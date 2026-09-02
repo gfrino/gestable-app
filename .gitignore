@@ -1,0 +1,13 @@
+node_modules/
+.expo/
+dist/
+ios/
+android/
+
+# Credenziali: non devono mai finire nel repository, tanto piu' che e' pubblico
+google-services.json
+GoogleService-Info.plist
+*.p12
+*.p8
+*.mobileprovision
+.env
