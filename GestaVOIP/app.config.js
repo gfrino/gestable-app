@@ -33,6 +33,7 @@ module.exports = {
   expo: {
     name: 'GestaVOIP',
     slug: 'gestavoip',
+    owner: 'ticinoweb',
     scheme: 'gestavoip',
     version: '0.1.0',
     orientation: 'portrait',
@@ -109,7 +110,8 @@ module.exports = {
 
     extra: {
       firebase,
-      eas: { projectId: process.env.GESTAVOIP_EAS_PROJECT_ID || '' },
+      // Progetto EAS @ticinoweb/gestavoip (organizzazione ticinoweb, login @gfrino).
+      eas: { projectId: '50258e2e-5fcb-4605-8ca9-20e39875236d' },
     },
   },
 }
