@@ -30,7 +30,9 @@ Con il telefono:
   autenticazione o email) e lo passa alla pagina `/web/login/totp` di Odoo,
   senza la casella «ricorda il dispositivo»: con lo User-Agent dell'app Odoo
   17 e 19 rispondono 500.
-- **Tastierino** con ricerca nei contatti e nei lead di Odoo (nome o cifre).
+- **Tastierino** sempre utilizzabile: dalla terza cifra mostra fino a due
+  contatti di Odoo sopra i tasti (solo quelli con un nome), e il pulsante
+  **Nome** apre la ricerca per nome o azienda con la tastiera del telefono.
 - **Chiamate in arrivo** dal centralino o sul numero diretto, anche con l'app
   chiusa e il telefono bloccato: squillo e schermata li fa il sistema
   (CallKit su iPhone, notifica a tutto schermo su Android).

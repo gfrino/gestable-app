@@ -35,14 +35,14 @@ module.exports = {
     slug: 'gestavoip',
     owner: 'ticinoweb',
     scheme: 'gestavoip',
-    version: '0.1.1',
+    version: '0.1.2',
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
 
     ios: {
       bundleIdentifier: IDENTIFICATIVO,
-      buildNumber: '2',
+      buildNumber: '3',
       supportsTablet: false,
       ...(firebaseIos ? { googleServicesFile: './GoogleService-Info.plist' } : {}),
       infoPlist: {
@@ -60,7 +60,7 @@ module.exports = {
 
     android: {
       package: IDENTIFICATIVO,
-      versionCode: 2,
+      versionCode: 3,
       ...(firebaseAndroid ? { googleServicesFile: './google-services.json' } : {}),
       adaptiveIcon: {
         backgroundColor: '#FFFFFF',
