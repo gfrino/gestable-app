@@ -2,6 +2,7 @@
 
 import * as Application from 'expo-application'
 import { useFocusEffect } from 'expo-router'
+import * as Updates from 'expo-updates'
 import { useCallback, useState } from 'react'
 import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
@@ -21,6 +22,16 @@ function Riga({ titolo, testo, children, c }: { titolo: string; testo?: string; 
       {children}
     </View>
   )
+}
+
+// Quale codice gira: quello della build o un aggiornamento OTA (con la data),
+// cosi' chi segnala un problema dice anche da quale versione.
+function aggiornamento(): string {
+  if (Updates.isEmbeddedLaunch || !Updates.createdAt) {
+    return ''
+  }
+  const quando = Updates.createdAt.toLocaleString('it-CH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return ` · aggiornamento del ${quando}`
 }
 
 export default function Impostazioni() {
@@ -122,6 +133,7 @@ export default function Impostazioni() {
         <Pulsante testo="Esci" variante="pericolo" onPress={chiediUscita} occupato={uscita} />
         <Text style={[s.versione, { color: c.testo3 }]}>
           GestaVOIP {Application.nativeApplicationVersion || ''} ({Application.nativeBuildVersion || ''})
+          {aggiornamento()}
         </Text>
       </ScrollView>
     </SafeAreaView>
