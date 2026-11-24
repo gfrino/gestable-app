@@ -144,3 +144,67 @@ export async function registroChiamate(server: string, uid: number): Promise<Voc
     limit: 80,
   })
 }
+
+/** Chi c'e' dall'altra parte della chiamata, letto dai contatti di Odoo. */
+export type SchedaContatto = {
+  nome: string
+  azienda: string
+  /** Immagine come data URI, o '' se il contatto (e la sua azienda) non ne hanno. */
+  foto: string
+}
+
+type RigaPartner = { id: number; name: string; parent_id: [number, string] | false; image_512: string | false }
+
+const schede = new Map<string, Promise<SchedaContatto | null>>()
+
+// Odoo da' agli utenti senza foto un disegno SVG generato: per l'app non e'
+// una foto (e React Native non lo disegna). Si usano solo PNG, JPEG e WebP.
+function datiFoto(b64: string | false): string {
+  if (!b64) {
+    return ''
+  }
+  const tipo = b64.startsWith('/9j/') ? 'jpeg' : b64.startsWith('iVBOR') ? 'png' : b64.startsWith('UklGR') ? 'webp' : ''
+  return tipo ? `data:image/${tipo};base64,${b64}` : ''
+}
+
+/**
+ * Contatto di Odoo con questo numero: nome, azienda e foto (quella della
+ * persona, altrimenti quella dell'azienda). Cerca con `phone_mobile_search`,
+ * che confronta i numeri normalizzati: «+41 76 571 49 82» salvato in Odoo
+ * corrisponde a «+41765714982» del centralino. Una sola richiesta per numero
+ * finche' l'app resta aperta; senza risultato o in caso di errore, null.
+ */
+export function schedaContatto(server: string, numero: string): Promise<SchedaContatto | null> {
+  const cifre = numero.replace(/\D/g, '')
+  if (cifre.length < 6) {
+    return Promise.resolve(null)
+  }
+  const chiave = `${server}|${cifre}`
+  let scheda = schede.get(chiave)
+  if (!scheda) {
+    scheda = (async () => {
+      // 512 pixel: la foto si vede grande, la 128 sarebbe sgranata.
+      const campi = ['name', 'parent_id', 'image_512']
+      const [p] = await callKw<RigaPartner[]>(server, 'res.partner', 'search_read', [], {
+        domain: [['phone_mobile_search', '=', numero]],
+        fields: campi,
+        limit: 1,
+        order: 'is_company asc, id desc',
+      })
+      if (!p) {
+        return null
+      }
+      let foto = datiFoto(p.image_512)
+      if (!foto && p.parent_id) {
+        const [azienda] = await callKw<RigaPartner[]>(server, 'res.partner', 'read', [[p.parent_id[0]], ['image_512']])
+        foto = datiFoto(azienda?.image_512 || false)
+      }
+      return { nome: p.name, azienda: p.parent_id ? p.parent_id[1] : '', foto }
+    })().catch(() => {
+      schede.delete(chiave)
+      return null
+    })
+    schede.set(chiave, scheda)
+  }
+  return scheda
+}

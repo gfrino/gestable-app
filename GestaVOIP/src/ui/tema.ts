@@ -44,6 +44,9 @@ const scuro: typeof chiaro = {
 
 export type Colori = typeof chiaro
 
+/** La schermata di chiamata e' sempre scura, come quella del telefono. */
+export const coloriChiamata: Colori = scuro
+
 export function useColori(): Colori {
   return useColorScheme() === 'dark' ? scuro : chiaro
 }

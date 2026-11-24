@@ -2,18 +2,20 @@
  * La chiamata in corso: muto, tastierino, audio, attesa, trasferimento.
  *
  * Si apre da sola quando una chiamata parte o viene accettata e si chiude
- * quando finisce (vedi (tabs)/_layout.tsx).
+ * quando finisce (vedi (tabs)/_layout.tsx). In alto chi c'e' dall'altra parte,
+ * con la foto del contatto in Odoo (o della sua azienda) se ce l'ha, altrimenti
+ * le iniziali. Sempre scura, come la schermata di chiamata del telefono.
  */
 
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { AudioDevice } from '@twilio/voice-react-native-sdk'
 import { useEffect, useState } from 'react'
-import { ActivityIndicator, Alert, FlatList, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
-import { SafeAreaView } from 'react-native-safe-area-context'
-import { colleghi, type Collega } from '../voip/api'
+import { ActivityIndicator, Alert, Animated, Easing, FlatList, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { colleghi, schedaContatto, type Collega, type SchedaContatto } from '../voip/api'
 import { useApp, useTelefono } from '../voip/Contesto'
 import { telefono, type Fase } from '../voip/telefono'
-import { raggio, spazio, useColori, type Colori } from '../ui/tema'
+import { coloriChiamata, raggio, spazio, type Colori } from '../ui/tema'
 
 const FASI: Record<Fase, string> = {
   composizione: 'Chiamata in corso...',
@@ -69,7 +71,7 @@ function Tasto({ icona, testo, attivo, onPress, disabilitato, c }: PropsTasto) {
       <View
         style={[
           s.azioneCerchio,
-          { backgroundColor: attivo ? c.testo : c.superficie2, opacity: disabilitato ? 0.4 : 1 },
+          { backgroundColor: attivo ? c.testo : 'rgba(255,255,255,0.10)', opacity: disabilitato ? 0.35 : 1 },
         ]}
       >
         <Ionicons name={icona} size={28} color={attivo ? c.sfondo : c.testo} />
@@ -81,10 +83,91 @@ function Tasto({ icona, testo, attivo, onPress, disabilitato, c }: PropsTasto) {
   )
 }
 
+function iniziali(nome: string): string {
+  const parole = nome.replace(/[^\p{L}\s]/gu, ' ').trim().split(/\s+/).filter(Boolean)
+  if (!parole.length) {
+    return ''
+  }
+  const prime = parole.length > 1 ? [parole[0], parole[parole.length - 1]] : [parole[0]]
+  return prime.map((p) => p[0].toUpperCase()).join('')
+}
+
+const LATO_FOTO = 136
+// Distanza fra il bordo alto (sotto la barra di stato) e il centro della foto.
+const CENTRO_FOTO = 150
+const ALONE = [900, 700, 520, 360, 240]
+
+/** Foto (o iniziali) con due anelli che si allargano finche' la chiamata squilla. */
+function Ritratto({ foto, nome, squilla, c }: { foto: string; nome: string; squilla: boolean; c: Colori }) {
+  const [onda] = useState(() => new Animated.Value(0))
+
+  useEffect(() => {
+    if (!squilla) {
+      onda.stopAnimation()
+      onda.setValue(0)
+      return
+    }
+    const giro = Animated.loop(
+      Animated.timing(onda, { toValue: 1, duration: 1800, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+    )
+    giro.start()
+    return () => giro.stop()
+  }, [squilla, onda])
+
+  const anello = (ritardo: number) => {
+    const v = onda.interpolate({ inputRange: [0, 1], outputRange: [ritardo, 1 + ritardo] })
+    return {
+      opacity: v.interpolate({ inputRange: [0, 0.2, 1, 2], outputRange: [0, 0.45, 0, 0], extrapolate: 'clamp' }),
+      transform: [{ scale: v.interpolate({ inputRange: [0, 1, 2], outputRange: [1, 1.55, 1.55], extrapolate: 'clamp' }) }],
+    }
+  }
+  const lettere = iniziali(nome)
+
+  return (
+    <View style={s.ritratto}>
+      {squilla ? (
+        <>
+          <Animated.View pointerEvents="none" style={[s.anello, { borderColor: c.primario }, anello(0)]} />
+          <Animated.View pointerEvents="none" style={[s.anello, { borderColor: c.primario }, anello(-0.5)]} />
+        </>
+      ) : null}
+      {foto ? (
+        <Image source={{ uri: foto }} style={s.foto} accessibilityIgnoresInvertColors />
+      ) : (
+        <View style={[s.foto, s.fotoVuota, { backgroundColor: c.primarioTenue }]}>
+          {lettere ? (
+            <Text style={[s.lettere, { color: c.primario }]}>{lettere}</Text>
+          ) : (
+            <Ionicons name="person" size={60} color={c.primario} />
+          )}
+        </View>
+      )}
+    </View>
+  )
+}
+
 export default function SchermataChiamata() {
-  const c = useColori()
+  const c = coloriChiamata
+  const margini = useSafeAreaInsets()
   const { sessione } = useApp()
   const { chiamata, audio, audioScelto } = useTelefono()
+  const [trovata, setTrovata] = useState<{ numero: string; scheda: SchedaContatto | null }>({ numero: '', scheda: null })
+  const numeroChiamata = chiamata?.numero || ''
+  // Vale solo la scheda del numero di questa chiamata.
+  const scheda = trovata.numero === numeroChiamata ? trovata.scheda : null
+
+  // Nome, azienda e foto da Odoo: arrivano poco dopo l'apertura, intanto si
+  // vede quello che ha detto il centralino.
+  useEffect(() => {
+    if (!sessione || !numeroChiamata) {
+      return
+    }
+    let viva = true
+    schedaContatto(sessione.server, numeroChiamata).then((r) => viva && setTrovata({ numero: numeroChiamata, scheda: r }))
+    return () => {
+      viva = false
+    }
+  }, [sessione, numeroChiamata])
   const [, setBattito] = useState(0)
   const [tastierino, setTastierino] = useState(false)
   const [toni, setToni] = useState('')
@@ -101,7 +184,10 @@ export default function SchermataChiamata() {
   }
 
   const connessa = chiamata.fase === 'connessa'
+  const squilla = ['composizione', 'squillo', 'in-arrivo'].includes(chiamata.fase)
   const stato = connessa ? cronometro(chiamata.inizio) : FASI[chiamata.fase]
+  const nome = scheda?.nome || chiamata.nome || ''
+  const colorePunto = chiamata.fase === 'riconnessione' ? c.ambra : connessa ? c.verde : c.testo3
 
   async function apriTrasferimento() {
     if (!sessione) {
@@ -127,20 +213,63 @@ export default function SchermataChiamata() {
   }
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]}>
+    <View style={[s.pagina, { backgroundColor: c.sfondo }]}>
+      {scheda?.foto ? (
+        <>
+          <Image source={{ uri: scheda.foto }} style={StyleSheet.absoluteFill} blurRadius={60} resizeMode="cover" />
+          <View style={[StyleSheet.absoluteFill, { backgroundColor: 'rgba(14,16,24,0.72)' }]} />
+        </>
+      ) : (
+        // Luce viola che sfuma: cerchi concentrici sulla foto, ognuno appena
+        // visibile, cosi' il bordo non si vede.
+        ALONE.map((lato) => (
+          <View
+            key={lato}
+            pointerEvents="none"
+            style={[
+              s.alone,
+              { width: lato, height: lato, borderRadius: lato / 2, top: margini.top + CENTRO_FOTO - lato / 2, backgroundColor: c.primario },
+            ]}
+          />
+        ))
+      )}
+      <View style={[s.contenuto, { paddingTop: margini.top, paddingBottom: margini.bottom }]}>
       <View style={s.testa}>
-        <Text style={[s.nome, { color: c.testo }]} numberOfLines={2}>
-          {chiamata.nome || chiamata.numero || 'Sconosciuto'}
+        <View style={s.direzione}>
+          <Ionicons
+            name={chiamata.direzione === 'entrata' ? 'arrow-down' : 'arrow-up'}
+            size={13}
+            color={c.testo2}
+            style={{ transform: [{ rotate: '45deg' }] }}
+          />
+          <Text style={[s.direzioneTesto, { color: c.testo2 }]}>
+            {chiamata.direzione === 'entrata' ? 'In arrivo' : 'In uscita'}
+          </Text>
+        </View>
+
+        <Ritratto foto={scheda?.foto || ''} nome={nome} squilla={squilla} c={c} />
+
+        <Text style={[s.nome, { color: c.testo }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>
+          {nome || chiamata.numero || 'Sconosciuto'}
         </Text>
-        {chiamata.nome ? (
-          <Text style={[s.numero, { color: c.testo2 }]} numberOfLines={1}>
+        {scheda?.azienda ? (
+          <Text style={[s.azienda, { color: c.testo2 }]} numberOfLines={1}>
+            {scheda.azienda}
+          </Text>
+        ) : null}
+        {nome ? (
+          <Text style={[s.numero, { color: c.testo3 }]} numberOfLines={1}>
             {chiamata.numero}
           </Text>
         ) : null}
-        <Text style={[s.stato, { color: chiamata.fase === 'riconnessione' ? c.ambra : c.testo2 }]}>
-          {stato}
-          {chiamata.attesa ? ' · in attesa' : ''}
-        </Text>
+
+        <View style={[s.pillola, { backgroundColor: 'rgba(255,255,255,0.08)' }]}>
+          <View style={[s.punto, { backgroundColor: colorePunto }]} />
+          <Text style={[s.stato, { color: chiamata.fase === 'riconnessione' ? c.ambra : c.testo }]}>
+            {stato}
+            {chiamata.attesa ? ' · in attesa' : ''}
+          </Text>
+        </View>
       </View>
 
       {tastierino ? (
@@ -156,7 +285,7 @@ export default function SchermataChiamata() {
                   setToni((v) => v + t)
                   void telefono.toni(t)
                 }}
-                style={({ pressed }) => [s.tono, { backgroundColor: pressed ? c.superficie2 : c.superficie }]}
+                style={({ pressed }) => [s.tono, { backgroundColor: pressed ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)' }]}
               >
                 <Text style={[s.tonoTesto, { color: c.testo }]}>{t}</Text>
               </Pressable>
@@ -196,6 +325,8 @@ export default function SchermataChiamata() {
           <Ionicons name="call" size={34} color="#FFFFFF" style={{ transform: [{ rotate: '135deg' }] }} />
         </Pressable>
         <View style={s.lato} />
+      </View>
+
       </View>
 
       <Modal visible={sceltaAudio} transparent animationType="fade" onRequestClose={() => setSceltaAudio(false)}>
@@ -239,20 +370,32 @@ export default function SchermataChiamata() {
           </View>
         </Pressable>
       </Modal>
-    </SafeAreaView>
+    </View>
   )
 }
 
 const s = StyleSheet.create({
-  pagina: { flex: 1, paddingHorizontal: spazio.xl },
-  testa: { alignItems: 'center', paddingTop: spazio.xxl * 1.5, gap: spazio.s },
-  nome: { fontSize: 32, fontWeight: '600', textAlign: 'center' },
-  numero: { fontSize: 17 },
-  stato: { fontSize: 17, marginTop: spazio.s, fontVariant: ['tabular-nums'] },
+  pagina: { flex: 1, overflow: 'hidden' },
+  contenuto: { flex: 1, paddingHorizontal: spazio.xl },
+  // Luce viola dietro la foto quando la foto non c'e'.
+  alone: { position: 'absolute', alignSelf: 'center', opacity: 0.045 },
+  testa: { alignItems: 'center', paddingTop: spazio.xl, gap: spazio.xs },
+  direzione: { flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: spazio.l },
+  direzioneTesto: { fontSize: 13, fontWeight: '600', letterSpacing: 0.6, textTransform: 'uppercase' },
+  ritratto: { width: LATO_FOTO, height: LATO_FOTO, alignItems: 'center', justifyContent: 'center', marginBottom: spazio.l },
+  anello: { position: 'absolute', width: LATO_FOTO, height: LATO_FOTO, borderRadius: LATO_FOTO / 2, borderWidth: 2 },
+  foto: { width: LATO_FOTO, height: LATO_FOTO, borderRadius: LATO_FOTO / 2, borderWidth: 3, borderColor: 'rgba(255,255,255,0.14)' },
+  fotoVuota: { alignItems: 'center', justifyContent: 'center' },
+  lettere: { fontSize: 50, fontWeight: '600', letterSpacing: 1 },
+  nome: { fontSize: 30, fontWeight: '700', textAlign: 'center', letterSpacing: -0.3 },
+  azienda: { fontSize: 17, fontWeight: '500' },
+  numero: { fontSize: 15, fontVariant: ['tabular-nums'], marginTop: 2 },
+  pillola: { flexDirection: 'row', alignItems: 'center', gap: spazio.s, paddingHorizontal: spazio.l, paddingVertical: 7, borderRadius: raggio.tondo, marginTop: spazio.l },
+  stato: { fontSize: 15, fontWeight: '600', fontVariant: ['tabular-nums'] },
   griglia: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', alignContent: 'center', rowGap: spazio.xl, columnGap: spazio.l },
   azione: { width: '28%', alignItems: 'center', gap: spazio.s },
-  azioneCerchio: { width: 72, height: 72, borderRadius: 36, alignItems: 'center', justifyContent: 'center' },
-  azioneTesto: { fontSize: 13 },
+  azioneCerchio: { width: 74, height: 74, borderRadius: 37, alignItems: 'center', justifyContent: 'center' },
+  azioneTesto: { fontSize: 13, fontWeight: '500' },
   toni: { flex: 1, justifyContent: 'center' },
   toniTesto: { fontSize: 28, textAlign: 'center', minHeight: 36, marginBottom: spazio.l },
   toniGriglia: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: spazio.m },
@@ -260,11 +403,21 @@ const s = StyleSheet.create({
   tonoTesto: { fontSize: 28, fontWeight: '500' },
   piede: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spazio.xl },
   lato: { width: 90, alignItems: 'center' },
-  riaggancia: { width: 78, height: 78, borderRadius: 39, alignItems: 'center', justifyContent: 'center' },
-  velo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  riaggancia: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FF5C61',
+    shadowOpacity: 0.45,
+    shadowRadius: 18,
+    shadowOffset: { width: 0, height: 6 },
+  },
+  velo: { flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   foglio: { borderTopLeftRadius: raggio.l, borderTopRightRadius: raggio.l, paddingVertical: spazio.m, paddingBottom: spazio.xxl },
   foglioTitolo: { fontSize: 17, fontWeight: '700', paddingHorizontal: spazio.xl, paddingVertical: spazio.m },
   foglioVoce: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, paddingHorizontal: spazio.xl, paddingVertical: spazio.l },
   foglioTesto: { fontSize: 17 },
-  punto: { width: 10, height: 10, borderRadius: 5 },
+  punto: { width: 8, height: 8, borderRadius: 4 },
 })
