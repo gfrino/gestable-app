@@ -19,6 +19,17 @@ export type Sessione = {
   db: string
   azienda: string
   utente: Utente
+  /**
+   * false: Odoo senza VOIP AI, l'app mostra solo Odoo e l'accesso lo fa la
+   * pagina di Odoo (db, utente e azienda restano vuoti). Assente nelle
+   * sessioni salvate prima che esistesse: erano tutte con il telefono.
+   */
+  voip?: boolean
+}
+
+/** Vero se la sessione ha il telefono (VOIP AI sul server). */
+export function conTelefono(sessione: Sessione | null): boolean {
+  return !!sessione && sessione.voip !== false
 }
 
 export async function leggiSessione(): Promise<Sessione | null> {

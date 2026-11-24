@@ -50,6 +50,13 @@ export default function LayoutSchede() {
         }}
       />
       <Tabs.Screen
+        name="odoo"
+        options={{
+          title: 'Odoo',
+          tabBarIcon: ({ color, size }) => <Ionicons name="apps" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="impostazioni"
         options={{
           title: 'Impostazioni',

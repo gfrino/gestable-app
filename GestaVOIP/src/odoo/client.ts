@@ -63,7 +63,7 @@ export async function rpc<T>(
   }
 
   if (risposta.status === 404) {
-    throw new ErroreOdoo('modulo', "Il modulo VOIP AI di questo Odoo è troppo vecchio per l'app, o non è installato: serve la versione 2.36 o successiva.")
+    throw new ErroreOdoo('modulo', "Questo Odoo non ha il modulo VOIP AI aggiornato (serve la versione 2.36 o successiva).")
   }
   if (!risposta.ok) {
     throw new ErroreOdoo('server', `Il server ha risposto ${risposta.status}.`)
@@ -90,15 +90,42 @@ export async function rpc<T>(
   return corpo.result as T
 }
 
-export type InfoServer = { db: string; company: string; module_version: string }
+export type InfoServer = {
+  db: string
+  company: string
+  module_version: string
+  /** false: Odoo senza VOIP AI (o troppo vecchio). L'app apre Odoo, senza telefono. */
+  voip: boolean
+}
 
-/** Il server esiste, ha il modulo, e su quale database si entra. */
+/**
+ * Il server esiste, se ha VOIP AI e su quale database si entra.
+ *
+ * Senza VOIP AI l'app serve lo stesso: diventa Odoo in un'app, come quella
+ * desktop. Per distinguere "Odoo senza modulo" da "non e' un Odoo" si chiede
+ * la versione, che Odoo da' senza login da sempre.
+ */
 export async function infoServer(base: string): Promise<InfoServer> {
-  const r = await rpc<{ status: string; message?: string } & InfoServer>(base, '/ai_telemarketing/mobile/info')
-  if (r.status !== 'success') {
-    throw new ErroreOdoo('server', r.message || 'Server non valido.')
+  try {
+    const r = await rpc<{ status: string; message?: string } & InfoServer>(base, '/ai_telemarketing/mobile/info')
+    if (r.status !== 'success') {
+      throw new ErroreOdoo('server', r.message || 'Server non valido.')
+    }
+    return { ...r, voip: true }
+  } catch (e) {
+    if (!(e instanceof ErroreOdoo) || e.tipo !== 'modulo') {
+      throw e
+    }
   }
-  return r
+  try {
+    await rpc<{ server_version?: string }>(base, '/web/webclient/version_info')
+  } catch (e) {
+    if (e instanceof ErroreOdoo && e.tipo === 'rete') {
+      throw e
+    }
+    throw new ErroreOdoo('server', "A questo indirizzo non risponde un Odoo: controlla l'indirizzo.")
+  }
+  return { db: '', company: '', module_version: '', voip: false }
 }
 
 export type Utente = { uid: number; name: string; login: string; company: string }

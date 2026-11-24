@@ -4,7 +4,7 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { accedi, esci, infoServer, type InfoServer } from '../odoo/client'
-import { dimenticaSessione, leggiSessione, salvaSessione, type Sessione } from '../odoo/sessione'
+import { conTelefono, dimenticaSessione, leggiSessione, salvaSessione, type Sessione } from '../odoo/sessione'
 import { segnalaErrore, utenteCrash } from '../ui/crash'
 import { telefono, type StatoTelefono } from './telefono'
 
@@ -15,6 +15,8 @@ type ValoreApp = {
   sessione: Sessione | null
   verificaServer: (indirizzo: string) => Promise<InfoServer>
   entra: (server: string, info: InfoServer, email: string, password: string) => Promise<void>
+  /** Odoo senza VOIP AI: si salva solo l'indirizzo, l'accesso lo fa Odoo. */
+  entraSoloOdoo: (server: string) => Promise<void>
   esci: () => Promise<void>
 }
 
@@ -46,7 +48,7 @@ export function ProviderApp({ children }: { children: ReactNode }) {
 
   // Il telefono si accende con la sessione e si spegne con lei.
   useEffect(() => {
-    if (!sessione) {
+    if (!sessione || !conTelefono(sessione)) {
       return
     }
     telefono.suSessioneScaduta = () => void chiudiLocale()
@@ -61,14 +63,28 @@ export function ProviderApp({ children }: { children: ReactNode }) {
       verificaServer: (indirizzo) => infoServer(indirizzo),
       entra: async (server, info, email, password) => {
         const utente = await accedi(server, info.db, email.trim(), password)
-        const nuova: Sessione = { server, db: info.db, azienda: info.company, utente }
+        const nuova: Sessione = { server, db: info.db, azienda: info.company, utente, voip: true }
+        await salvaSessione(nuova)
+        setSessione(nuova)
+        setFase('dentro')
+      },
+      entraSoloOdoo: async (server) => {
+        const nuova: Sessione = {
+          server,
+          db: '',
+          azienda: '',
+          utente: { uid: 0, name: '', login: '', company: '' },
+          voip: false,
+        }
         await salvaSessione(nuova)
         setSessione(nuova)
         setFase('dentro')
       },
       esci: async () => {
         const server = sessione?.server
-        await telefono.ferma()
+        if (conTelefono(sessione)) {
+          await telefono.ferma()
+        }
         if (server) {
           await esci(server)
         }

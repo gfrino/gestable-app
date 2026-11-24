@@ -9,6 +9,21 @@ stesso centralino, stesso interno, stesse note sul contatto a fine chiamata.
 
 ## Cosa fa
 
+L'app ha due modi, scelti dal server al primo passo dell'accesso:
+
+- **Con VOIP AI** (2.36 o successiva): telefono e Odoo. Le schede sono
+  Tastierino, Recenti, **Odoo** e Impostazioni.
+- **Senza VOIP AI** (modulo assente o troppo vecchio): l'app e' Odoo a tutto
+  schermo, come l'app desktop, senza telefono. L'accesso lo fa la pagina di
+  login di Odoo (scelta del database, doppio fattore, accesso con Google).
+
+In tutti e due i casi Odoo e' una vista web (`src/ui/VistaOdoo.tsx`) che usa la
+stessa sessione dell'app. I numeri cliccati in Odoo partono dal softphone se
+c'e', altrimenti dal telefono del sistema; i link verso altri siti si aprono
+nel browser.
+
+Con il telefono:
+
 - **Accesso** con l'indirizzo di Odoo, email e password. Il server viene
   verificato prima della password e mostra il nome dell'azienda.
 - **Tastierino** con ricerca nei contatti e nei lead di Odoo (nome o cifre).

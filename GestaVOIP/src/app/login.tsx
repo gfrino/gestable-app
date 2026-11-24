@@ -26,7 +26,7 @@ import { Pulsante } from '../ui/Pulsante'
 
 export default function Login() {
   const c = useColori()
-  const { verificaServer, entra } = useApp()
+  const { verificaServer, entra, entraSoloOdoo } = useApp()
   const [indirizzo, setIndirizzo] = useState('')
   const [server, setServer] = useState('')
   const [info, setInfo] = useState<InfoServer | null>(null)
@@ -68,6 +68,31 @@ export default function Login() {
     }
   }
 
+  async function apriOdoo() {
+    setOccupato(true)
+    await entraSoloOdoo(server)
+  }
+
+  const cambiaServer = (
+    <Pressable
+      onPress={() => {
+        setInfo(null)
+        setPassword('')
+        setErrore('')
+      }}
+      style={[s.server, { backgroundColor: c.primarioTenue }]}
+      accessibilityRole="button"
+      accessibilityLabel="Cambia server"
+    >
+      <Text style={[s.serverNome, { color: c.primario }]} numberOfLines={1}>
+        {info?.company || info?.db || server.replace(/^https?:\/\//, '')}
+      </Text>
+      <Text style={[s.serverUrl, { color: c.testo2 }]} numberOfLines={1}>
+        {info?.company || info?.db ? `${server.replace(/^https?:\/\//, '')} · cambia` : 'Cambia indirizzo'}
+      </Text>
+    </Pressable>
+  )
+
   const campo = [s.campo, { backgroundColor: c.superficie, borderColor: c.bordo, color: c.testo }]
 
   return (
@@ -97,24 +122,21 @@ export default function Login() {
               />
               <Pulsante testo="Continua" onPress={verifica} occupato={occupato} />
             </View>
+          ) : !info.voip ? (
+            <View style={s.blocco}>
+              {cambiaServer}
+              <View style={[s.nota, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
+                <Text style={[s.notaTitolo, { color: c.testo }]}>Questo Odoo non ha il telefono</Text>
+                <Text style={[s.notaTesto, { color: c.testo2 }]}>
+                  Manca il modulo VOIP AI (versione 2.36 o successiva). Puoi usare lo stesso Odoo
+                  dall&apos;app: l&apos;accesso lo fai nella sua pagina, come dal browser.
+                </Text>
+              </View>
+              <Pulsante testo="Apri Odoo" onPress={apriOdoo} occupato={occupato} />
+            </View>
           ) : (
             <View style={s.blocco}>
-              <Pressable
-                onPress={() => {
-                  setInfo(null)
-                  setPassword('')
-                }}
-                style={[s.server, { backgroundColor: c.primarioTenue }]}
-                accessibilityRole="button"
-                accessibilityLabel="Cambia server"
-              >
-                <Text style={[s.serverNome, { color: c.primario }]} numberOfLines={1}>
-                  {info.company || info.db}
-                </Text>
-                <Text style={[s.serverUrl, { color: c.testo2 }]} numberOfLines={1}>
-                  {server.replace(/^https?:\/\//, '')} · cambia
-                </Text>
-              </Pressable>
+              {cambiaServer}
               <Text style={[s.etichetta, { color: c.testo2 }]}>Email</Text>
               <TextInput
                 style={campo}
@@ -158,6 +180,9 @@ const s = StyleSheet.create({
   pagina: { flex: 1 },
   contenuto: { padding: spazio.xl, paddingTop: spazio.xxl * 2, gap: spazio.s },
   logo: { width: 88, height: 88, alignSelf: 'center' },
+  nota: { borderWidth: 1, borderRadius: raggio.l, padding: spazio.l, gap: spazio.xs, marginVertical: spazio.s },
+  notaTitolo: { fontSize: 16, fontWeight: '600' },
+  notaTesto: { fontSize: 15, lineHeight: 21 },
   titolo: { fontSize: 28, fontWeight: '700', textAlign: 'center', marginTop: spazio.m },
   sottotitolo: { fontSize: 15, textAlign: 'center', marginBottom: spazio.xl },
   blocco: { gap: spazio.s },
