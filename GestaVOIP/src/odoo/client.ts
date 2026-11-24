@@ -63,7 +63,7 @@ export async function rpc<T>(
   }
 
   if (risposta.status === 404) {
-    throw new ErroreOdoo('modulo', 'Su questo server manca il modulo VOIP AI aggiornato.')
+    throw new ErroreOdoo('modulo', "Il modulo VOIP AI di questo Odoo è troppo vecchio per l'app, o non è installato: serve la versione 2.36 o successiva.")
   }
   if (!risposta.ok) {
     throw new ErroreOdoo('server', `Il server ha risposto ${risposta.status}.`)
