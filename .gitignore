@@ -1,8 +1,5 @@
 node_modules/
-.expo/
-dist/
-ios/
-android/
+.DS_Store
 
 # Credenziali: non devono mai finire nel repository, tanto piu' che e' pubblico
 google-services.json
@@ -10,4 +7,7 @@ GoogleService-Info.plist
 *.p12
 *.p8
 *.mobileprovision
+*.jks
+*.keystore
 .env
+.env.*
