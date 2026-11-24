@@ -42,6 +42,22 @@ Con il telefono:
 - **Impostazioni**: disponibile / non disponibile, ricezione delle chiamate del
   centralino, interno e numero diretto, uscita.
 
+## Solo server autorizzati da ticinoWEB
+
+L'app funziona solo con gli Odoo che ticinoWEB ha messo nella lista, nell'Odoo
+interno (modulo `tw_app_allowlist`, repo `gfrino/extra-addons-tw-internal-ticinoweb-only`,
+menu **App GestABLE › Server autorizzati**). La lista si scarica da
+`https://ticinoweb.online/tw_app/allowlist`, firmata Ed25519: nell'app c'e'
+solo la chiave pubblica (`src/odoo/autorizzati.ts`).
+
+- All'accesso: un server fuori lista e' rifiutato prima della password.
+- All'avvio: chi era dentro un server tolto dalla lista viene fatto uscire.
+- Senza rete vale l'ultima lista valida, fino a 30 giorni; senza nessuna lista
+  valida un nuovo accesso non parte (chi e' gia' dentro resta).
+
+Il controllo protegge l'app pubblicata sugli store: chi ricompila il codice
+(repo pubblico) puo' toglierlo.
+
 ## Come funziona
 
 | Pezzo | Dove |

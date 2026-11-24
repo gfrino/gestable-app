@@ -3,7 +3,9 @@
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { accedi, confermaCodice, esci, infoServer, type InfoServer, type Utente } from '../odoo/client'
+import { Alert } from 'react-native'
+import { MESSAGGIO_NON_AUTORIZZATO, MESSAGGIO_NON_VERIFICABILE, verificaServer as autorizzato } from '../odoo/autorizzati'
+import { accedi, confermaCodice, ErroreOdoo, esci, infoServer, type InfoServer, type Utente } from '../odoo/client'
 import { conTelefono, dimenticaSessione, leggiSessione, salvaSessione, type Sessione } from '../odoo/sessione'
 import { segnalaErrore, utenteCrash } from '../ui/crash'
 import { telefono, type StatoTelefono } from './telefono'
@@ -43,11 +45,22 @@ export function ProviderApp({ children }: { children: ReactNode }) {
       }
       setSessione(s)
       setFase(s ? 'dentro' : 'fuori')
+      // Un server tolto dalla lista di ticinoWEB esce anche da chi era gia'
+      // dentro. Se la lista non si puo' verificare (niente rete) non si caccia
+      // nessuno: si riprova al prossimo avvio.
+      if (s) {
+        autorizzato(s.server).then((esito) => {
+          if (vivo && esito === 'non-autorizzato') {
+            void chiudiLocale()
+            Alert.alert('Server non abilitato', MESSAGGIO_NON_AUTORIZZATO)
+          }
+        })
+      }
     })
     return () => {
       vivo = false
     }
-  }, [])
+  }, [chiudiLocale])
 
   // Il telefono si accende con la sessione e si spegne con lei.
   useEffect(() => {
@@ -70,7 +83,18 @@ export function ProviderApp({ children }: { children: ReactNode }) {
     () => ({
       fase,
       sessione,
-      verificaServer: (indirizzo) => infoServer(indirizzo),
+      verificaServer: async (indirizzo) => {
+        // Prima la lista dei server autorizzati, poi il server stesso: chi non
+        // e' abilitato lo sa subito, senza digitare la password.
+        const esito = await autorizzato(indirizzo)
+        if (esito === 'non-autorizzato') {
+          throw new ErroreOdoo('server', MESSAGGIO_NON_AUTORIZZATO)
+        }
+        if (esito === 'non-verificabile') {
+          throw new ErroreOdoo('rete', MESSAGGIO_NON_VERIFICABILE)
+        }
+        return infoServer(indirizzo)
+      },
       entra: async (server, info, email, password) => {
         await apri(server, info, await accedi(server, info.db, email.trim(), password))
       },

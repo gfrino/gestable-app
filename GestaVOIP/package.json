@@ -4,6 +4,7 @@
   "main": "expo-router/entry",
   "dependencies": {
     "@expo/vector-icons": "^15.1.1",
+    "@noble/curves": "^1.9.7",
     "@react-native-firebase/app": "^27.1.1",
     "@react-native-firebase/crashlytics": "^27.1.1",
     "@twilio/voice-react-native-sdk": "^1.8.1",
