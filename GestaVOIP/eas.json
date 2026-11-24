@@ -8,16 +8,28 @@
     "development": {
       "developmentClient": true,
       "distribution": "internal",
-      "env": { "GESTAVOIP_APS_ENV": "development" }
+      "env": {
+        "GESTAVOIP_APS_ENV": "development"
+      }
     },
     "production": {
-      "env": { "GESTAVOIP_APS_ENV": "production" },
-      "android": { "buildType": "app-bundle" }
+      "env": {
+        "GESTAVOIP_APS_ENV": "production"
+      },
+      "android": {
+        "buildType": "app-bundle"
+      }
     }
   },
   "submit": {
     "production": {
-      "android": { "track": "internal", "releaseStatus": "draft" }
+      "android": {
+        "track": "internal",
+        "releaseStatus": "draft"
+      },
+      "ios": {
+        "ascAppId": "6838846263"
+      }
     }
   }
 }
