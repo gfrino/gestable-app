@@ -27,6 +27,9 @@ const firebase = firebaseAndroid || firebaseIos
 // nessun errore da nessuna parte. Le build di sviluppo lo sovrascrivono.
 const APS = process.env.GESTAVOIP_APS_ENV || 'production'
 
+// Progetto EAS @ticinoweb/gestavoip: build, invio agli store e aggiornamenti OTA.
+const PROGETTO_EAS = '50258e2e-5fcb-4605-8ca9-20e39875236d'
+
 const MICROFONO = 'GestaVOIP usa il microfono per le telefonate.'
 
 module.exports = {
@@ -35,14 +38,27 @@ module.exports = {
     slug: 'gestavoip',
     owner: 'ticinoweb',
     scheme: 'gestavoip',
-    version: '0.1.2',
+    version: '0.1.3',
     orientation: 'portrait',
+
+    // Aggiornamenti OTA (EAS Update): il JavaScript nuovo arriva senza una
+    // build. La versione del runtime e' l'impronta del codice nativo: un
+    // aggiornamento va solo alle build con lo stesso nativo, e ogni modifica
+    // nativa (librerie, permessi, plugin, SDK) chiede una build nuova.
+    runtimeVersion: { policy: 'fingerprint' },
+    updates: {
+      url: `https://u.expo.dev/${PROGETTO_EAS}`,
+      // All'avvio si aspetta al massimo 3 secondi un aggiornamento appena
+      // pubblicato; oltre, parte la versione gia' scaricata e quella nuova
+      // vale dall'avvio successivo.
+      fallbackToCacheTimeout: 3000,
+    },
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
 
     ios: {
       bundleIdentifier: IDENTIFICATIVO,
-      buildNumber: '3',
+      buildNumber: '4',
       supportsTablet: false,
       ...(firebaseIos ? { googleServicesFile: './GoogleService-Info.plist' } : {}),
       infoPlist: {
@@ -60,7 +76,7 @@ module.exports = {
 
     android: {
       package: IDENTIFICATIVO,
-      versionCode: 3,
+      versionCode: 4,
       ...(firebaseAndroid ? { googleServicesFile: './google-services.json' } : {}),
       adaptiveIcon: {
         backgroundColor: '#FFFFFF',
@@ -111,7 +127,7 @@ module.exports = {
     extra: {
       firebase,
       // Progetto EAS @ticinoweb/gestavoip (organizzazione ticinoweb, login @gfrino).
-      eas: { projectId: '50258e2e-5fcb-4605-8ca9-20e39875236d' },
+      eas: { projectId: PROGETTO_EAS },
     },
   },
 }

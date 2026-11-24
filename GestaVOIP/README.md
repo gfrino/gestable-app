@@ -126,6 +126,25 @@ Le build di sviluppo che devono ricevere push dalla sandbox di Apple si fanno co
 `GESTAVOIP_APS_ENV=development`; TestFlight e App Store vogliono `production`
 (il default).
 
+## Aggiornamenti senza build (OTA)
+
+Dalla 0.1.3 (build 4) l'app riceve gli aggiornamenti di EAS Update sul canale
+`production` (le build di sviluppo su `development`). Schermate, testi e logica
+in JavaScript si pubblicano senza build e senza TestFlight:
+
+```bash
+npx eas-cli@latest update --channel production --message "cosa cambia"
+```
+
+L'app scarica l'aggiornamento all'avvio e lo usa subito se arriva entro 3
+secondi, altrimenti dall'avvio successivo.
+
+Un aggiornamento arriva solo alle build con lo stesso codice nativo: la
+`runtimeVersion` e' l'impronta del nativo (`policy: 'fingerprint'`), senza
+versione e numero di build (`fingerprint.config.js`). Librerie native, permessi,
+`infoPlist`, plugin, icona e SDK cambiano l'impronta: serve una build nuova, e
+l'aggiornamento pubblicato prima non la raggiunge (ne' danneggia le vecchie).
+
 ## Controlli
 
 ```bash

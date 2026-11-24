@@ -10,7 +10,8 @@
       "distribution": "internal",
       "env": {
         "GESTAVOIP_APS_ENV": "development"
-      }
+      },
+      "channel": "development"
     },
     "production": {
       "env": {
@@ -18,7 +19,8 @@
       },
       "android": {
         "buildType": "app-bundle"
-      }
+      },
+      "channel": "production"
     }
   },
   "submit": {
