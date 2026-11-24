@@ -3,7 +3,7 @@
  */
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
-import { accedi, esci, infoServer, type InfoServer } from '../odoo/client'
+import { accedi, confermaCodice, esci, infoServer, type InfoServer, type Utente } from '../odoo/client'
 import { conTelefono, dimenticaSessione, leggiSessione, salvaSessione, type Sessione } from '../odoo/sessione'
 import { segnalaErrore, utenteCrash } from '../ui/crash'
 import { telefono, type StatoTelefono } from './telefono'
@@ -14,7 +14,10 @@ type ValoreApp = {
   fase: Fase
   sessione: Sessione | null
   verificaServer: (indirizzo: string) => Promise<InfoServer>
+  /** Con la verifica in due passaggi attiva lancia ErroreOdoo di tipo 'codice'. */
   entra: (server: string, info: InfoServer, email: string, password: string) => Promise<void>
+  /** Secondo passo dell'accesso: il codice della verifica in due passaggi. */
+  entraConCodice: (server: string, info: InfoServer, codice: string) => Promise<void>
   /** Odoo senza VOIP AI: si salva solo l'indirizzo, l'accesso lo fa Odoo. */
   entraSoloOdoo: (server: string) => Promise<void>
   esci: () => Promise<void>
@@ -56,17 +59,23 @@ export function ProviderApp({ children }: { children: ReactNode }) {
     telefono.avvia(sessione).catch((e) => segnalaErrore(e, 'avvio telefono'))
   }, [sessione, chiudiLocale])
 
+  const apri = useCallback(async (server: string, info: InfoServer, utente: Utente) => {
+    const nuova: Sessione = { server, db: info.db, azienda: info.company, utente, voip: true }
+    await salvaSessione(nuova)
+    setSessione(nuova)
+    setFase('dentro')
+  }, [])
+
   const valore = useMemo<ValoreApp>(
     () => ({
       fase,
       sessione,
       verificaServer: (indirizzo) => infoServer(indirizzo),
       entra: async (server, info, email, password) => {
-        const utente = await accedi(server, info.db, email.trim(), password)
-        const nuova: Sessione = { server, db: info.db, azienda: info.company, utente, voip: true }
-        await salvaSessione(nuova)
-        setSessione(nuova)
-        setFase('dentro')
+        await apri(server, info, await accedi(server, info.db, email.trim(), password))
+      },
+      entraConCodice: async (server, info, codice) => {
+        await apri(server, info, await confermaCodice(server, codice))
       },
       entraSoloOdoo: async (server) => {
         const nuova: Sessione = {
@@ -91,7 +100,7 @@ export function ProviderApp({ children }: { children: ReactNode }) {
         await chiudiLocale()
       },
     }),
-    [fase, sessione, chiudiLocale],
+    [fase, sessione, chiudiLocale, apri],
   )
 
   return <ContestoApp.Provider value={valore}>{children}</ContestoApp.Provider>

@@ -25,7 +25,11 @@ nel browser.
 Con il telefono:
 
 - **Accesso** con l'indirizzo di Odoo, email e password. Il server viene
-  verificato prima della password e mostra il nome dell'azienda.
+  verificato prima della password e mostra il nome dell'azienda. Con la
+  verifica in due passaggi attiva in Odoo l'app chiede poi il codice (app di
+  autenticazione o email) e lo passa alla pagina `/web/login/totp` di Odoo,
+  senza la casella «ricorda il dispositivo»: con lo User-Agent dell'app Odoo
+  17 e 19 rispondono 500.
 - **Tastierino** con ricerca nei contatti e nei lead di Odoo (nome o cifre).
 - **Chiamate in arrivo** dal centralino o sul numero diretto, anche con l'app
   chiusa e il telefono bloccato: squillo e schermata li fa il sistema

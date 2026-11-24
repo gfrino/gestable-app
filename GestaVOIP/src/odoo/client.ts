@@ -7,7 +7,7 @@
  * non serve, e un segreto in meno da tenere in giro.
  */
 
-export type TipoErrore = 'sessione' | 'rete' | 'server' | 'accesso' | 'modulo'
+export type TipoErrore = 'sessione' | 'rete' | 'server' | 'accesso' | 'modulo' | 'codice'
 
 export class ErroreOdoo extends Error {
   tipo: TipoErrore
@@ -141,10 +141,90 @@ export async function accedi(
     '/web/session/authenticate',
     { db, login, password },
   )
-  if (!r?.uid) {
-    throw new ErroreOdoo('accesso', 'Email o password non corrette.')
+  if (r?.uid) {
+    return { uid: r.uid, name: r.name || login, login: r.username || login, company: '' }
   }
-  return { uid: r.uid, name: r.name || login, login: r.username || login, company: '' }
+  // Password sbagliata = errore AccessDenied (gestito in rpc). Una risposta
+  // senza uid e senza errore vuol dire password giusta e verifica in due
+  // passaggi attiva: Odoo aspetta il codice. Se il telefono e' gia' fidato
+  // (cookie td_id, es. dato dal login nella vista web) basta aprire la pagina
+  // del codice.
+  await paginaCodice(base)
+  const utente = await utenteCollegato(base)
+  if (utente) {
+    return utente
+  }
+  throw new ErroreOdoo('codice', 'Serve il codice della verifica in due passaggi.')
+}
+
+/** Utente della sessione aperta, o null se Odoo aspetta ancora il codice. */
+async function utenteCollegato(base: string): Promise<Utente | null> {
+  try {
+    const r = await rpc<{ uid?: number | false; name?: string; username?: string }>(base, '/web/session/get_session_info')
+    return r?.uid ? { uid: r.uid, name: r.name || '', login: r.username || '', company: '' } : null
+  } catch (e) {
+    if (e instanceof ErroreOdoo && e.tipo === 'sessione') {
+      return null
+    }
+    throw e
+  }
+}
+
+/**
+ * Apre la pagina del codice di Odoo (`/web/login/totp`, Odoo 17 e 19) e ne
+ * restituisce il token CSRF del modulo. Con un telefono gia' fidato Odoo
+ * chiude qui l'accesso e rimanda a /web: il token allora non c'e'.
+ */
+async function paginaCodice(base: string): Promise<string> {
+  const controllo = new AbortController()
+  const timer = setTimeout(() => controllo.abort(), TIMEOUT_MS)
+  try {
+    const risposta = await fetch(`${base}/web/login/totp`, { credentials: 'include', signal: controllo.signal })
+    const html = await risposta.text()
+    return /name="csrf_token"[^>]*value="([^"]+)"/.exec(html)?.[1] || ''
+  } catch {
+    throw new ErroreOdoo('rete', "Server non raggiungibile: controlla la connessione a internet.")
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * Secondo passo dell'accesso: il codice dell'app di autenticazione (o quello
+ * ricevuto per email). Senza `remember`: con quella casella Odoo 17 e 19
+ * danno il nome al dispositivo dal browser dello User-Agent e con quello
+ * dell'app (nessun browser) rispondono 500. Il codice serve comunque solo a
+ * un nuovo accesso: la sessione dell'app resta aperta.
+ */
+export async function confermaCodice(base: string, codice: string): Promise<Utente> {
+  const token = await paginaCodice(base)
+  const gia = await utenteCollegato(base)
+  if (gia) {
+    return gia
+  }
+  if (!token) {
+    throw new ErroreOdoo('sessione', 'Il tempo per il codice e\' scaduto: accedi di nuovo.')
+  }
+  const controllo = new AbortController()
+  const timer = setTimeout(() => controllo.abort(), TIMEOUT_MS)
+  try {
+    await fetch(`${base}/web/login/totp`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ csrf_token: token, totp_token: codice.replace(/\s/g, '') }).toString(),
+      signal: controllo.signal,
+    })
+  } catch {
+    throw new ErroreOdoo('rete', "Server non raggiungibile: controlla la connessione a internet.")
+  } finally {
+    clearTimeout(timer)
+  }
+  const utente = await utenteCollegato(base)
+  if (!utente) {
+    throw new ErroreOdoo('accesso', 'Codice non valido o scaduto: riprova con quello nuovo.')
+  }
+  return utente
 }
 
 export async function esci(base: string): Promise<void> {

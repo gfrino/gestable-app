@@ -1,5 +1,6 @@
 /**
- * Accesso in due passi: prima l'indirizzo di Odoo, poi email e password.
+ * Accesso in due passi: prima l'indirizzo di Odoo, poi email e password (e il
+ * codice, per chi ha la verifica in due passaggi attiva in Odoo).
  *
  * Il primo passo verifica subito il server e mostra il nome dell'azienda:
  * chi sbaglia indirizzo lo vede prima di digitare la password, non dopo.
@@ -19,19 +20,22 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { normalizzaIndirizzo, type InfoServer } from '../odoo/client'
+import { ErroreOdoo, normalizzaIndirizzo, type InfoServer } from '../odoo/client'
 import { useApp } from '../voip/Contesto'
 import { raggio, spazio, useColori } from '../ui/tema'
 import { Pulsante } from '../ui/Pulsante'
 
 export default function Login() {
   const c = useColori()
-  const { verificaServer, entra, entraSoloOdoo } = useApp()
+  const { verificaServer, entra, entraConCodice, entraSoloOdoo } = useApp()
   const [indirizzo, setIndirizzo] = useState('')
   const [server, setServer] = useState('')
   const [info, setInfo] = useState<InfoServer | null>(null)
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  // Password giusta, Odoo aspetta il codice della verifica in due passaggi.
+  const [chiediCodice, setChiediCodice] = useState(false)
+  const [codice, setCodice] = useState('')
   const [occupato, setOccupato] = useState(false)
   const [errore, setErrore] = useState('')
 
@@ -63,9 +67,41 @@ export default function Login() {
     try {
       await entra(server, info, email, password)
     } catch (e) {
+      if (e instanceof ErroreOdoo && e.tipo === 'codice') {
+        setChiediCodice(true)
+      } else {
+        setErrore(e instanceof Error ? e.message : String(e))
+      }
+      setOccupato(false)
+    }
+  }
+
+  async function confermaCodice() {
+    if (!info || !codice.trim()) {
+      setErrore('Scrivi il codice.')
+      return
+    }
+    setOccupato(true)
+    setErrore('')
+    try {
+      await entraConCodice(server, info, codice)
+    } catch (e) {
+      setCodice('')
+      if (e instanceof ErroreOdoo && e.tipo === 'sessione') {
+        // Troppo tempo fra password e codice: si riparte dalla password.
+        setChiediCodice(false)
+        setPassword('')
+      }
       setErrore(e instanceof Error ? e.message : String(e))
       setOccupato(false)
     }
+  }
+
+  function annullaCodice() {
+    setChiediCodice(false)
+    setCodice('')
+    setPassword('')
+    setErrore('')
   }
 
   async function apriOdoo() {
@@ -78,6 +114,8 @@ export default function Login() {
       onPress={() => {
         setInfo(null)
         setPassword('')
+        setChiediCodice(false)
+        setCodice('')
         setErrore('')
       }}
       style={[s.server, { backgroundColor: c.primarioTenue }]}
@@ -133,6 +171,38 @@ export default function Login() {
                 </Text>
               </View>
               <Pulsante testo="Apri Odoo" onPress={apriOdoo} occupato={occupato} />
+            </View>
+          ) : chiediCodice ? (
+            <View style={s.blocco}>
+              {cambiaServer}
+              <View style={[s.nota, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
+                <Text style={[s.notaTitolo, { color: c.testo }]}>Verifica in due passaggi</Text>
+                <Text style={[s.notaTesto, { color: c.testo2 }]}>
+                  Scrivi il codice dell&apos;app di autenticazione (o quello arrivato per email). Serve
+                  solo a questo accesso: poi l&apos;app resta collegata.
+                </Text>
+              </View>
+              <Text style={[s.etichetta, { color: c.testo2 }]}>Codice</Text>
+              <TextInput
+                style={[campo, s.codice]}
+                value={codice}
+                onChangeText={setCodice}
+                placeholder="123456"
+                placeholderTextColor={c.testo3}
+                keyboardType="number-pad"
+                textContentType="oneTimeCode"
+                autoComplete="one-time-code"
+                maxLength={8}
+                autoFocus
+                returnKeyType="go"
+                onSubmitEditing={confermaCodice}
+              />
+              <Pulsante testo="Conferma" onPress={confermaCodice} occupato={occupato} />
+              <Pressable onPress={annullaCodice} hitSlop={8} style={s.indietro} accessibilityRole="button">
+                <Text style={[s.indietroTesto, { color: c.primario }]} numberOfLines={1}>
+                  Torna alla password
+                </Text>
+              </Pressable>
             </View>
           ) : (
             <View style={s.blocco}>
@@ -197,5 +267,8 @@ const s = StyleSheet.create({
   server: { borderRadius: raggio.m, padding: spazio.l, gap: 2 },
   serverNome: { fontSize: 17, fontWeight: '700' },
   serverUrl: { fontSize: 13 },
+  codice: { fontSize: 24, letterSpacing: 6, textAlign: 'center' },
+  indietro: { alignSelf: 'center', padding: spazio.s },
+  indietroTesto: { fontSize: 15, fontWeight: '600' },
   errore: { borderRadius: raggio.m, padding: spazio.m, marginTop: spazio.m },
 })
