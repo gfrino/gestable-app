@@ -20,14 +20,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, BackHandler, Linking, Platform, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, BackHandler, Linking, Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { WebView, type WebViewNavigation } from 'react-native-webview'
 import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes'
 import { t } from '../i18n'
 import { ascoltaOdoo, prendiInAttesa, type ComandoOdoo } from './comandiOdoo'
 import { PulsanteMenu } from './MenuLaterale'
-import { APRI_PANNELLO, dopoIlCaricamento, MOSTRA_HOME, PRIMA_DEL_CARICAMENTO, vaiA } from './odooIniettato'
+import { APRI_PANNELLO, AURORA, dopoIlCaricamento, MOSTRA_HOME, PRIMA_DEL_CARICAMENTO, vaiA } from './odooIniettato'
 import { Pulsante } from './Pulsante'
 import { spazio, useColori } from './tema'
 
@@ -70,6 +70,16 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
   const [errore, setErrore] = useState(false)
   const [chiave, setChiave] = useState(0)
   const [nelLogin, setNelLogin] = useState(false)
+  // Tema scuro con la griglia delle app a vista: la barra in alto e' trasparente
+  // sopra la stessa sfumatura «Aurora» della pagina, che continua senza stacco.
+  const scuro = useColorScheme() === 'dark'
+  const [home, setHome] = useState(false)
+  const aurora = scuro && home && !errore
+  // Altezza della barra (con la zona di stato): la pagina ne sposta in su la sfumatura.
+  const alto = useRef(0)
+  function passaAlto() {
+    vista.current?.injectJavaScript(`document.documentElement.style.setProperty('--gv-alto', '${alto.current}px'); true;`)
+  }
 
   // Comandi dal resto dell'app: home (tasto Odoo) o apri un record.
   useEffect(
@@ -148,8 +158,9 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
   }
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.superficie }]} edges={['top']}>
-      <View style={[s.barra, { borderBottomColor: c.bordo }]}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: aurora ? '#232846' : c.superficie }]} edges={['top']}>
+      {aurora ? <View pointerEvents="none" style={[StyleSheet.absoluteFill, { experimental_backgroundImage: AURORA }]} /> : null}
+      <View style={[s.barra, { borderBottomColor: aurora ? 'transparent' : c.bordo }]}>
         <PulsanteMenu />
         <Text style={[s.titolo, { color: c.testo }]} numberOfLines={1}>
           {titolo || host(server)}
@@ -194,8 +205,17 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
           injectedJavaScriptBeforeContentLoaded={PRIMA_DEL_CARICAMENTO}
           injectedJavaScript={dopoIlCaricamento()}
           // Su iOS lo script dopo il caricamento parte solo se la vista ha anche
-          // un ricevitore di messaggi: questo, che per ora non riceve nulla.
-          onMessage={() => undefined}
+          // un ricevitore di messaggi: qui arriva se la griglia delle app e' a vista.
+          onMessage={(e) => {
+            const m = e.nativeEvent.data
+            if (m === 'gv-home:1' || m === 'gv-home:0') {
+              setHome(m === 'gv-home:1')
+            }
+          }}
+          onLayout={(e) => {
+            alto.current = Math.round(e.nativeEvent.layout.y)
+            passaAlto()
+          }}
           onShouldStartLoadWithRequest={decidi}
           onNavigationStateChange={(n: WebViewNavigation) => {
             indietro.current = n.canGoBack
@@ -203,6 +223,7 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
           }}
           onLoadEnd={() => {
             pronta.current = true
+            passaAlto()
             // Alla prima apertura si parte dalla home; «Ricarica» resta dov'e'.
             if (recordInAttesa.current) {
               const percorso = recordInAttesa.current
@@ -215,6 +236,7 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
           }}
           onLoadStart={() => {
             pronta.current = false
+            setHome(false)
           }}
           startInLoadingState
           renderLoading={() => (

@@ -42,6 +42,15 @@ export const PRIMA_DEL_CARICAMENTO = `
 true;
 `
 
+/**
+ * Sfondo «Aurora» del tema scuro: lo stesso testo CSS vale per la pagina (qui)
+ * e per la barra dell'app sopra (experimental_backgroundImage in VistaOdoo).
+ */
+export const AURORA =
+  'radial-gradient(80% 55% at 15% 10%, #6A4BB0 0%, transparent 70%), ' +
+  'radial-gradient(75% 55% at 90% 95%, #1F7A5C 0%, transparent 70%), ' +
+  'linear-gradient(180deg, #2C3159 0%, #232846 100%)'
+
 const CSS = `
 .o_main_navbar { display: none !important; }
 #gv-home { position: fixed; inset: 0; z-index: 1040; overflow-y: auto; -webkit-overflow-scrolling: touch;
@@ -69,11 +78,12 @@ const CSS = `
      verde in basso (i colori dell'app). Sta in ::before, fermo mentre la griglia
      scorre; niente immagini da scaricare. */
   #gv-home { background: #232846; color: #F2F3F8; }
-  #gv-home::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
-    background:
-      radial-gradient(80% 55% at 15% 10%, #6A4BB0 0%, transparent 70%),
-      radial-gradient(75% 55% at 90% 95%, #1F7A5C 0%, transparent 70%),
-      linear-gradient(180deg, #2C3159 0%, #232846 100%); }
+  /* Il riquadro parte sopra la pagina quanto e' alta la barra dell'app
+     (--gv-alto): la stessa sfumatura disegnata dall'app dietro la barra
+     continua qui senza stacco. */
+  #gv-home::before { content: ''; position: fixed; left: 0; right: 0; bottom: 0;
+    top: calc(-1 * var(--gv-alto, 0px)); z-index: -1; pointer-events: none;
+    background: ${AURORA}; }
   #gv-home .gv-cerca { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.18);
     -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 8px 24px rgba(0,0,0,.18); }
   #gv-home .gv-cerca input::placeholder { color: rgba(255,255,255,.6); }
@@ -144,9 +154,14 @@ export function dopoIlCaricamento(): string {
       griglia.appendChild(b);
     });
   }
+  // Dice all'app se la griglia e' a vista (la barra sopra prende lo stesso sfondo).
+  function avvisa(visibile) {
+    try { window.ReactNativeWebView.postMessage(visibile ? 'gv-home:1' : 'gv-home:0'); } catch (e) {}
+  }
   function nascondi() {
     var home = document.getElementById('gv-home');
     if (home) { home.classList.remove('gv-visibile'); setTimeout(function () { home.style.display = 'none'; }, 180); }
+    avvisa(false);
   }
   function mostra(tentativo) {
     var svc = servizioMenu();
@@ -172,6 +187,7 @@ export function dopoIlCaricamento(): string {
     home.style.display = 'block';
     home.scrollTop = 0;
     requestAnimationFrame(function () { home.classList.add('gv-visibile'); });
+    avvisa(true);
   }
   window.__gvHome = mostra;
   window.__gvNascondiHome = nascondi;
