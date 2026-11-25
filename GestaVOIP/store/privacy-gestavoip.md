@@ -35,10 +35,21 @@ telefonico scelto dalla tua azienda). Per far squillare l'app quando è chiusa
 si usano le notifiche di Apple (PushKit) e di Google (Firebase Cloud
 Messaging), che ricevono solo un avviso tecnico di chiamata in arrivo.
 
+## Report degli errori (Android)
+
+Sui telefoni Android, quando l'app incontra un errore (anche senza chiudersi),
+invia a ticinoWEB un report tecnico tramite Firebase Crashlytics (Google): tipo
+di errore, modello del telefono e versione di Android, un identificativo casuale
+dell'installazione e un codice interno del tuo utente (database e numero utente
+di Odoo, senza nome né email). Il report serve solo a correggere gli errori e
+viene cancellato automaticamente dopo 90 giorni. Su iPhone questi report non
+vengono inviati.
+
 ## Cosa non facciamo
 
 - nessuna pubblicità e nessun tracciamento;
-- nessun dato di analisi o profilazione inviato a ticinoWEB o a terzi;
+- nessun dato di analisi o profilazione inviato a ticinoWEB o a terzi, a parte
+  i report degli errori descritti sopra;
 - nessuna lettura della rubrica, delle foto o della posizione del telefono.
 
 ## Server autorizzati
