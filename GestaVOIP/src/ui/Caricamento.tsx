@@ -21,12 +21,12 @@ const GIRO_MS = 900
 const PAUSA_MS = 280
 
 type Props = {
-  /** Lato del logo in punti (48 per una schermata intera). */
+  /** Lato del logo in punti (64 per una schermata intera). */
   dimensione?: number
   style?: StyleProp<ViewStyle>
 }
 
-export function Caricamento({ dimensione = 48, style }: Props) {
+export function Caricamento({ dimensione = 64, style }: Props) {
   const scuro = useColorScheme() === 'dark'
   const { colore } = useAspetto().aspetto
   // Il colore scelto per primo, poi gli altri del tema, e il verde delle chiamate.

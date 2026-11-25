@@ -241,7 +241,7 @@ export default function Login() {
               <Text style={{ color: c.rosso }}>{errore}</Text>
             </View>
           ) : null}
-          {occupato && !info ? <Caricamento dimensione={36} style={{ marginTop: spazio.l }} /> : null}
+          {occupato && !info ? <Caricamento dimensione={44} style={{ marginTop: spazio.l }} /> : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

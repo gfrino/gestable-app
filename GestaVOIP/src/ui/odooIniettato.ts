@@ -43,9 +43,15 @@ true;
 `
 
 /**
- * Sfondo «Aurora» del tema scuro: lo stesso testo CSS vale per la pagina (qui)
- * e per la barra dell'app sopra (experimental_backgroundImage in VistaOdoo).
+ * Sfondo «Aurora» della griglia delle app, scuro e chiaro: lo stesso testo CSS
+ * vale per la pagina (qui) e per la barra dell'app sopra
+ * (experimental_backgroundImage in VistaOdoo), che cosi' continuano senza stacco.
  */
+export const AURORA_CHIARA =
+  'radial-gradient(80% 55% at 15% 10%, #E2D3F6 0%, transparent 70%), ' +
+  'radial-gradient(75% 55% at 90% 95%, #CDEEDD 0%, transparent 70%), ' +
+  'linear-gradient(180deg, #F6F3FC 0%, #EEF2F8 100%)'
+
 export const AURORA =
   'radial-gradient(80% 55% at 15% 10%, #6A4BB0 0%, transparent 70%), ' +
   'radial-gradient(75% 55% at 90% 95%, #1F7A5C 0%, transparent 70%), ' +
@@ -54,18 +60,24 @@ export const AURORA =
 const CSS = `
 .o_main_navbar { display: none !important; }
 #gv-home { position: fixed; inset: 0; z-index: 1040; overflow-y: auto; -webkit-overflow-scrolling: touch;
-  background: #F6F7FB; color: #151826; font-family: -apple-system, system-ui, sans-serif;
+  background: #EEF2F8; color: #151826; font-family: -apple-system, system-ui, sans-serif;
   padding: 18px 16px 40px; opacity: 0; transform: translateY(8px); transition: opacity .18s ease, transform .18s ease; }
 #gv-home.gv-visibile { opacity: 1; transform: none; }
-#gv-home .gv-cerca { display: flex; align-items: center; gap: 8px; background: #FFFFFF; border: 1px solid #E1E4EE;
-  border-radius: 14px; padding: 0 14px; margin-bottom: 18px; box-shadow: 0 1px 2px rgba(20,24,40,.04); }
+/* Il riquadro parte sopra la pagina quanto e' alta la barra dell'app (--gv-alto):
+   la stessa sfumatura disegnata dall'app dietro la barra continua qui senza stacco. */
+#gv-home::before { content: ''; position: fixed; left: 0; right: 0; bottom: 0;
+  top: calc(-1 * var(--gv-alto, 0px)); z-index: -1; pointer-events: none;
+  background: ${AURORA_CHIARA}; }
+#gv-home .gv-cerca { display: flex; align-items: center; gap: 8px; background: rgba(255,255,255,.72); border: 1px solid rgba(255,255,255,.95);
+  -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px);
+  border-radius: 14px; padding: 0 14px; margin-bottom: 18px; box-shadow: 0 6px 20px rgba(60,40,120,.08); }
 #gv-home .gv-cerca input { flex: 1; border: 0; outline: 0; background: transparent; font-size: 17px; padding: 13px 0; color: inherit; }
 #gv-home .gv-griglia { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px 8px; }
 #gv-home .gv-app { display: flex; flex-direction: column; align-items: center; gap: 7px; background: none; border: 0;
   padding: 0; color: inherit; -webkit-tap-highlight-color: transparent; }
 #gv-home .gv-app:active .gv-icona { transform: scale(.92); }
 #gv-home .gv-icona { width: 62px; height: 62px; border-radius: 17px; display: flex; align-items: center; justify-content: center;
-  background: #FFFFFF; box-shadow: 0 2px 6px rgba(20,24,40,.10), 0 0 0 1px rgba(20,24,40,.04); overflow: hidden; transition: transform .12s ease; }
+  background: #FFFFFF; box-shadow: 0 6px 16px rgba(60,40,120,.12), 0 0 0 1px rgba(20,24,40,.04); overflow: hidden; transition: transform .12s ease; }
 #gv-home .gv-icona { padding: 9px; box-sizing: border-box; }
 #gv-home .gv-icona img { width: 100%; height: 100%; object-fit: contain; border-radius: 9px; }
 #gv-home .gv-icona i { font-size: 28px; }
@@ -78,12 +90,7 @@ const CSS = `
      verde in basso (i colori dell'app). Sta in ::before, fermo mentre la griglia
      scorre; niente immagini da scaricare. */
   #gv-home { background: #232846; color: #F2F3F8; }
-  /* Il riquadro parte sopra la pagina quanto e' alta la barra dell'app
-     (--gv-alto): la stessa sfumatura disegnata dall'app dietro la barra
-     continua qui senza stacco. */
-  #gv-home::before { content: ''; position: fixed; left: 0; right: 0; bottom: 0;
-    top: calc(-1 * var(--gv-alto, 0px)); z-index: -1; pointer-events: none;
-    background: ${AURORA}; }
+  #gv-home::before { background: ${AURORA}; }
   #gv-home .gv-cerca { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.18);
     -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 8px 24px rgba(0,0,0,.18); }
   #gv-home .gv-cerca input::placeholder { color: rgba(255,255,255,.6); }

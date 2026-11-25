@@ -27,7 +27,7 @@ import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTyp
 import { t } from '../i18n'
 import { ascoltaOdoo, prendiInAttesa, type ComandoOdoo } from './comandiOdoo'
 import { PulsanteMenu } from './MenuLaterale'
-import { APRI_PANNELLO, AURORA, dopoIlCaricamento, MOSTRA_HOME, PRIMA_DEL_CARICAMENTO, vaiA } from './odooIniettato'
+import { APRI_PANNELLO, AURORA, AURORA_CHIARA, dopoIlCaricamento, MOSTRA_HOME, PRIMA_DEL_CARICAMENTO, vaiA } from './odooIniettato'
 import { Pulsante } from './Pulsante'
 import { spazio, useColori } from './tema'
 import { Caricamento } from './Caricamento'
@@ -71,11 +71,11 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
   const [errore, setErrore] = useState(false)
   const [chiave, setChiave] = useState(0)
   const [nelLogin, setNelLogin] = useState(false)
-  // Tema scuro con la griglia delle app a vista: la barra in alto e' trasparente
-  // sopra la stessa sfumatura «Aurora» della pagina, che continua senza stacco.
+  // Con la griglia delle app a vista la barra in alto e' trasparente sopra la
+  // stessa sfumatura «Aurora» della pagina (scura o chiara), senza stacco.
   const scuro = useColorScheme() === 'dark'
   const [home, setHome] = useState(false)
-  const aurora = scuro && home && !errore
+  const aurora = home && !errore
   // Altezza della barra (con la zona di stato): la pagina ne sposta in su la sfumatura.
   const alto = useRef(0)
   function passaAlto() {
@@ -159,8 +159,10 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
   }
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: aurora ? '#232846' : c.superficie }]} edges={['top']}>
-      {aurora ? <View pointerEvents="none" style={[StyleSheet.absoluteFill, { experimental_backgroundImage: AURORA }]} /> : null}
+    <SafeAreaView style={[s.pagina, { backgroundColor: aurora ? (scuro ? '#232846' : '#EEF2F8') : c.superficie }]} edges={['top']}>
+      {aurora ? (
+        <View pointerEvents="none" style={[StyleSheet.absoluteFill, { experimental_backgroundImage: scuro ? AURORA : AURORA_CHIARA }]} />
+      ) : null}
       <View style={[s.barra, { borderBottomColor: aurora ? 'transparent' : c.bordo }]}>
         <PulsanteMenu />
         <Text style={[s.titolo, { color: c.testo }]} numberOfLines={1}>

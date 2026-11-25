@@ -106,7 +106,7 @@ export function CercaPersone({ aperto, server, tipo, scelti, chiudi, tocca }: Pr
       {errore ? (
         <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>
       ) : !lista ? (
-        <Caricamento dimensione={36} style={{ marginTop: spazio.xl }} />
+        <Caricamento dimensione={44} style={{ marginTop: spazio.xl }} />
       ) : (
         <FlatList
           data={lista}
