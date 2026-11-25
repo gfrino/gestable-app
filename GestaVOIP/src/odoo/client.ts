@@ -157,6 +157,74 @@ export async function accedi(
   throw new ErroreOdoo('codice', 'Serve il codice della verifica in due passaggi.')
 }
 
+/**
+ * Accesso dalla pagina di login di Odoo (/web/login), per gli Odoo senza VOIP
+ * AI: non serve sapere il nome del database (lo sceglie il server), e il
+ * cookie di sessione resta all'app, che lo passa poi alla vista web.
+ * Stessi esiti di accedi(): utente, codice della verifica in due passaggi, o
+ * credenziali sbagliate.
+ */
+export async function accediDallaPagina(base: string, login: string, password: string): Promise<Utente & { db: string }> {
+  const controllo = new AbortController()
+  const timer = setTimeout(() => controllo.abort(), TIMEOUT_MS * 2)
+  let finale = ''
+  try {
+    const pagina = await fetch(`${base}/web/login`, { credentials: 'include', signal: controllo.signal })
+    const html = await pagina.text()
+    const token = /name="csrf_token"[^>]*value="([^"]+)"/.exec(html)?.[1] || ''
+    if (!token) {
+      throw new ErroreOdoo('server', "A questo indirizzo non risponde la pagina di accesso di Odoo.")
+    }
+    const r = await fetch(`${base}/web/login`, {
+      method: 'POST',
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ csrf_token: token, login, password, redirect: '/web' }).toString(),
+      signal: controllo.signal,
+    })
+    finale = r.url || ''
+  } catch (e) {
+    if (e instanceof ErroreOdoo) {
+      throw e
+    }
+    throw new ErroreOdoo('rete', "Server non raggiungibile: controlla l'indirizzo e la connessione a internet.")
+  } finally {
+    clearTimeout(timer)
+  }
+  const info = await infoSessione(base)
+  if (info) {
+    return info
+  }
+  if (/\/web\/login\/totp/.test(finale)) {
+    throw new ErroreOdoo('codice', 'Serve il codice della verifica in due passaggi.')
+  }
+  throw new ErroreOdoo('accesso', 'Email o password non corrette.')
+}
+
+/** Utente e database della sessione aperta, o null se non c'e' (o aspetta il codice). */
+export async function infoSessione(base: string): Promise<(Utente & { db: string }) | null> {
+  try {
+    const r = await rpc<{
+      uid?: number | false
+      name?: string
+      username?: string
+      db?: string
+      user_companies?: { current_company?: number; allowed_companies?: Record<string, { name?: string }> }
+    }>(base, '/web/session/get_session_info')
+    if (!r?.uid) {
+      return null
+    }
+    const corrente = r.user_companies?.current_company
+    const azienda = corrente ? r.user_companies?.allowed_companies?.[String(corrente)]?.name || '' : ''
+    return { uid: r.uid, name: r.name || '', login: r.username || '', company: azienda, db: r.db || '' }
+  } catch (e) {
+    if (e instanceof ErroreOdoo && e.tipo === 'sessione') {
+      return null
+    }
+    throw e
+  }
+}
+
 /** Utente della sessione aperta, o null se Odoo aspetta ancora il codice. */
 async function utenteCollegato(base: string): Promise<Utente | null> {
   try {

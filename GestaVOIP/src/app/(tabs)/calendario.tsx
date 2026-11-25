@@ -27,6 +27,8 @@ import { delGiorno, eventi, giornoChiave, giornoEsteso, type Evento } from '../.
 import { PulsanteMenu } from '../../ui/MenuLaterale'
 import { raggio, spazio, useColori } from '../../ui/tema'
 import { useApp } from '../../voip/Contesto'
+import { APP } from '../../odoo/capacita'
+import { RichiedeApp } from '../../ui/RichiedeApp'
 
 const SETTIMANE = 52 // avanti e indietro da oggi
 const LETTERE = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
@@ -48,7 +50,7 @@ function ora(d: Date): string {
   return d.toLocaleTimeString('it-CH', { hour: '2-digit', minute: '2-digit' })
 }
 
-export default function Calendario() {
+function VistaCalendario() {
   const c = useColori()
   const router = useRouter()
   const navigation = useNavigation()
@@ -339,3 +341,11 @@ const s = StyleSheet.create({
   vuoto: { fontSize: 15, textAlign: 'center', marginTop: spazio.s },
   vuotoBlocco: { alignItems: 'center', marginTop: spazio.xxl },
 })
+
+export default function Calendario() {
+  return (
+    <RichiedeApp xmlid={APP.calendario} app="Calendario" titolo="Calendario" icona="calendar">
+      <VistaCalendario />
+    </RichiedeApp>
+  )
+}

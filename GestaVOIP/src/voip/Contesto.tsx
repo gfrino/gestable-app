@@ -5,7 +5,8 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Alert } from 'react-native'
 import { MESSAGGIO_NON_AUTORIZZATO, MESSAGGIO_NON_VERIFICABILE, verificaServer as autorizzato } from '../odoo/autorizzati'
-import { accedi, confermaCodice, ErroreOdoo, esci, infoServer, type InfoServer, type Utente } from '../odoo/client'
+import { accedi, accediDallaPagina, confermaCodice, ErroreOdoo, esci, infoServer, infoSessione, type InfoServer, type Utente } from '../odoo/client'
+import { dimenticaMenu } from '../odoo/capacita'
 import { conTelefono, dimenticaSessione, leggiSessione, salvaSessione, type Sessione } from '../odoo/sessione'
 import { segnalaErrore, utenteCrash } from '../ui/crash'
 import { telefono, type StatoTelefono } from './telefono'
@@ -33,6 +34,7 @@ export function ProviderApp({ children }: { children: ReactNode }) {
 
   const chiudiLocale = useCallback(async () => {
     await dimenticaSessione()
+    dimenticaMenu()
     setSessione(null)
     setFase('fuori')
   }, [])
@@ -72,8 +74,15 @@ export function ProviderApp({ children }: { children: ReactNode }) {
     telefono.avvia(sessione).catch((e) => segnalaErrore(e, 'avvio telefono'))
   }, [sessione, chiudiLocale])
 
-  const apri = useCallback(async (server: string, info: InfoServer, utente: Utente) => {
-    const nuova: Sessione = { server, db: info.db, azienda: info.company, utente, voip: true }
+  const apri = useCallback(async (server: string, info: InfoServer, utente: Utente & { db?: string }) => {
+    // Senza VOIP AI database e azienda li dice la sessione appena aperta.
+    const nuova: Sessione = {
+      server,
+      db: info.db || utente.db || '',
+      azienda: info.company || utente.company || '',
+      utente: { uid: utente.uid, name: utente.name, login: utente.login, company: utente.company },
+      voip: info.voip,
+    }
     await salvaSessione(nuova)
     setSessione(nuova)
     setFase('dentro')
@@ -96,10 +105,16 @@ export function ProviderApp({ children }: { children: ReactNode }) {
         return infoServer(indirizzo)
       },
       entra: async (server, info, email, password) => {
-        await apri(server, info, await accedi(server, info.db, email.trim(), password))
+        // Con VOIP AI si conosce il database e si entra via JSON; senza, dalla
+        // pagina di login di Odoo, che il database lo sceglie da sola.
+        const utente = info.voip
+          ? await accedi(server, info.db, email.trim(), password)
+          : await accediDallaPagina(server, email.trim(), password)
+        await apri(server, info, utente)
       },
       entraConCodice: async (server, info, codice) => {
-        await apri(server, info, await confermaCodice(server, codice))
+        const utente = await confermaCodice(server, codice)
+        await apri(server, info, info.voip ? utente : (await infoSessione(server)) || utente)
       },
       entraSoloOdoo: async (server) => {
         const nuova: Sessione = {

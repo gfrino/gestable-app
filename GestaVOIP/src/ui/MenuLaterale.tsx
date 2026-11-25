@@ -199,7 +199,10 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
   }
 
   function chiediUscita() {
-    Alert.alert('Uscire?', 'Esci da Odoo su questo telefono: il telefono smette di squillare finché non rientri.', [
+    const avviso = conTelefono(sessione)
+      ? 'Esci da Odoo su questo telefono: il telefono smette di squillare finché non rientri.'
+      : 'Esci da Odoo su questo telefono.'
+    Alert.alert('Uscire?', avviso, [
       { text: 'Annulla', style: 'cancel' },
       {
         text: 'Esci',
@@ -278,8 +281,13 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
         ) : null}
 
         <View style={s.voci}>
-          <Voce c={c} icona="chatbubbles" testo="Messaggi" numero={n.messaggi} onPress={() => vai('/messaggi')} />
-          <Voce c={c} icona="checkmark-done-circle" testo="Attività" numero={n.attivita} onPress={() => vai('/attivita')} />
+          {/* Chi e' entrato dalla pagina di Odoo (Google, Microsoft) le ha nella vista Odoo. */}
+          {sessione.utente.uid ? (
+            <>
+              <Voce c={c} icona="chatbubbles" testo="Messaggi" numero={n.messaggi} onPress={() => vai('/messaggi')} />
+              <Voce c={c} icona="checkmark-done-circle" testo="Attività" numero={n.attivita} onPress={() => vai('/attivita')} />
+            </>
+          ) : null}
           {telefono ? <Voce c={c} icona="settings" testo="Impostazioni" onPress={() => vai('/impostazioni')} /> : null}
         </View>
 

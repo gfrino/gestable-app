@@ -7,7 +7,6 @@ import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, T
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { dettaglioEvento, ETICHETTE_STATO, rispondi, type DettaglioEvento, type Partecipante } from '../../odoo/calendario'
 import { percorsoRecord, urlAvatar } from '../../odoo/lavoro'
-import { conTelefono } from '../../odoo/sessione'
 import { testoDaHtml } from '../../odoo/testo'
 import { Avatar } from '../../ui/Avatar'
 import { inviaOdoo, rottaOdoo } from '../../ui/comandiOdoo'
@@ -89,7 +88,7 @@ export default function Appuntamento() {
       return
     }
     inviaOdoo({ tipo: 'apri', percorso: percorsoRecord('calendar.event', e.id) })
-    router.dismissTo(rottaOdoo(conTelefono(sessione)))
+    router.dismissTo(rottaOdoo())
   }
 
   const io = e?.persone.find((p) => p.io)

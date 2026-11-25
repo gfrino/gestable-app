@@ -22,16 +22,9 @@ function Navigazione() {
 
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: c.sfondo } }}>
-      <Stack.Protected guard={fase === 'dentro' && telefono}>
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen
-          name="chiamata"
-          options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', gestureEnabled: false }}
-        />
-        <Stack.Screen name="impostazioni" />
-      </Stack.Protected>
-      {/* Dal menu laterale, con o senza telefono. */}
+      {/* Schede e schermate di Odoo: per tutti, con o senza telefono. */}
       <Stack.Protected guard={fase === 'dentro'}>
+        <Stack.Screen name="(tabs)" />
         <Stack.Screen name="messaggi/index" />
         <Stack.Screen name="messaggi/[id]" />
         <Stack.Screen name="attivita" />
@@ -40,9 +33,13 @@ function Navigazione() {
         <Stack.Screen name="contatti/[id]" />
         <Stack.Screen name="contatti/nuovo" options={{ presentation: 'modal' }} />
       </Stack.Protected>
-      {/* Odoo senza VOIP AI: niente telefono, solo Odoo. */}
-      <Stack.Protected guard={fase === 'dentro' && !telefono}>
-        <Stack.Screen name="odoo" />
+      {/* Il telefono: solo con VOIP AI. */}
+      <Stack.Protected guard={fase === 'dentro' && telefono}>
+        <Stack.Screen
+          name="chiamata"
+          options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', gestureEnabled: false }}
+        />
+        <Stack.Screen name="impostazioni" />
       </Stack.Protected>
       <Stack.Protected guard={fase !== 'dentro'}>
         <Stack.Screen name="login" />

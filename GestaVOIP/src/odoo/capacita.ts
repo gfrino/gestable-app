@@ -1,0 +1,82 @@
+/**
+ * Quali app di Odoo ha questo server, viste dall'utente collegato.
+ *
+ * L'elenco dei moduli (ir.module.module) lo legge solo l'amministratore: qui
+ * si usano i menu che Odoo da' al suo client web, che ogni utente puo'
+ * leggere e che portano l'identificativo di ogni app («calendar.mail_menu_calendar»).
+ * Un'app che manca dai menu o non e' installata o l'utente non la puo' usare:
+ * in tutti e due i casi deve intervenire l'amministratore del suo Odoo.
+ */
+
+import { ErroreOdoo } from './client'
+
+/** Gli identificativi dei menu che l'app sa usare. */
+export const APP = {
+  calendario: 'calendar.mail_menu_calendar',
+  contatti: 'contacts.menu_contacts',
+} as const
+
+const DURATA_MS = 10 * 60_000
+const TIMEOUT_MS = 15_000
+
+type Voce = { at: number; menu: Promise<Set<string> | null> }
+const memoria = new Map<string, Voce>()
+
+async function scarica(percorso: string): Promise<Response> {
+  const controllo = new AbortController()
+  const timer = setTimeout(() => controllo.abort(), TIMEOUT_MS)
+  try {
+    return await fetch(percorso, { credentials: 'include', headers: { Accept: 'application/json' }, signal: controllo.signal })
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * Gli xmlid dei menu visibili all'utente, o null se non si sa (rete, Odoo
+ * troppo vecchio): in quel caso l'app prova lo stesso invece di bloccare.
+ * Lancia ErroreOdoo('sessione') se il server non riconosce l'accesso.
+ */
+async function leggiMenu(server: string): Promise<Set<string> | null> {
+  // Odoo 18 e successivi: /web/webclient/load_menus; Odoo 17: con un valore in fondo.
+  let r = await scarica(`${server}/web/webclient/load_menus`)
+  if (r.status === 404) {
+    r = await scarica(`${server}/web/webclient/load_menus/${Date.now()}`)
+  }
+  // Senza accesso Odoo rimanda alla pagina di login (HTML, non JSON).
+  if (r.url.includes('/web/login') || (r.headers.get('content-type') || '').includes('text/html')) {
+    throw new ErroreOdoo('sessione', 'La sessione e\' scaduta: accedi di nuovo.')
+  }
+  if (!r.ok) {
+    return null
+  }
+  const menu = (await r.json()) as Record<string, { xmlid?: string }>
+  const xmlid = new Set<string>()
+  for (const m of Object.values(menu)) {
+    if (m?.xmlid) {
+      xmlid.add(m.xmlid)
+    }
+  }
+  return xmlid.size ? xmlid : null
+}
+
+export function menuOdoo(server: string, forza = false): Promise<Set<string> | null> {
+  const v = memoria.get(server)
+  if (v && !forza && Date.now() - v.at < DURATA_MS) {
+    return v.menu
+  }
+  const menu = leggiMenu(server).catch((e: unknown) => {
+    memoria.delete(server)
+    if (e instanceof ErroreOdoo) {
+      throw e
+    }
+    return null
+  })
+  memoria.set(server, { at: Date.now(), menu })
+  return menu
+}
+
+/** Dimentica quanto letto (all'uscita o cambiando server). */
+export function dimenticaMenu(): void {
+  memoria.clear()
+}

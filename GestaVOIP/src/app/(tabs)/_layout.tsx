@@ -1,13 +1,18 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { Tabs, useRouter } from 'expo-router'
 import { useEffect, useRef } from 'react'
-import { useTelefono } from '../../voip/Contesto'
+import { conTelefono } from '../../odoo/sessione'
+import { useApp, useTelefono } from '../../voip/Contesto'
 import { inviaOdoo } from '../../ui/comandiOdoo'
 import { useColori } from '../../ui/tema'
 
 export default function LayoutSchede() {
   const c = useColori()
   const { chiamata } = useTelefono()
+  const { sessione } = useApp()
+  // Stessa barra per tutti i server; Tastierino e Recenti solo con VOIP AI,
+  // senza l'app si apre su Odoo.
+  const telefono = conTelefono(sessione)
   const router = useRouter()
   const aperta = useRef(false)
 
@@ -29,6 +34,7 @@ export default function LayoutSchede() {
 
   return (
     <Tabs
+      initialRouteName={telefono ? 'index' : 'odoo'}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: c.primario,
@@ -39,6 +45,7 @@ export default function LayoutSchede() {
       <Tabs.Screen
         name="index"
         options={{
+          href: telefono ? undefined : null,
           title: 'Tastierino',
           tabBarIcon: ({ color, size }) => <Ionicons name="keypad" color={color} size={size} />,
         }}
@@ -46,6 +53,7 @@ export default function LayoutSchede() {
       <Tabs.Screen
         name="recenti"
         options={{
+          href: telefono ? undefined : null,
           title: 'Recenti',
           tabBarIcon: ({ color, size }) => <Ionicons name="time" color={color} size={size} />,
         }}

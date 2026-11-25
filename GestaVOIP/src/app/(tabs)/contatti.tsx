@@ -15,6 +15,8 @@ import { chiamaNumero } from '../../ui/chiama'
 import { PulsanteMenu } from '../../ui/MenuLaterale'
 import { raggio, spazio, useColori } from '../../ui/tema'
 import { useApp } from '../../voip/Contesto'
+import { APP } from '../../odoo/capacita'
+import { RichiedeApp } from '../../ui/RichiedeApp'
 
 const PAGINA = 60
 const FILTRI: { valore: Filtro; testo: string }[] = [
@@ -23,7 +25,7 @@ const FILTRI: { valore: Filtro; testo: string }[] = [
   { valore: 'persone', testo: 'Persone' },
 ]
 
-export default function Contatti() {
+function ElencoContatti() {
   const c = useColori()
   const router = useRouter()
   const { sessione } = useApp()
@@ -260,3 +262,11 @@ const s = StyleSheet.create({
   vuoto: { fontSize: 15, textAlign: 'center', marginTop: spazio.s, paddingHorizontal: spazio.xl },
   vuotoBlocco: { alignItems: 'center', marginTop: spazio.xxl },
 })
+
+export default function Contatti() {
+  return (
+    <RichiedeApp xmlid={APP.contatti} app="Contatti" titolo="Contatti" icona="people">
+      <ElencoContatti />
+    </RichiedeApp>
+  )
+}

@@ -20,9 +20,11 @@ export type Sessione = {
   azienda: string
   utente: Utente
   /**
-   * false: Odoo senza VOIP AI, l'app mostra solo Odoo e l'accesso lo fa la
-   * pagina di Odoo (db, utente e azienda restano vuoti). Assente nelle
-   * sessioni salvate prima che esistesse: erano tutte con il telefono.
+   * false: Odoo senza VOIP AI, l'app ha tutto tranne il telefono. Assente
+   * nelle sessioni salvate prima che esistesse: erano tutte con il telefono.
+   * utente.uid 0: accesso fatto dalla pagina di Odoo (Google, Microsoft):
+   * la sessione vive solo nella vista Odoo, le schermate native chiedono
+   * l'accesso con email e password.
    */
   voip?: boolean
 }

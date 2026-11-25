@@ -7,7 +7,6 @@ import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, T
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { schedaContatto, type SchedaContatto } from '../../odoo/contatti'
 import { percorsoRecord, urlAvatar } from '../../odoo/lavoro'
-import { conTelefono } from '../../odoo/sessione'
 import { testoDaHtml } from '../../odoo/testo'
 import { Avatar } from '../../ui/Avatar'
 import { chiamaNumero } from '../../ui/chiama'
@@ -54,7 +53,7 @@ export default function SchedaContattoSchermata() {
       return
     }
     inviaOdoo({ tipo: 'apri', percorso: percorsoRecord('res.partner', k.id) })
-    router.dismissTo(rottaOdoo(conTelefono(sessione)))
+    router.dismissTo(rottaOdoo())
   }
 
   const numero = k ? k.cellulare || k.telefono : ''

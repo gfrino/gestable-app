@@ -9,34 +9,47 @@ stesso centralino, stesso interno, stesse note sul contatto a fine chiamata.
 
 ## Cosa fa
 
-L'app ha due modi, scelti dal server al primo passo dell'accesso:
+L'app funziona con ogni Odoo autorizzato da ticinoWEB (modulo `tw_app_allowlist`),
+17 e 19, con o senza VOIP AI. La barra in basso è la stessa per tutti:
 
-- **Con VOIP AI** (2.36 o successiva): telefono e Odoo. Le schede sono
-  Tastierino, Recenti, **Odoo** e Impostazioni.
-- **Senza VOIP AI** (modulo assente o troppo vecchio): l'app e' Odoo a tutto
-  schermo, come l'app desktop, senza telefono. L'accesso lo fa la pagina di
-  login di Odoo (scelta del database, doppio fattore, accesso con Google).
+| Scheda | Quando c'è |
+| --- | --- |
+| Tastierino, Recenti | solo con VOIP AI 2.36 o successiva (il telefono) |
+| Contatti, Calendario | sempre; se in Odoo manca l'app Contatti o Calendario la scheda spiega di chiedere all'amministratore di installarla, e si attiva da sola appena c'è |
+| Odoo | sempre; senza telefono l'app si apre qui |
 
-In tutti e due i casi Odoo e' una vista web (`src/ui/VistaOdoo.tsx`) che usa la
-stessa sessione dell'app. I numeri cliccati in Odoo partono dal softphone se
-c'e', altrimenti dal telefono del sistema; i link verso altri siti si aprono
-nel browser.
+Le app presenti si leggono dai menu che Odoo dà al suo client web
+(`/web/webclient/load_menus`, ogni utente li può leggere; l'elenco dei moduli
+lo legge solo l'amministratore): `src/odoo/capacita.ts`, controllo in
+`src/ui/RichiedeApp.tsx`. Un'app che manca dai menu o non è installata o
+l'utente non ha i permessi: in tutti e due i casi serve l'amministratore.
+
+L'accesso è con email e password di Odoo (e il codice della verifica in due
+passaggi, se attiva): con VOIP AI dalla route del modulo, senza dal modulo di
+login di Odoo (`accediDallaPagina` in `src/odoo/client.ts`). Chi entra con
+Google o Microsoft usa la pagina di Odoo ("Accedi con Google o Microsoft"): la
+sessione vive solo nella vista Odoo, e Contatti, Calendario, Messaggi e
+Attività chiedono l'accesso con email.
+
+Odoo è una vista web (`src/ui/VistaOdoo.tsx`) che usa la stessa sessione
+dell'app. I numeri cliccati in Odoo partono dal softphone se c'è, altrimenti
+dal telefono del sistema; i link verso altri siti si aprono nel browser.
 
 Il menu ☰ (in alto a sinistra in ogni scheda) prende il posto della barra in
 alto di Odoo:
 
-- **Presenze**: entrata e uscita (il pallino rosso/verde di Odoo), con le ore di oggi.
+- **Presenze**: entrata e uscita (il pallino rosso/verde di Odoo), con le ore di oggi; solo se c'è l'app Presenze.
 - **Messaggi**: le chat e i canali di Discuss (bolle, invio, segnate lette
   all'apertura) e le **Notifiche** (la posta in arrivo di Odoo); toccarne una
   apre il record in Odoo.
 - **Attività**: in ritardo, oggi, prossime; un tocco apre il record, la spunta
   la segna fatta.
-- **Impostazioni** del telefono, ed **Esci**.
+- **Impostazioni** del telefono (solo con VOIP AI), ed **Esci**.
 
 I numeri accanto a Messaggi e Attività si contano come in Odoo (notifiche più
 chat con qualcosa da leggere; attività di oggi e in ritardo).
 
-La scheda **Contatti** (dopo Recenti) cerca nei contatti di Odoo per nome,
+La scheda **Contatti** cerca nei contatti di Odoo per nome,
 azienda, email o numero, con i filtri Tutti / Aziende / Persone e la lista a
 pagine con le lettere; senza ricerca nasconde i nomi che iniziano con simboli
 (numeri «+41…» creati dalle chiamate, «"Nome" <email>» creati dalle email).
@@ -45,7 +58,7 @@ Mappa, i recapiti, le etichette, le note e, per le aziende, le persone; **+**
 crea una persona o un'azienda. Odoo 19 non ha il campo cellulare: i campi si
 leggono dal server.
 
-La scheda **Calendario** (fra Contatti e Odoo) mostra i miei appuntamenti di
+La scheda **Calendario** mostra i miei appuntamenti di
 Odoo una settimana alla volta: giorni da scorrere di lato con un pallino dove
 c'è qualcosa, l'agenda del giorno (in corso evidenziato), il dettaglio con
 luogo, videochiamata, partecipanti e risposta all'invito (Ci sono / Forse / No),

@@ -160,18 +160,6 @@ export default function Login() {
               />
               <Pulsante testo="Continua" onPress={verifica} occupato={occupato} />
             </View>
-          ) : !info.voip ? (
-            <View style={s.blocco}>
-              {cambiaServer}
-              <View style={[s.nota, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
-                <Text style={[s.notaTitolo, { color: c.testo }]}>Questo Odoo non ha il telefono</Text>
-                <Text style={[s.notaTesto, { color: c.testo2 }]}>
-                  Manca il modulo VOIP AI (versione 2.36 o successiva). Puoi usare lo stesso Odoo
-                  dall&apos;app: l&apos;accesso lo fai nella sua pagina, come dal browser.
-                </Text>
-              </View>
-              <Pulsante testo="Apri Odoo" onPress={apriOdoo} occupato={occupato} />
-            </View>
           ) : chiediCodice ? (
             <View style={s.blocco}>
               {cambiaServer}
@@ -207,6 +195,15 @@ export default function Login() {
           ) : (
             <View style={s.blocco}>
               {cambiaServer}
+              {!info.voip ? (
+                <View style={[s.nota, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
+                  <Text style={[s.notaTitolo, { color: c.testo }]}>Questo Odoo non ha il telefono</Text>
+                  <Text style={[s.notaTesto, { color: c.testo2 }]}>
+                    Manca il modulo VOIP AI: l&apos;app funziona lo stesso, con contatti, calendario,
+                    messaggi, attività e Odoo, senza telefonate.
+                  </Text>
+                </View>
+              ) : null}
               <Text style={[s.etichetta, { color: c.testo2 }]}>Email</Text>
               <TextInput
                 style={campo}
@@ -231,6 +228,16 @@ export default function Login() {
                 onSubmitEditing={accedi}
               />
               <Pulsante testo="Accedi" onPress={accedi} occupato={occupato} />
+              {!info.voip ? (
+                // Chi entra con Google o Microsoft non ha una password di Odoo:
+                // entra dalla pagina di Odoo (le schede dell'app chiedono poi
+                // l'accesso con email e password).
+                <Pressable onPress={apriOdoo} hitSlop={8} style={s.indietro} accessibilityRole="button">
+                  <Text style={[s.indietroTesto, { color: c.primario }]} numberOfLines={1}>
+                    Accedi con Google o Microsoft
+                  </Text>
+                </Pressable>
+              ) : null}
             </View>
           )}
 

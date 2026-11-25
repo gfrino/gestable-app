@@ -11,7 +11,6 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { attivita as caricaAttivita, completaAttivita, percorsoRecord, type Attivita } from '../odoo/lavoro'
 import { testoDaHtml } from '../odoo/testo'
 import { inviaOdoo, rottaOdoo } from '../ui/comandiOdoo'
-import { conTelefono } from '../odoo/sessione'
 import { useMenu } from '../ui/MenuLaterale'
 import { Testata } from '../ui/Testata'
 import { raggio, spazio, useColori, type Colori } from '../ui/tema'
@@ -109,7 +108,7 @@ export default function SchermataAttivita() {
     inviaOdoo({ tipo: 'apri', percorso: percorsoRecord(a.modello, a.recordId) })
     // dismissTo torna alla vista di Odoo che c'e' gia' (navigate ne aprirebbe
     // una seconda copia sopra, che riparte dalla home).
-    router.dismissTo(rottaOdoo(conTelefono(sessione)))
+    router.dismissTo(rottaOdoo())
   }
 
   // In ritardo: prima le piu' recenti (quelle vecchie di mesi servono meno);

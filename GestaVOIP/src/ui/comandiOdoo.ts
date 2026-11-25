@@ -42,10 +42,7 @@ export function prendiInAttesa(): ComandoOdoo | null {
   return c
 }
 
-/**
- * Dove sta la vista di Odoo: la scheda Odoo se c'e' il telefono, altrimenti la
- * schermata intera. «/odoo» da solo e' ambiguo (corrisponde a tutte e due).
- */
-export function rottaOdoo(conTelefono: boolean): '/(tabs)/odoo' | '/odoo' {
-  return conTelefono ? '/(tabs)/odoo' : '/odoo'
+/** La vista di Odoo sta sempre nella scheda Odoo (con o senza telefono). */
+export function rottaOdoo(): '/(tabs)/odoo' {
+  return '/(tabs)/odoo'
 }

@@ -21,7 +21,6 @@ import {
 import { quandoBreve, testoDaHtml } from '../../odoo/testo'
 import { Avatar } from '../../ui/Avatar'
 import { inviaOdoo, rottaOdoo } from '../../ui/comandiOdoo'
-import { conTelefono } from '../../odoo/sessione'
 import { useMenu } from '../../ui/MenuLaterale'
 import { Testata } from '../../ui/Testata'
 import { raggio, spazio, useColori } from '../../ui/tema'
@@ -83,7 +82,7 @@ export default function Messaggi() {
       inviaOdoo({ tipo: 'apri', percorso: percorsoRecord(n.modello, n.recordId) })
       // dismissTo torna alla vista di Odoo che c'e' gia' (navigate ne aprirebbe
     // una seconda copia sopra, che riparte dalla home).
-    router.dismissTo(rottaOdoo(conTelefono(sessione)))
+    router.dismissTo(rottaOdoo())
     }
   }
 
