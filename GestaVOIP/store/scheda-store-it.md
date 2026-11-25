@@ -2,7 +2,7 @@
 
 ## App Store
 - **Nome:** GestABLE (dalla 1.1.0; fino alla 1.0.0 GestaVOIP)
-- **Sottotitolo (≤30):** Telefono e Odoo in tasca
+- **Sottotitolo (≤30):** Odoo e telefono in tasca (dalla 1.1.0; prima «Telefono e Odoo in tasca»)
 - **Categoria:** Economia (Business); secondaria Produttività
 - **URL privacy:** https://ticinoweb.com/gestavoip-privacy/
 - **URL supporto:** https://ticinoweb.com/gestavoip-privacy/  (contatti ticinoWEB in fondo alla pagina)
