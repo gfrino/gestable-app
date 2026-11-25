@@ -38,7 +38,7 @@ module.exports = {
     slug: 'gestavoip',
     owner: 'ticinoweb',
     scheme: 'gestavoip',
-    version: '0.1.3',
+    version: '1.0.0',
     orientation: 'portrait',
 
     // Aggiornamenti OTA (EAS Update): il JavaScript nuovo arriva senza una
@@ -58,7 +58,7 @@ module.exports = {
 
     ios: {
       bundleIdentifier: IDENTIFICATIVO,
-      buildNumber: '4',
+      buildNumber: '5',
       supportsTablet: false,
       ...(firebaseIos ? { googleServicesFile: './GoogleService-Info.plist' } : {}),
       infoPlist: {
@@ -76,7 +76,7 @@ module.exports = {
 
     android: {
       package: IDENTIFICATIVO,
-      versionCode: 4,
+      versionCode: 5,
       ...(firebaseAndroid ? { googleServicesFile: './google-services.json' } : {}),
       adaptiveIcon: {
         backgroundColor: '#FFFFFF',
