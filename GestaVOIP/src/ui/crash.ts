@@ -34,7 +34,7 @@ function crashlytics(): { m: ModuloCrashlytics; c: Istanza } | null {
 
 export function segnalaErrore(e: unknown, dove: string) {
   const errore = e instanceof Error ? e : new Error(String(e))
-  console.warn(`[GestaVOIP] ${dove}:`, errore.message)
+  console.warn(`[GestABLE] ${dove}:`, errore.message)
   try {
     const fb = crashlytics()
     if (fb) {

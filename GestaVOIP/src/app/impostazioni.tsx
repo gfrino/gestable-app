@@ -278,7 +278,7 @@ export default function Impostazioni() {
 
         <Pulsante testo={t('comune.esci')} variante="pericolo" onPress={chiediUscita} occupato={uscita} />
         <Text style={[s.versione, { color: c.testo3 }]}>
-          GestaVOIP {Application.nativeApplicationVersion || ''} ({Application.nativeBuildVersion || ''})
+          GestABLE {Application.nativeApplicationVersion || ''} ({Application.nativeBuildVersion || ''})
           {aggiornamento()}
         </Text>
       </ScrollView>

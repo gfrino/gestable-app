@@ -79,6 +79,7 @@ export const it = {
   'accesso.credenzialiErrate': 'Email o password non corrette.',
   'accesso.serverNonValido': 'Server non valido.',
   'accesso.nonOdoo': "A questo indirizzo non risponde un Odoo: controlla l'indirizzo.",
+  'accesso.odooVecchio': 'Questo server ha Odoo {versione}: GestABLE funziona con Odoo {minimo} o successivo. Chiedi un aggiornamento all\'amministratore del tuo Odoo.',
   'accesso.nonPaginaAccesso': 'A questo indirizzo non risponde la pagina di accesso di Odoo.',
   'accesso.serveCodice': 'Serve il codice della verifica in due passaggi.',
   'accesso.codiceScaduto': "Il tempo per il codice e' scaduto: accedi di nuovo.",
@@ -86,7 +87,7 @@ export const it = {
 
   // Server autorizzati
   'accesso.serverNonAbilitato': 'Server non abilitato',
-  'accesso.nonAutorizzato': 'Questo Odoo non è abilitato per GestaVOIP. Per attivarlo contatta ticinoWEB.',
+  'accesso.nonAutorizzato': 'Questo Odoo non è abilitato per GestABLE. Per attivarlo contatta ticinoWEB.',
   'accesso.nonVerificabile': 'Non riesco a verificare il server: controlla la connessione a internet e riprova.',
 }
 
@@ -169,6 +170,7 @@ export const en: Record<keyof typeof it, string> = {
   'accesso.credenzialiErrate': 'Incorrect email or password.',
   'accesso.serverNonValido': 'Invalid server.',
   'accesso.nonOdoo': "There's no Odoo at this address. Check the address.",
+  'accesso.odooVecchio': 'This server runs Odoo {versione}. GestABLE works with Odoo {minimo} or later: ask your Odoo administrator about an upgrade.',
   'accesso.nonPaginaAccesso': "There's no Odoo sign-in page at this address.",
   'accesso.serveCodice': 'Two-step verification code required.',
   'accesso.codiceScaduto': 'The code timed out. Please sign in again.',
@@ -176,6 +178,6 @@ export const en: Record<keyof typeof it, string> = {
 
   // Server autorizzati
   'accesso.serverNonAbilitato': 'Server not enabled',
-  'accesso.nonAutorizzato': 'This Odoo is not enabled for GestaVOIP. Contact ticinoWEB to activate it.',
+  'accesso.nonAutorizzato': 'This Odoo is not enabled for GestABLE. Contact ticinoWEB to activate it.',
   'accesso.nonVerificabile': "Can't verify the server. Check your internet connection and try again.",
 }

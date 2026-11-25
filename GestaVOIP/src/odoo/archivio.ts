@@ -7,14 +7,10 @@
  * Una copia per server e utente, nella cartella cache dell'app (iOS la puo'
  * svuotare quando manca spazio: si ricarica da Odoo). All'uscita si cancella.
  *
- * expo-file-system arriva con il pacchetto expo ed e' gia' nella build 1.0.0;
- * si importa dal suo percorso dentro expo perche' aggiungerlo alle dipendenze
- * cambierebbe l'impronta nativa e gli aggiornamenti over-the-air non
- * arriverebbero piu' alla 1.0.0. Quando si fa una build nuova va messo nelle
- * dipendenze e importato come 'expo-file-system'.
+ * I file si scrivono con expo-file-system (dipendenza diretta dalla 1.1.0).
  */
 
-type ModuloFile = typeof import('expo/node_modules/expo-file-system')
+type ModuloFile = typeof import('expo-file-system')
 
 const VERSIONE = 1
 const DURATA_MS = 30 * 24 * 3600 * 1000
@@ -27,7 +23,7 @@ function fs(): ModuloFile | null {
   if (modulo === undefined) {
     try {
       // eslint-disable-next-line @typescript-eslint/no-require-imports
-      modulo = require('expo/node_modules/expo-file-system') as ModuloFile
+      modulo = require('expo-file-system') as ModuloFile
     } catch {
       modulo = null
     }

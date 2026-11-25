@@ -1,19 +1,31 @@
 import { Stack } from 'expo-router'
+import * as SplashScreen from 'expo-splash-screen'
+import { useEffect } from 'react'
 import { StatusBar } from 'expo-status-bar'
 import { View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { ProviderLingua, useLingua } from '../i18n/Lingua'
 import { conTelefono } from '../odoo/sessione'
 import { ProviderApp, useApp } from '../voip/Contesto'
+import { Apertura, segnalaPronta } from '../ui/Apertura'
 import { ProviderAspetto } from '../ui/Aspetto'
 import { ProviderMenu } from '../ui/MenuLaterale'
 import { useColori } from '../ui/tema'
 import { Caricamento } from '../ui/Caricamento'
 
+// La schermata di avvio resta finche' l'apertura non e' pronta (ui/Apertura.tsx).
+SplashScreen.preventAutoHideAsync().catch(() => undefined)
+
 function Navigazione() {
   const { fase, sessione } = useApp()
   const telefono = conTelefono(sessione)
   const c = useColori()
+
+  useEffect(() => {
+    if (fase !== 'caricamento') {
+      segnalaPronta()
+    }
+  }, [fase])
 
   if (fase === 'caricamento') {
     return (
@@ -74,6 +86,7 @@ export default function Radice() {
           </ProviderApp>
         </ProviderAspetto>
       </ProviderLingua>
+      <Apertura />
     </SafeAreaProvider>
   )
 }

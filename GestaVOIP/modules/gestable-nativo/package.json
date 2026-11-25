@@ -1,0 +1,7 @@
+{
+  "name": "gestable-nativo",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.ts",
+  "description": "GestABLE: chiamate da Siri e dai Recenti di iOS, schermata CarPlay"
+}

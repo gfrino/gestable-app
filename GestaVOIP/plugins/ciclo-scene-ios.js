@@ -86,9 +86,12 @@ function conProgetto(config) {
 
 function conInfoPlist(config) {
   return withInfoPlist(config, (cfg) => {
+    // Le altre scene (CarPlay, da plugins/carplay-siri.js) restano: si sostituisce solo quella del telefono.
+    const prima = cfg.modResults.UIApplicationSceneManifest?.UISceneConfigurations || {}
     cfg.modResults.UIApplicationSceneManifest = {
       UIApplicationSupportsMultipleScenes: false,
       UISceneConfigurations: {
+        ...prima,
         UIWindowSceneSessionRoleApplication: [
           {
             UISceneConfigurationName: 'Default Configuration',

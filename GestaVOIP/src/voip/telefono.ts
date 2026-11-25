@@ -96,7 +96,7 @@ const STATO_INIZIALE: StatoTelefono = {
 }
 
 function etichetta(): string {
-  return `${Device.modelName || (Platform.OS === 'ios' ? 'iPhone' : 'Android')} (GestaVOIP)`
+  return `${Device.modelName || (Platform.OS === 'ios' ? 'iPhone' : 'Android')} (GestABLE)`
 }
 
 export class Telefono {

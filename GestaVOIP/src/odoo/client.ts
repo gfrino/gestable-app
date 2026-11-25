@@ -108,10 +108,38 @@ export type InfoServer = {
  * Il server esiste, se ha VOIP AI e su quale database si entra.
  *
  * Senza VOIP AI l'app serve lo stesso: diventa Odoo in un'app, come quella
- * desktop. Per distinguere "Odoo senza modulo" da "non e' un Odoo" si chiede
- * la versione, che Odoo da' senza login da sempre.
+ * desktop. La versione (che Odoo da' senza login) distingue "non e' un Odoo"
+ * e ferma i server sotto Odoo 17.
  */
+/** Versione minima di Odoo: GestABLE usa le API web e i menu da Odoo 17 in su. */
+export const ODOO_MINIMO = 17
+
+/** La versione principale di Odoo (17, 18, 19...), o 0 se il server non la dice. */
+function versionePrincipale(r: { server_version?: string; server_version_info?: (string | number)[] }): number {
+  const prima = r.server_version_info?.[0]
+  const testo = typeof prima === 'number' ? String(prima) : prima || r.server_version || ''
+  // «saas~18.2» o «17.0+e»: conta il primo numero.
+  const m = /(\d+)/.exec(String(testo))
+  return m ? Number(m[1]) : 0
+}
+
 export async function infoServer(base: string): Promise<InfoServer> {
+  // La versione si chiede per prima, senza login: sotto Odoo 17 ci si ferma con
+  // un messaggio chiaro invece di errori incomprensibili piu' avanti.
+  let versione = 0
+  try {
+    versione = versionePrincipale(
+      await rpc<{ server_version?: string; server_version_info?: (string | number)[] }>(base, '/web/webclient/version_info'),
+    )
+  } catch (e) {
+    if (e instanceof ErroreOdoo && (e.tipo === 'rete' || e.tipo === 'occupato')) {
+      throw e
+    }
+    throw new ErroreOdoo('server', t('accesso.nonOdoo'))
+  }
+  if (versione && versione < ODOO_MINIMO) {
+    throw new ErroreOdoo('server', t('accesso.odooVecchio', { versione, minimo: ODOO_MINIMO }))
+  }
   try {
     const r = await rpc<{ status: string; message?: string } & InfoServer>(base, '/ai_telemarketing/mobile/info')
     if (r.status !== 'success') {
@@ -122,14 +150,6 @@ export async function infoServer(base: string): Promise<InfoServer> {
     if (!(e instanceof ErroreOdoo) || e.tipo !== 'modulo') {
       throw e
     }
-  }
-  try {
-    await rpc<{ server_version?: string }>(base, '/web/webclient/version_info')
-  } catch (e) {
-    if (e instanceof ErroreOdoo && e.tipo === 'rete') {
-      throw e
-    }
-    throw new ErroreOdoo('server', t('accesso.nonOdoo'))
   }
   return { db: '', company: '', module_version: '', voip: false }
 }

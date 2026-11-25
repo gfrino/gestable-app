@@ -1,5 +1,5 @@
 /**
- * Configurazione di GestaVOIP.
+ * Configurazione di GestABLE (prima GestaVOIP: identificativo, schema e progetto EAS restano quelli).
  *
  * Permessi e capacita' native si dichiarano QUI: `ios/` e `android/` vengono
  * rigenerati da `expo prebuild` e ogni modifica fatta a mano andrebbe persa.
@@ -36,15 +36,15 @@ const APS = process.env.GESTAVOIP_APS_ENV || 'production'
 // Progetto EAS @ticinoweb/gestavoip: build, invio agli store e aggiornamenti OTA.
 const PROGETTO_EAS = '50258e2e-5fcb-4605-8ca9-20e39875236d'
 
-const MICROFONO = 'GestaVOIP usa il microfono per le telefonate.'
+const MICROFONO = 'GestABLE usa il microfono per le telefonate.'
 
 module.exports = {
   expo: {
-    name: 'GestaVOIP',
+    name: 'GestABLE',
     slug: 'gestavoip',
     owner: 'ticinoweb',
     scheme: 'gestavoip',
-    version: '1.0.0',
+    version: '1.1.0',
     orientation: 'portrait',
 
     // Aggiornamenti OTA (EAS Update): il JavaScript nuovo arriva senza una
@@ -54,17 +54,23 @@ module.exports = {
     runtimeVersion: { policy: 'fingerprint' },
     updates: {
       url: `https://u.expo.dev/${PROGETTO_EAS}`,
-      // All'avvio si aspetta al massimo 3 secondi un aggiornamento appena
-      // pubblicato; oltre, parte la versione gia' scaricata e quella nuova
-      // vale dall'avvio successivo.
-      fallbackToCacheTimeout: 3000,
+      // All'avvio non si aspetta: parte la versione gia' scaricata, quella
+      // nuova si scarica dietro e vale dall'avvio successivo (prima si
+      // aspettavano fino a 3 secondi a ogni apertura).
+      fallbackToCacheTimeout: 0,
     },
-    icon: './assets/icon.png',
+    icon: './assets/icona-gestable.png',
     userInterfaceStyle: 'automatic',
 
     ios: {
       bundleIdentifier: IDENTIFICATIVO,
-      buildNumber: '7',
+      buildNumber: '8',
+      // La «G» di GestABLE: chiara, scura (sfondo del sistema) e tinta.
+      icon: {
+        light: './assets/icona-gestable.png',
+        dark: './assets/icona-gestable-scura.png',
+        tinted: './assets/icona-gestable-tinta.png',
+      },
       supportsTablet: false,
       ...(firebaseIos ? { googleServicesFile: './GoogleService-Info.plist' } : {}),
       infoPlist: {
@@ -86,9 +92,9 @@ module.exports = {
       ...(firebaseAndroid ? { googleServicesFile: fileAndroid } : {}),
       adaptiveIcon: {
         backgroundColor: '#FFFFFF',
-        foregroundImage: './assets/android-icon-foreground.png',
-        backgroundImage: './assets/android-icon-background.png',
-        monochromeImage: './assets/android-icon-monochrome.png',
+        foregroundImage: './assets/android-g-primo-piano.png',
+        backgroundImage: './assets/android-g-sfondo.png',
+        monochromeImage: './assets/android-g-monocromo.png',
       },
       permissions: [
         'android.permission.RECORD_AUDIO',
@@ -129,6 +135,19 @@ module.exports = {
       ...(firebaseAndroid ? ['./plugins/firebase-android'] : []),
       // iOS 27 vuole le scene: senza, l'app si chiude all'avvio.
       './plugins/ciclo-scene-ios',
+      // Siri, Recenti di iOS e CarPlay (dopo ciclo-scene-ios, che riscrive il manifest delle scene).
+      './plugins/carplay-siri',
+      // Avvio: la «G» al centro; in app si ingrandisce fino a scoprire la prima schermata (ui/Apertura.tsx).
+      [
+        'expo-splash-screen',
+        {
+          image: './assets/splash-g.png',
+          imageWidth: 120,
+          resizeMode: 'contain',
+          backgroundColor: '#F6F7FB',
+          dark: { image: './assets/splash-g.png', backgroundColor: '#0E1018' },
+        },
+      ],
     ],
 
     experiments: { typedRoutes: true },

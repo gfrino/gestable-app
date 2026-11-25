@@ -1,7 +1,7 @@
-# GestaVOIP – testi degli store (italiano)
+# GestABLE (prima GestaVOIP) – testi degli store (italiano)
 
 ## App Store
-- **Nome:** GestaVOIP
+- **Nome:** GestABLE (dalla 1.1.0; fino alla 1.0.0 GestaVOIP)
 - **Sottotitolo (≤30):** Telefono e Odoo in tasca
 - **Categoria:** Economia (Business); secondaria Produttività
 - **URL privacy:** https://ticinoweb.com/gestavoip-privacy/
@@ -52,6 +52,26 @@ odoo,voip,centralino,telefono,ufficio,crm,contatti,calendario,chiamate,twilio,ge
 Server demo: odoosvizzera.ch — non servono email né password. Aprire l'app, scrivere «odoosvizzera.ch» nel campo «Indirizzo di Odoo» e toccare «Continua»: il server demo apre la sessione da solo come utente dimostrativo.
 Sul server demo si possono provare Contatti, Calendario, Messaggi, Attività (menu ☰) e la vista Odoo. Le telefonate richiedono il modulo VOIP AI e un account Twilio dell'azienda cliente, che il server demo non ha: il video allegato mostra una chiamata in uscita e una in arrivo con l'app (CallKit).
 Contatto: ticinoWEB, +41 91 225 37 15, info@ticinoweb.net.
+
+## Novità della 1.1.0 (App Store, «Novità in questa versione»)
+
+**Italiano**
+GestaVOIP ora si chiama GestABLE: non è solo un telefono, è il tuo Odoo in tasca.
+- Nuova icona e animazione di apertura con la G di GestABLE
+- Chiama con Siri: «Chiama Mario con GestABLE»
+- Richiama dai Recenti del Telefono le chiamate fatte con GestABLE
+- Nuovo menu dell'app Odoo, sfondi Aurora, temi colore e ordine delle schede nelle impostazioni
+- GestABLE funziona con Odoo 17 o successivo
+
+**English**
+GestaVOIP is now GestABLE: not just a phone, your Odoo in your pocket.
+- New icon and opening animation with the GestABLE G
+- Call with Siri: "Call Mario with GestABLE"
+- Call back from the Phone app's Recents
+- New Odoo app menu, Aurora backgrounds, colour themes and tab order in Settings
+- GestABLE works with Odoo 17 or later
+
+(CarPlay arriva in una build successiva, quando Apple abilita l'entitlement: vedi carplay-entitlement-request.md.)
 
 ## Google Play
 - **Descrizione breve (≤80):** Il telefono dell'ufficio e il tuo Odoo: chiamate, contatti e calendario.

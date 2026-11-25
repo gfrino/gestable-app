@@ -294,7 +294,7 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
         <View style={{ flex: 1 }} />
         <Voce c={c} icona="log-out-outline" testo={t('comune.esci')} onPress={chiediUscita} pericolo />
         <Text style={[s.versione, { color: c.testo3 }]}>
-          GestaVOIP {Application.nativeApplicationVersion || ''}
+          GestABLE {Application.nativeApplicationVersion || ''}
         </Text>
       </Animated.View>
     </Modal>

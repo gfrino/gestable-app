@@ -12,6 +12,7 @@ import { conTelefono, dimenticaSessione, leggiSessione, salvaSessione, type Sess
 import { segnalaErrore, utenteCrash } from '../ui/crash'
 import { telefono, type StatoTelefono } from './telefono'
 import { svuota as svuotaArchivio } from '../odoo/archivio'
+import { ascolta, chiediSiri, prendiNumeroInAttesa } from '../../modules/gestable-nativo'
 
 type Fase = 'caricamento' | 'fuori' | 'dentro'
 
@@ -76,6 +77,19 @@ export function ProviderApp({ children }: { children: ReactNode }) {
     telefono.suSessioneScaduta = () => void chiudiLocale()
     utenteCrash(`${sessione.db}:${sessione.utente.uid}`)
     telefono.avvia(sessione).catch((e) => segnalaErrore(e, 'avvio telefono'))
+    // Siri («Chiama Mario con GestABLE») e i Recenti del Telefono di iOS: anche
+    // quando hanno aperto loro l'app (numero in attesa).
+    const daFuori = (numero: string) => {
+      telefono.chiama(numero).catch((e) => segnalaErrore(e, 'chiamata da Siri o Recenti'))
+    }
+    const inAttesa = prendiNumeroInAttesa()
+    if (inAttesa) {
+      daFuori(inAttesa)
+    }
+    const via = ascolta('onChiama', ({ numero }) => daFuori(numero))
+    // Il permesso per Siri si chiede una volta sola (iOS non lo richiede piu').
+    void chiediSiri().catch(() => false)
+    return via
   }, [sessione, chiudiLocale])
 
   const apri = useCallback(async (server: string, info: InfoServer, utente: Utente & { db?: string }) => {
