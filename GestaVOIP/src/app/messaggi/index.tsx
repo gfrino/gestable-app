@@ -8,6 +8,7 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { t } from '../../i18n'
 import {
   conversazioni,
   percorsoRecord,
@@ -61,8 +62,8 @@ export default function Messaggi() {
   useFocusEffect(
     useCallback(() => {
       void carica()
-      const t = setInterval(() => void carica(), 20_000)
-      return () => clearInterval(t)
+      const timer = setInterval(() => void carica(), 20_000)
+      return () => clearInterval(timer)
     }, [carica]),
   )
 
@@ -102,12 +103,12 @@ export default function Messaggi() {
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
       <Testata
-        titolo="Messaggi"
+        titolo={t('lavoro.messaggi.titolo')}
         destra={
           vista === 'notifiche' && notifiche?.length ? (
             <Pressable onPress={tutteLette} hitSlop={10} style={s.azione} accessibilityRole="button">
               <Text style={[s.azioneTesto, { color: c.primario }]} numberOfLines={1}>
-                Tutte lette
+                {t('lavoro.messaggi.tutteLette')}
               </Text>
             </Pressable>
           ) : null
@@ -127,7 +128,7 @@ export default function Messaggi() {
               accessibilityState={{ selected: attivo }}
             >
               <Text style={[s.segmentoTesto, { color: attivo ? c.primario : c.testo2 }]} numberOfLines={1}>
-                {v === 'chat' ? 'Chat' : 'Notifiche'}
+                {v === 'chat' ? t('lavoro.messaggi.chat') : t('lavoro.messaggi.notifiche')}
                 {n ? ` · ${n}` : ''}
               </Text>
             </Pressable>
@@ -144,7 +145,7 @@ export default function Messaggi() {
           data={chat}
           keyExtractor={(x) => String(x.id)}
           refreshControl={<RefreshControl refreshing={ricarica} onRefresh={tiraGiu} tintColor={c.primario} />}
-          ListEmptyComponent={<Text style={[s.vuoto, { color: c.testo3 }]}>Nessuna chat.</Text>}
+          ListEmptyComponent={<Text style={[s.vuoto, { color: c.testo3 }]}>{t('lavoro.messaggi.nessunaChat')}</Text>}
           renderItem={({ item }) => {
             const anteprima = item.ultimo ? testoDaHtml(item.ultimo.testo).replace(/\s+/g, ' ') : ''
             return (
@@ -174,7 +175,7 @@ export default function Messaggi() {
                   </View>
                   <View style={s.rigaSopra}>
                     <Text style={[s.anteprima, { color: item.nonLetti ? c.testo : c.testo2 }]} numberOfLines={2}>
-                      {item.ultimo ? `${item.ultimo.mio ? 'Tu: ' : item.tipo === 'chat' ? '' : `${item.ultimo.autore.split(' ')[0]}: `}${anteprima}` : ' '}
+                      {item.ultimo ? `${item.ultimo.mio ? `${t('lavoro.messaggi.tu')}: ` : item.tipo === 'chat' ? '' : `${item.ultimo.autore.split(' ')[0]}: `}${anteprima}` : ' '}
                     </Text>
                     {item.nonLetti ? (
                       <View style={[s.badge, { backgroundColor: c.primario }]}>
@@ -195,7 +196,7 @@ export default function Messaggi() {
           ListEmptyComponent={
             <View style={s.vuotoBlocco}>
               <Ionicons name="checkmark-done-circle" size={56} color={c.verde} />
-              <Text style={[s.vuoto, { color: c.testo2, marginTop: spazio.s }]}>Nessuna notifica da leggere.</Text>
+              <Text style={[s.vuoto, { color: c.testo2, marginTop: spazio.s }]}>{t('lavoro.messaggi.nessunaNotifica')}</Text>
             </View>
           }
           renderItem={({ item }) => (

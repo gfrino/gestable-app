@@ -24,9 +24,10 @@ import { ActivityIndicator, Alert, BackHandler, Linking, Platform, Pressable, St
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { WebView, type WebViewNavigation } from 'react-native-webview'
 import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes'
+import { t } from '../i18n'
 import { ascoltaOdoo, prendiInAttesa, type ComandoOdoo } from './comandiOdoo'
 import { PulsanteMenu } from './MenuLaterale'
-import { APRI_PANNELLO, DOPO_IL_CARICAMENTO, MOSTRA_HOME, PRIMA_DEL_CARICAMENTO, vaiA } from './odooIniettato'
+import { APRI_PANNELLO, dopoIlCaricamento, MOSTRA_HOME, PRIMA_DEL_CARICAMENTO, vaiA } from './odooIniettato'
 import { Pulsante } from './Pulsante'
 import { spazio, useColori } from './tema'
 
@@ -66,7 +67,7 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
   const homeAlCaricamento = useRef(!iniziale)
   // Un record chiesto mentre la pagina carica: si apre appena e' pronta.
   const recordInAttesa = useRef('')
-  const [errore, setErrore] = useState('')
+  const [errore, setErrore] = useState(false)
   const [chiave, setChiave] = useState(0)
   const [nelLogin, setNelLogin] = useState(false)
 
@@ -108,7 +109,7 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
   )
 
   function apriFuori(url: string) {
-    Linking.openURL(url).catch(() => Alert.alert('Link', 'Nessuna app sa aprire questo link.'))
+    Linking.openURL(url).catch(() => Alert.alert(t('accesso.link'), t('accesso.linkNonApribile')))
   }
 
   function decidi(r: ShouldStartLoadRequest): boolean {
@@ -138,7 +139,7 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
   }
 
   function ricarica() {
-    setErrore('')
+    setErrore(false)
     if (vista.current) {
       vista.current.reload()
     } else {
@@ -153,7 +154,7 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
         <Text style={[s.titolo, { color: c.testo }]} numberOfLines={1}>
           {titolo || host(server)}
         </Text>
-        <Pressable onPress={ricarica} hitSlop={10} style={s.tasto} accessibilityRole="button" accessibilityLabel="Ricarica Odoo">
+        <Pressable onPress={ricarica} hitSlop={10} style={s.tasto} accessibilityRole="button" accessibilityLabel={t('accesso.ricaricaOdoo')}>
           <Ionicons name="refresh" size={22} color={c.testo2} />
         </Pressable>
         {!nelLogin ? (
@@ -162,7 +163,7 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
             hitSlop={10}
             style={s.tasto}
             accessibilityRole="button"
-            accessibilityLabel="Menu di Odoo"
+            accessibilityLabel={t('accesso.menuOdoo')}
           >
             <Ionicons name="reorder-three-outline" size={26} color={c.testo} />
           </Pressable>
@@ -172,8 +173,8 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
       {errore ? (
         <View style={[s.errore, { backgroundColor: c.sfondo }]}>
           <Ionicons name="cloud-offline-outline" size={44} color={c.testo3} />
-          <Text style={[s.erroreTesto, { color: c.testo2 }]}>{errore}</Text>
-          <Pulsante testo="Riprova" onPress={ricarica} />
+          <Text style={[s.erroreTesto, { color: c.testo2 }]}>{t('accesso.odooNonSiApre')}</Text>
+          <Pulsante testo={t('comune.riprova')} onPress={ricarica} />
         </View>
       ) : (
         <WebView
@@ -191,7 +192,7 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
           applicationNameForUserAgent="GestaVOIP"
           originWhitelist={['*']}
           injectedJavaScriptBeforeContentLoaded={PRIMA_DEL_CARICAMENTO}
-          injectedJavaScript={DOPO_IL_CARICAMENTO}
+          injectedJavaScript={dopoIlCaricamento()}
           // Su iOS lo script dopo il caricamento parte solo se la vista ha anche
           // un ricevitore di messaggi: questo, che per ora non riceve nulla.
           onMessage={() => undefined}
@@ -221,7 +222,7 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
               <ActivityIndicator color={c.primario} />
             </View>
           )}
-          onError={() => setErrore("Odoo non si apre: controlla la connessione a internet.")}
+          onError={() => setErrore(true)}
           // iOS chiude la vista web se resta in secondo piano a lungo: si
           // ricarica invece di lasciare una pagina bianca.
           onContentProcessDidTerminate={() => vista.current?.reload()}

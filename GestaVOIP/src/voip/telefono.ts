@@ -16,6 +16,7 @@
 import * as Device from 'expo-device'
 import { AppState, Platform, type NativeEventSubscription } from 'react-native'
 import { AudioDevice, Call, CallInvite, Voice } from '@twilio/voice-react-native-sdk'
+import { t } from '../i18n'
 import { ErroreOdoo } from '../odoo/client'
 import { idDispositivo, type Sessione } from '../odoo/sessione'
 import * as api from './api'
@@ -46,7 +47,10 @@ export type Chiamata = {
 
 export type StatoTelefono = {
   registrazione: Registrazione
+  /** Il perche' del guasto, cosi' come lo dice il server o l'SDK (non tradotto). */
   motivo: string
+  /** Tentativo di registrazione fallito (0 = nessuno): il testo lo compone la UI nella lingua scelta. */
+  tentativo: number
   disponibile: boolean
   chiamata: Chiamata | null
   audio: AudioDevice[]
@@ -58,6 +62,7 @@ type Ascoltatore = (stato: StatoTelefono) => void
 const STATO_INIZIALE: StatoTelefono = {
   registrazione: 'spento',
   motivo: '',
+  tentativo: 0,
   disponibile: true,
   chiamata: null,
   audio: [],
@@ -125,8 +130,8 @@ export class Telefono {
 
     this.voice.on(Voice.Event.CallInvite, (invito: CallInvite) => this.suInvito(invito))
     this.voice.on(Voice.Event.Error, (errore: { message?: string }) => {
-      const motivo = errore?.message || 'errore sconosciuto'
-      this.aggiorna({ registrazione: 'guasto', motivo })
+      const motivo = errore?.message || t('telefono.erroreSconosciuto')
+      this.aggiorna({ registrazione: 'guasto', motivo, tentativo: 0 })
       // Quasi sempre e' la rete o un token scaduto: si risolve riprovando.
       void this.registra('errore: ' + motivo)
     })
@@ -226,12 +231,12 @@ export class Telefono {
       } catch (e) {
         if (e instanceof ErroreOdoo && e.tipo === 'sessione') {
           // Qui insistere non serve: serve che l'operatore rientri.
-          this.aggiorna({ registrazione: 'guasto', motivo: e.message })
+          this.aggiorna({ registrazione: 'guasto', motivo: e.message, tentativo: 0 })
           this.suSessioneScaduta?.()
           return
         }
         const messaggio = e instanceof Error ? e.message : String(e)
-        this.aggiorna({ registrazione: 'guasto', motivo: `${messaggio} (tentativo ${tentativo + 1})` })
+        this.aggiorna({ registrazione: 'guasto', motivo: messaggio, tentativo: tentativo + 1 })
         await new Promise((r) => setTimeout(r, ATTESE_MS[Math.min(tentativo, ATTESE_MS.length - 1)]))
       }
     }
@@ -446,7 +451,7 @@ export class Telefono {
 
   async trasferisci(collega: number): Promise<string> {
     if (!this.sessione || !this.stato.chiamata) {
-      throw new Error('Nessuna chiamata in corso')
+      throw new Error(t('telefono.nessunaChiamata'))
     }
     return api.trasferisci(this.sessione.server, collega, {
       log_id: this.stato.chiamata.logId,

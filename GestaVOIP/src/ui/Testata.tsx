@@ -4,6 +4,7 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { useRouter } from 'expo-router'
 import type { ReactNode } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
+import { t } from '../i18n'
 import { spazio, useColori } from './tema'
 
 export function Testata({ titolo, sottotitolo, destra, sinistra }: { titolo: string; sottotitolo?: string; destra?: ReactNode; sinistra?: ReactNode }) {
@@ -17,7 +18,7 @@ export function Testata({ titolo, sottotitolo, destra, sinistra }: { titolo: str
           hitSlop={12}
           style={s.tasto}
           accessibilityRole="button"
-          accessibilityLabel="Indietro"
+          accessibilityLabel={t('comune.indietro')}
         >
           <Ionicons name="chevron-back" size={28} color={c.primario} />
         </Pressable>

@@ -5,6 +5,7 @@
  * vecchia.
  */
 
+import { t } from '../i18n'
 import { callKw, ErroreOdoo, rpc } from './client'
 import { dataOdoo } from './testo'
 
@@ -329,7 +330,7 @@ export async function attivita(server: string, uid: number): Promise<Attivita[]>
   const nomeDi = new Map(nomi.map((n) => [n.model, n.name]))
   return righe.map((r) => ({
     id: r.id,
-    tipo: r.activity_type_id ? r.activity_type_id[1] : 'Attività',
+    tipo: r.activity_type_id ? r.activity_type_id[1] : t('lavoro.attivita.tipo'),
     riassunto: r.summary || '',
     nota: r.note || '',
     // La scadenza e' una data senza ora: mezzogiorno locale evita salti di giorno.

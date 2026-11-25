@@ -12,6 +12,7 @@
  * tutto il giorno hanno anche start_date/stop_date, date senza ora.
  */
 
+import { lingua, loc, t, tn } from '../i18n'
 import { callKw } from './client'
 import { mioPartner } from './lavoro'
 import { dataOdoo, htmlDaTesto, testoDaHtml } from './testo'
@@ -82,8 +83,18 @@ export function giornoChiave(d: Date): string {
 
 /** «mercoledì 25 novembre» → «Mercoledì 25 novembre» (solo la prima lettera). */
 export function giornoEsteso(d: Date): string {
-  const t = d.toLocaleDateString('it-CH', { weekday: 'long', day: 'numeric', month: 'long' })
-  return t.charAt(0).toUpperCase() + t.slice(1)
+  const x = d.toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'long' })
+  return x.charAt(0).toUpperCase() + x.slice(1)
+}
+
+/** L'ora breve nella lingua dell'app: «14:00» in italiano, «2:00 PM» in inglese. */
+export function oraBreve(d: Date): string {
+  return d.toLocaleTimeString(loc(), { hour: lingua() === 'it' ? '2-digit' : 'numeric', minute: '2-digit' })
+}
+
+/** Le iniziali dei giorni da lunedi' a domenica («L M M G V S D», «M T W T F S S»). */
+export function lettereGiorni(): string[] {
+  return t('calendario.lettereGiorni').split(' ')
 }
 
 /** Un istante in UTC nel formato di Odoo. */
@@ -139,7 +150,7 @@ function daRiga(r: Riga): Evento {
   const al = r.stop_date || r.stop.slice(0, 10)
   return {
     id: r.id,
-    titolo: r.name || '(senza titolo)',
+    titolo: r.name || t('calendario.senzaTitolo'),
     // Tutto il giorno: date locali, l'ora non conta.
     inizio: r.allday ? new Date(`${dal}T00:00:00`) : dataOdoo(r.start) || new Date(),
     fine: r.allday ? new Date(`${al}T23:59:59`) : dataOdoo(r.stop) || new Date(),
@@ -547,53 +558,84 @@ export async function eliminaEvento(server: string, id: Id, ambito?: Ambito): Pr
   await callKw<boolean>(server, 'calendar.event', 'unlink', [[id]])
 }
 
-export const ETICHETTE_STATO: Record<Stato, string> = {
-  accepted: 'Accettato',
-  declined: 'Rifiutato',
-  tentative: 'Forse',
-  needsAction: 'In attesa',
+const CHIAVI_STATO: Record<Stato, string> = {
+  accepted: 'calendario.statoAccettato',
+  declined: 'calendario.statoRifiutato',
+  tentative: 'calendario.statoForse',
+  needsAction: 'calendario.statoInAttesa',
 }
 
-const NOMI_TIPO: Record<TipoRipetizione, [string, string]> = {
-  daily: ['giorno', 'giorni'],
-  weekly: ['settimana', 'settimane'],
-  monthly: ['mese', 'mesi'],
-  yearly: ['anno', 'anni'],
+/** «Accettato», «Rifiutato», «Forse», «In attesa» nella lingua dell'app. */
+export function etichettaStato(stato: Stato): string {
+  return t(CHIAVI_STATO[stato])
+}
+
+const CHIAVI_TIPO: Record<TipoRipetizione, string> = {
+  daily: 'calendario.ripGiorno',
+  weekly: 'calendario.ripSettimana',
+  monthly: 'calendario.ripMese',
+  yearly: 'calendario.ripAnno',
+}
+
+/** «lunedì e mercoledì», «Monday, Wednesday, and Friday». */
+function elenco(voci: string[]): string {
+  if (voci.length < 2) {
+    return voci[0] || ''
+  }
+  const chiave = voci.length > 2 ? 'calendario.elencoPiu' : 'calendario.elencoDue'
+  return t(chiave, { elenco: voci.slice(0, -1).join(', '), ultimo: voci[voci.length - 1] })
 }
 
 /** «Ogni settimana il lunedì e mercoledì, 10 volte» */
 export function descriviRipetizione(r: Ripetizione, inizio: Date): string {
-  const [uno, piu] = NOMI_TIPO[r.tipo]
-  const femminile = r.tipo === 'weekly'
-  let t = r.ogni === 1 ? `Ogni ${uno}` : `Ogni ${r.ogni} ${piu}`
-  if (femminile && r.ogni === 1) {
-    t = 'Ogni settimana'
-  }
+  let x = tn(CHIAVI_TIPO[r.tipo], r.ogni)
   if (r.tipo === 'weekly') {
-    const giorni = (r.giorni.length ? r.giorni : [giornoDi(inizio)]).map((g) => NOME_GIORNO[g])
-    t += ` il ${giorni.length > 1 ? `${giorni.slice(0, -1).join(', ')} e ${giorni[giorni.length - 1]}` : giorni[0]}`
+    const giorni = (r.giorni.length ? r.giorni : [giornoDi(inizio)]).map(nomeGiorno)
+    x += t('calendario.ripNeiGiorni', { giorni: elenco(giorni) })
   } else if (r.tipo === 'monthly') {
-    t +=
+    const settimana = settimanaDelMese(inizio)
+    x +=
       r.mesePer === 'date'
-        ? ` il giorno ${inizio.getDate()}`
-        : ` ${settimanaDelMese(inizio) === '-1' ? "l'ultimo" : `il ${ORDINALE[settimanaDelMese(inizio)]}`} ${NOME_GIORNO[giornoDi(inizio)]}`
+        ? t('calendario.ripGiornoDelMese', { n: inizio.getDate() })
+        : t('calendario.ripOrdinaleGiorno', { frase: fraseOrdinale(settimana, giornoDi(inizio)) })
   }
   if (r.fine === 'count') {
-    t += `, ${r.volte} ${r.volte === 1 ? 'volta' : 'volte'}`
+    x += tn('calendario.ripVolte', r.volte)
   } else if (r.fine === 'end_date' && r.finoAl) {
-    t += `, fino al ${new Date(`${r.finoAl}T12:00:00`).toLocaleDateString('it-CH', { day: 'numeric', month: 'long', year: 'numeric' })}`
+    const data = new Date(`${r.finoAl}T12:00:00`).toLocaleDateString(loc(), { day: 'numeric', month: 'long', year: 'numeric' })
+    x += t('calendario.ripFinoAl', { data })
   }
-  return t
+  return x
 }
 
-export const NOME_GIORNO: Record<GiornoSettimana, string> = {
-  mon: 'lunedì',
-  tue: 'martedì',
-  wed: 'mercoledì',
-  thu: 'giovedì',
-  fri: 'venerdì',
-  sat: 'sabato',
-  sun: 'domenica',
+/** Il nome del giorno nella lingua dell'app («lunedì», «Monday»). */
+export function nomeGiorno(g: GiornoSettimana): string {
+  // Lunedi' 1 gennaio 2024: un lunedi' noto, poi i giorni dopo.
+  return new Date(2024, 0, 1 + GIORNI_SETTIMANA.indexOf(g)).toLocaleDateString(loc(), { weekday: 'long' })
 }
 
-const ORDINALE: Record<string, string> = { '1': 'primo', '2': 'secondo', '3': 'terzo', '4': 'quarto' }
+/**
+ * «il primo lunedì», «la prima domenica», «l'ultimo mercoledì» / «the first
+ * Monday»: in italiano articolo e ordinale seguono il genere del giorno.
+ */
+export function fraseOrdinale(settimana: string, g: GiornoSettimana): string {
+  const giorno = nomeGiorno(g)
+  if (lingua() === 'it') {
+    const f = g === 'sun'
+    const ord: Record<string, [string, string]> = {
+      '1': ['primo', 'prima'],
+      '2': ['secondo', 'seconda'],
+      '3': ['terzo', 'terza'],
+      '4': ['quarto', 'quarta'],
+      '-1': ['ultimo', 'ultima'],
+    }
+    const articolo = settimana === '-1' ? "l'" : f ? 'la ' : 'il '
+    return `${articolo}${ord[settimana][f ? 1 : 0]} ${giorno}`
+  }
+  return `the ${nomeOrdinale(settimana)} ${giorno}`
+}
+
+/** Quale settimana del mese, a parole: «1» → «primo», «-1» → «ultimo». */
+export function nomeOrdinale(settimana: string): string {
+  return t(settimana === '-1' ? 'calendario.ordinaleUltimo' : `calendario.ordinale${settimana}`)
+}

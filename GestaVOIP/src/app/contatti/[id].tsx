@@ -5,6 +5,7 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { t } from '../../i18n'
 import { schedaContatto, type SchedaContatto } from '../../odoo/contatti'
 import { percorsoRecord, urlAvatar } from '../../odoo/lavoro'
 import { testoDaHtml } from '../../odoo/testo'
@@ -31,7 +32,7 @@ export default function SchedaContattoSchermata() {
       if (r) {
         setK(r)
       } else {
-        setErrore('Contatto non trovato.')
+        setErrore(t('schede.contattoNonTrovato'))
       }
     } catch (e) {
       setErrore(e instanceof Error ? e.message : String(e))
@@ -45,7 +46,7 @@ export default function SchedaContattoSchermata() {
   )
 
   function apri(url: string) {
-    Linking.openURL(url).catch(() => Alert.alert('Link', 'Nessuna app sa aprire questo link.'))
+    Linking.openURL(url).catch(() => Alert.alert(t('schede.link'), t('schede.nessunaAppLink')))
   }
 
   function apriInOdoo() {
@@ -60,12 +61,12 @@ export default function SchedaContattoSchermata() {
   const indirizzoUnaRiga = k ? k.indirizzo.replace(/\n/g, ', ') : ''
   const azioni = k
     ? [
-        { icona: 'call' as const, testo: 'Chiama', attiva: !!numero, fai: () => chiamaNumero(sessione, numero, k.nome) },
-        { icona: 'chatbubble' as const, testo: 'Messaggio', attiva: !!numero, fai: () => apri(`sms:${numero.replace(/\s+/g, '')}`) },
-        { icona: 'mail' as const, testo: 'Email', attiva: !!k.email, fai: () => apri(`mailto:${k.email}`) },
+        { icona: 'call' as const, testo: t('schede.chiama'), attiva: !!numero, fai: () => chiamaNumero(sessione, numero, k.nome) },
+        { icona: 'chatbubble' as const, testo: t('schede.messaggio'), attiva: !!numero, fai: () => apri(`sms:${numero.replace(/\s+/g, '')}`) },
+        { icona: 'mail' as const, testo: t('schede.email'), attiva: !!k.email, fai: () => apri(`mailto:${k.email}`) },
         {
           icona: 'navigate' as const,
-          testo: 'Mappa',
+          testo: t('schede.mappa'),
           attiva: !!indirizzoUnaRiga,
           fai: () => apri(`http://maps.apple.com/?q=${encodeURIComponent(indirizzoUnaRiga)}`),
         },
@@ -91,7 +92,7 @@ export default function SchedaContattoSchermata() {
 
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom']}>
-      <Testata titolo={k?.eAzienda || k?.persone.length ? 'Azienda' : 'Contatto'} />
+      <Testata titolo={k?.eAzienda || k?.persone.length ? t('schede.azienda') : t('schede.contatto')} />
       {errore && !k ? (
         <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>
       ) : !k ? (
@@ -144,20 +145,20 @@ export default function SchedaContattoSchermata() {
           </View>
 
           <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
-            {k.cellulare ? voce('phone-portrait-outline', 'Cellulare', k.cellulare, () => chiamaNumero(sessione, k.cellulare, k.nome)) : null}
+            {k.cellulare ? voce('phone-portrait-outline', t('schede.cellulare'), k.cellulare, () => chiamaNumero(sessione, k.cellulare, k.nome)) : null}
             {k.telefono && k.telefono.replace(/\D/g, '') !== k.cellulare.replace(/\D/g, '')
-              ? voce('call-outline', 'Telefono', k.telefono, () => chiamaNumero(sessione, k.telefono, k.nome))
+              ? voce('call-outline', t('schede.telefono'), k.telefono, () => chiamaNumero(sessione, k.telefono, k.nome))
               : null}
-            {k.email ? voce('mail-outline', 'Email', k.email, () => apri(`mailto:${k.email}`)) : null}
+            {k.email ? voce('mail-outline', t('schede.email'), k.email, () => apri(`mailto:${k.email}`)) : null}
             {k.indirizzo
-              ? voce('location-outline', 'Indirizzo', k.indirizzo, () =>
+              ? voce('location-outline', t('schede.indirizzo'), k.indirizzo, () =>
                   apri(`http://maps.apple.com/?q=${encodeURIComponent(indirizzoUnaRiga)}`),
                 )
               : null}
-            {k.sito ? voce('globe-outline', 'Sito', k.sito, () => apri(/^https?:/i.test(k.sito) ? k.sito : `https://${k.sito}`)) : null}
-            {k.partitaIva ? voce('document-text-outline', 'Partita IVA', k.partitaIva) : null}
+            {k.sito ? voce('globe-outline', t('schede.sito'), k.sito, () => apri(/^https?:/i.test(k.sito) ? k.sito : `https://${k.sito}`)) : null}
+            {k.partitaIva ? voce('document-text-outline', t('schede.partitaIva'), k.partitaIva) : null}
             {!numero && !k.email && !k.indirizzo && !k.sito && !k.partitaIva ? (
-              <Text style={[s.vuotoScheda, { color: c.testo3 }]}>Nessun recapito in Odoo.</Text>
+              <Text style={[s.vuotoScheda, { color: c.testo3 }]}>{t('schede.nessunRecapito')}</Text>
             ) : null}
           </View>
 
@@ -173,7 +174,7 @@ export default function SchedaContattoSchermata() {
 
           {k.persone.length ? (
             <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
-              <Text style={[s.titoloScheda, { color: c.testo2 }]}>Persone · {k.persone.length}</Text>
+              <Text style={[s.titoloScheda, { color: c.testo2 }]}>{t('schede.persone', { n: k.persone.length })}</Text>
               {k.persone.map((p) => {
                 const n = p.cellulare || p.telefono
                 return (
@@ -198,7 +199,7 @@ export default function SchedaContattoSchermata() {
                         onPress={() => chiamaNumero(sessione, n, p.nome)}
                         hitSlop={8}
                         style={[s.chiama, { backgroundColor: c.verdeTenue }]}
-                        accessibilityLabel={`Chiama ${p.nome}`}
+                        accessibilityLabel={t('schede.chiamaNome', { nome: p.nome })}
                       >
                         <Ionicons name="call" size={16} color={c.verde} />
                       </Pressable>
@@ -211,14 +212,14 @@ export default function SchedaContattoSchermata() {
 
           {testoDaHtml(k.note) ? (
             <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo, padding: spazio.m }]}>
-              <Text style={[s.titoloScheda, { color: c.testo2, paddingHorizontal: 0 }]}>Note</Text>
+              <Text style={[s.titoloScheda, { color: c.testo2, paddingHorizontal: 0 }]}>{t('schede.note')}</Text>
               <Text style={[s.note, { color: c.testo }]} selectable>
                 {testoDaHtml(k.note)}
               </Text>
             </View>
           ) : null}
 
-          <Pulsante testo="Apri in Odoo" variante="tenue" onPress={apriInOdoo} />
+          <Pulsante testo={t('schede.apriInOdoo')} variante="tenue" onPress={apriInOdoo} />
         </ScrollView>
       )}
     </SafeAreaView>

@@ -7,6 +7,8 @@
  * non serve, e un segreto in meno da tenere in giro.
  */
 
+import { t } from '../i18n'
+
 export type TipoErrore = 'sessione' | 'rete' | 'server' | 'accesso' | 'modulo' | 'codice'
 
 export class ErroreOdoo extends Error {
@@ -55,35 +57,35 @@ export async function rpc<T>(
     // assente: il messaggio dice all'utente le due cose da controllare.
     const motivo =
       (e as Error)?.name === 'AbortError'
-        ? 'Il server non risponde. Riprova fra poco.'
-        : 'Server non raggiungibile: controlla l\'indirizzo e la connessione a internet.'
+        ? t('accesso.erroreNonRisponde')
+        : t('accesso.erroreNonRaggiungibile')
     throw new ErroreOdoo('rete', motivo)
   } finally {
     clearTimeout(timer)
   }
 
   if (risposta.status === 404) {
-    throw new ErroreOdoo('modulo', "Questo Odoo non ha il modulo VOIP AI aggiornato (serve la versione 2.36 o successiva).")
+    throw new ErroreOdoo('modulo', t('accesso.erroreModulo'))
   }
   if (!risposta.ok) {
-    throw new ErroreOdoo('server', `Il server ha risposto ${risposta.status}.`)
+    throw new ErroreOdoo('server', t('accesso.erroreStato', { stato: risposta.status }))
   }
 
   let corpo: { result?: T; error?: { message?: string; data?: { name?: string; message?: string } } }
   try {
     corpo = await risposta.json()
   } catch {
-    throw new ErroreOdoo('server', 'Risposta non valida dal server.')
+    throw new ErroreOdoo('server', t('accesso.erroreRisposta'))
   }
 
   if (corpo.error) {
     const nome = corpo.error.data?.name || ''
-    const messaggio = corpo.error.data?.message || corpo.error.message || 'Errore del server.'
+    const messaggio = corpo.error.data?.message || corpo.error.message || t('accesso.erroreServer')
     if (nome.includes('SessionExpired')) {
-      throw new ErroreOdoo('sessione', 'La sessione e\' scaduta: accedi di nuovo.')
+      throw new ErroreOdoo('sessione', t('accesso.sessioneScaduta'))
     }
     if (nome.includes('AccessDenied')) {
-      throw new ErroreOdoo('accesso', 'Email o password non corrette.')
+      throw new ErroreOdoo('accesso', t('accesso.credenzialiErrate'))
     }
     throw new ErroreOdoo('server', messaggio)
   }
@@ -109,7 +111,7 @@ export async function infoServer(base: string): Promise<InfoServer> {
   try {
     const r = await rpc<{ status: string; message?: string } & InfoServer>(base, '/ai_telemarketing/mobile/info')
     if (r.status !== 'success') {
-      throw new ErroreOdoo('server', r.message || 'Server non valido.')
+      throw new ErroreOdoo('server', r.message || t('accesso.serverNonValido'))
     }
     return { ...r, voip: true }
   } catch (e) {
@@ -123,7 +125,7 @@ export async function infoServer(base: string): Promise<InfoServer> {
     if (e instanceof ErroreOdoo && e.tipo === 'rete') {
       throw e
     }
-    throw new ErroreOdoo('server', "A questo indirizzo non risponde un Odoo: controlla l'indirizzo.")
+    throw new ErroreOdoo('server', t('accesso.nonOdoo'))
   }
   return { db: '', company: '', module_version: '', voip: false }
 }
@@ -154,7 +156,7 @@ export async function accedi(
   if (utente) {
     return utente
   }
-  throw new ErroreOdoo('codice', 'Serve il codice della verifica in due passaggi.')
+  throw new ErroreOdoo('codice', t('accesso.serveCodice'))
 }
 
 /**
@@ -173,7 +175,7 @@ export async function accediDallaPagina(base: string, login: string, password: s
     const html = await pagina.text()
     const token = /name="csrf_token"[^>]*value="([^"]+)"/.exec(html)?.[1] || ''
     if (!token) {
-      throw new ErroreOdoo('server', "A questo indirizzo non risponde la pagina di accesso di Odoo.")
+      throw new ErroreOdoo('server', t('accesso.nonPaginaAccesso'))
     }
     const r = await fetch(`${base}/web/login`, {
       method: 'POST',
@@ -187,7 +189,7 @@ export async function accediDallaPagina(base: string, login: string, password: s
     if (e instanceof ErroreOdoo) {
       throw e
     }
-    throw new ErroreOdoo('rete', "Server non raggiungibile: controlla l'indirizzo e la connessione a internet.")
+    throw new ErroreOdoo('rete', t('accesso.erroreNonRaggiungibile'))
   } finally {
     clearTimeout(timer)
   }
@@ -196,9 +198,9 @@ export async function accediDallaPagina(base: string, login: string, password: s
     return info
   }
   if (/\/web\/login\/totp/.test(finale)) {
-    throw new ErroreOdoo('codice', 'Serve il codice della verifica in due passaggi.')
+    throw new ErroreOdoo('codice', t('accesso.serveCodice'))
   }
-  throw new ErroreOdoo('accesso', 'Email o password non corrette.')
+  throw new ErroreOdoo('accesso', t('accesso.credenzialiErrate'))
 }
 
 /**
@@ -279,7 +281,7 @@ async function paginaCodice(base: string): Promise<string> {
     const html = await risposta.text()
     return /name="csrf_token"[^>]*value="([^"]+)"/.exec(html)?.[1] || ''
   } catch {
-    throw new ErroreOdoo('rete', "Server non raggiungibile: controlla la connessione a internet.")
+    throw new ErroreOdoo('rete', t('accesso.erroreSenzaRete'))
   } finally {
     clearTimeout(timer)
   }
@@ -299,7 +301,7 @@ export async function confermaCodice(base: string, codice: string): Promise<Uten
     return gia
   }
   if (!token) {
-    throw new ErroreOdoo('sessione', 'Il tempo per il codice e\' scaduto: accedi di nuovo.')
+    throw new ErroreOdoo('sessione', t('accesso.codiceScaduto'))
   }
   const controllo = new AbortController()
   const timer = setTimeout(() => controllo.abort(), TIMEOUT_MS)
@@ -312,13 +314,13 @@ export async function confermaCodice(base: string, codice: string): Promise<Uten
       signal: controllo.signal,
     })
   } catch {
-    throw new ErroreOdoo('rete', "Server non raggiungibile: controlla la connessione a internet.")
+    throw new ErroreOdoo('rete', t('accesso.erroreSenzaRete'))
   } finally {
     clearTimeout(timer)
   }
   const utente = await utenteCollegato(base)
   if (!utente) {
-    throw new ErroreOdoo('accesso', 'Codice non valido o scaduto: riprova con quello nuovo.')
+    throw new ErroreOdoo('accesso', t('accesso.codiceNonValido'))
   }
   return utente
 }

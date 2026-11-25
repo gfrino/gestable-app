@@ -1,29 +1,33 @@
 import { StyleSheet, Text, View } from 'react-native'
+import { t } from '../i18n'
 import { useTelefono } from '../voip/Contesto'
 import { raggio, spazio, useColori } from './tema'
 
 /** Una riga che dice se il telefono squilla davvero, e se no perche'. */
 export function StatoLinea() {
   const c = useColori()
-  const { registrazione, motivo, disponibile } = useTelefono()
+  const { registrazione, motivo, tentativo, disponibile } = useTelefono()
 
-  let testo = 'Pronto: ricevi e fai chiamate'
+  let testo = t('telefono.linea.pronto')
   let colore = c.verde
   let sfondo = c.verdeTenue
   if (!disponibile) {
-    testo = 'Non disponibile: le chiamate non squillano qui'
+    testo = t('telefono.linea.nonDisponibile')
     colore = c.ambra
     sfondo = c.ambraTenue
   } else if (registrazione === 'collegamento' || registrazione === 'spento') {
-    testo = 'Collegamento al centralino...'
+    testo = t('telefono.linea.collegamento')
     colore = c.testo2
     sfondo = c.superficie2
   } else if (registrazione === 'senza-push') {
-    testo = 'Solo chiamate in uscita: push non configurate sul server'
+    testo = t('telefono.linea.senzaPush')
     colore = c.ambra
     sfondo = c.ambraTenue
   } else if (registrazione === 'guasto') {
-    testo = motivo ? `Non collegato: ${motivo}` : 'Non collegato: riprovo da solo'
+    // Il motivo viene dal server o dall'SDK Twilio cosi' com'e'; il numero del
+    // tentativo si scrive qui, nella lingua scelta ora.
+    const dettaglio = tentativo ? t('telefono.linea.tentativo', { motivo, n: tentativo }) : motivo
+    testo = motivo || tentativo ? t('telefono.linea.guasto', { motivo: dettaglio }) : t('telefono.linea.guastoRiprovo')
     colore = c.rosso
     sfondo = c.rossoTenue
   }

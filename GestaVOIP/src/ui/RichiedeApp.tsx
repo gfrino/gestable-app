@@ -12,6 +12,7 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useRef, useState, type ReactNode } from 'react'
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { t } from '../i18n'
 import { menuOdoo } from '../odoo/capacita'
 import { ErroreOdoo } from '../odoo/client'
 import { useApp } from '../voip/Contesto'
@@ -115,31 +116,23 @@ function Avviso({
           </View>
           {stato === 'manca' ? (
             <>
-              <Text style={[s.grande, { color: c.testo }]}>{app} non è attivo</Text>
-              <Text style={[s.testo, { color: c.testo2 }]}>
-                In questo Odoo ({indirizzo}) l&apos;app {app} non è installata, oppure il tuo utente non la può usare.
-              </Text>
+              <Text style={[s.grande, { color: c.testo }]}>{t('accesso.appNonAttiva', { app })}</Text>
+              <Text style={[s.testo, { color: c.testo2 }]}>{t('accesso.appNonAttivaTesto', { indirizzo, app })}</Text>
               <View style={[s.riquadro, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
                 <Ionicons name="person-circle-outline" size={22} color={c.primario} />
-                <Text style={[s.riquadroTesto, { color: c.testo }]}>
-                  Chiedi all&apos;amministratore del tuo Odoo di installare l&apos;app {app} e di darti l&apos;accesso.
-                  Poi torna qui: la scheda si attiva da sola.
-                </Text>
+                <Text style={[s.riquadroTesto, { color: c.testo }]}>{t('accesso.chiediAmministratore', { app })}</Text>
               </View>
               <View style={s.pulsanti}>
-                <Pulsante testo="Apri Odoo" variante="tenue" onPress={() => router.navigate('/(tabs)/odoo')} />
+                <Pulsante testo={t('accesso.apriOdoo')} variante="tenue" onPress={() => router.navigate('/(tabs)/odoo')} />
               </View>
             </>
           ) : (
             <>
-              <Text style={[s.grande, { color: c.testo }]}>Serve l&apos;accesso con email</Text>
-              <Text style={[s.testo, { color: c.testo2 }]}>
-                Sei entrato dalla pagina di Odoo (per esempio con Google o Microsoft). {titolo} nell&apos;app funziona
-                con l&apos;accesso con email e password di Odoo.
-              </Text>
+              <Text style={[s.grande, { color: c.testo }]}>{t('accesso.serveEmail')}</Text>
+              <Text style={[s.testo, { color: c.testo2 }]}>{t('accesso.serveEmailTesto', { titolo })}</Text>
               <View style={s.pulsanti}>
-                <Pulsante testo="Accedi con email" onPress={esci} />
-                <Pulsante testo="Apri Odoo" variante="tenue" onPress={() => router.navigate('/(tabs)/odoo')} />
+                <Pulsante testo={t('accesso.accediEmail')} onPress={esci} />
+                <Pulsante testo={t('accesso.apriOdoo')} variante="tenue" onPress={() => router.navigate('/(tabs)/odoo')} />
               </View>
             </>
           )}

@@ -12,18 +12,20 @@ import { AudioDevice } from '@twilio/voice-react-native-sdk'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, Animated, Easing, FlatList, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { t } from '../i18n'
 import { colleghi, schedaContatto, type Collega, type SchedaContatto } from '../voip/api'
 import { useApp, useTelefono } from '../voip/Contesto'
 import { telefono, type Fase } from '../voip/telefono'
 import { coloriChiamata, raggio, spazio, type Colori } from '../ui/tema'
 
+// Chiavi dei testi, tradotti al momento di mostrarli (la lingua puo' cambiare).
 const FASI: Record<Fase, string> = {
-  composizione: 'Chiamata in corso...',
-  squillo: 'Squilla...',
-  'in-arrivo': 'Chiamata in arrivo',
+  composizione: 'telefono.fase.composizione',
+  squillo: 'telefono.fase.squillo',
+  'in-arrivo': 'telefono.fase.inArrivo',
   connessa: '',
-  riconnessione: 'Rete debole, riconnessione...',
-  finita: 'Chiamata terminata',
+  riconnessione: 'telefono.fase.riconnessione',
+  finita: 'telefono.fase.finita',
 }
 
 const TONI = ['1', '2', '3', '4', '5', '6', '7', '8', '9', '*', '0', '#']
@@ -38,15 +40,15 @@ function cronometro(inizio: number | null): string {
 
 function nomeAudio(d: AudioDevice | null): string {
   if (!d) {
-    return 'Audio'
+    return t('telefono.audio')
   }
   if (d.type === AudioDevice.Type.Speaker) {
-    return 'Vivavoce'
+    return t('telefono.vivavoce')
   }
   if (d.type === AudioDevice.Type.Earpiece) {
-    return 'Telefono'
+    return t('telefono.auricolare')
   }
-  return d.name || 'Bluetooth'
+  return d.name || t('telefono.bluetooth')
 }
 
 type PropsTasto = {
@@ -175,8 +177,8 @@ export default function SchermataChiamata() {
   const [sceltaAudio, setSceltaAudio] = useState(false)
 
   useEffect(() => {
-    const t = setInterval(() => setBattito((n) => n + 1), 1000)
-    return () => clearInterval(t)
+    const timer = setInterval(() => setBattito((n) => n + 1), 1000)
+    return () => clearInterval(timer)
   }, [])
 
   if (!chiamata) {
@@ -185,7 +187,7 @@ export default function SchermataChiamata() {
 
   const connessa = chiamata.fase === 'connessa'
   const squilla = ['composizione', 'squillo', 'in-arrivo'].includes(chiamata.fase)
-  const stato = connessa ? cronometro(chiamata.inizio) : FASI[chiamata.fase]
+  const stato = connessa ? cronometro(chiamata.inizio) : FASI[chiamata.fase] ? t(FASI[chiamata.fase]) : ''
   const nome = scheda?.nome || chiamata.nome || ''
   const colorePunto = chiamata.fase === 'riconnessione' ? c.ambra : connessa ? c.verde : c.testo3
 
@@ -198,7 +200,7 @@ export default function SchermataChiamata() {
       setLista(await colleghi(sessione.server))
     } catch (e) {
       setLista(null)
-      Alert.alert('Trasferimento', e instanceof Error ? e.message : String(e))
+      Alert.alert(t('telefono.trasferimento'), e instanceof Error ? e.message : String(e))
     }
   }
 
@@ -206,9 +208,9 @@ export default function SchermataChiamata() {
     setLista(null)
     try {
       const nome = await telefono.trasferisci(collega.id)
-      Alert.alert('Chiamata passata', `La chiamata ora squilla a ${nome}.`)
+      Alert.alert(t('telefono.passataTitolo'), t('telefono.passataTesto', { nome }))
     } catch (e) {
-      Alert.alert('Trasferimento non riuscito', e instanceof Error ? e.message : String(e))
+      Alert.alert(t('telefono.trasferimentoErrore'), e instanceof Error ? e.message : String(e))
     }
   }
 
@@ -242,15 +244,15 @@ export default function SchermataChiamata() {
             color={c.testo2}
             style={{ transform: [{ rotate: '45deg' }] }}
           />
-          <Text style={[s.direzioneTesto, { color: c.testo2 }]}>
-            {chiamata.direzione === 'entrata' ? 'In arrivo' : 'In uscita'}
+          <Text style={[s.direzioneTesto, { color: c.testo2 }]} numberOfLines={1}>
+            {chiamata.direzione === 'entrata' ? t('telefono.inArrivo') : t('telefono.inUscita')}
           </Text>
         </View>
 
         <Ritratto foto={scheda?.foto || ''} nome={nome} squilla={squilla} c={c} />
 
         <Text style={[s.nome, { color: c.testo }]} numberOfLines={2} adjustsFontSizeToFit minimumFontScale={0.7}>
-          {nome || chiamata.numero || 'Sconosciuto'}
+          {nome || chiamata.numero || t('telefono.sconosciuto')}
         </Text>
         {scheda?.azienda ? (
           <Text style={[s.azienda, { color: c.testo2 }]} numberOfLines={1}>
@@ -267,7 +269,7 @@ export default function SchermataChiamata() {
           <View style={[s.punto, { backgroundColor: colorePunto }]} />
           <Text style={[s.stato, { color: chiamata.fase === 'riconnessione' ? c.ambra : c.testo }]}>
             {stato}
-            {chiamata.attesa ? ' · in attesa' : ''}
+            {chiamata.attesa ? t('telefono.inAttesa') : ''}
           </Text>
         </View>
       </View>
@@ -278,24 +280,24 @@ export default function SchermataChiamata() {
             {toni}
           </Text>
           <View style={s.toniGriglia}>
-            {TONI.map((t) => (
+            {TONI.map((tono) => (
               <Pressable
-                key={t}
+                key={tono}
                 onPress={() => {
-                  setToni((v) => v + t)
-                  void telefono.toni(t)
+                  setToni((v) => v + tono)
+                  void telefono.toni(tono)
                 }}
                 style={({ pressed }) => [s.tono, { backgroundColor: pressed ? 'rgba(255,255,255,0.18)' : 'rgba(255,255,255,0.08)' }]}
               >
-                <Text style={[s.tonoTesto, { color: c.testo }]}>{t}</Text>
+                <Text style={[s.tonoTesto, { color: c.testo }]}>{tono}</Text>
               </Pressable>
             ))}
           </View>
         </View>
       ) : (
         <View style={s.griglia}>
-          <Tasto c={c} icona="mic-off" testo="Muto" attivo={chiamata.muto} onPress={() => void telefono.muto()} disabilitato={!connessa} />
-          <Tasto c={c} icona="keypad" testo="Tastierino" onPress={() => setTastierino(true)} disabilitato={!connessa} />
+          <Tasto c={c} icona="mic-off" testo={t('telefono.muto')} attivo={chiamata.muto} onPress={() => void telefono.muto()} disabilitato={!connessa} />
+          <Tasto c={c} icona="keypad" testo={t('telefono.tastierino')} onPress={() => setTastierino(true)} disabilitato={!connessa} />
           <Tasto
             c={c}
             icona={audioScelto?.type === AudioDevice.Type.Speaker ? 'volume-high' : 'volume-medium'}
@@ -303,15 +305,17 @@ export default function SchermataChiamata() {
             attivo={audioScelto?.type === AudioDevice.Type.Speaker}
             onPress={() => setSceltaAudio(true)}
           />
-          <Tasto c={c} icona="pause" testo="Attesa" attivo={chiamata.attesa} onPress={() => void telefono.attesa()} disabilitato={!connessa} />
-          <Tasto c={c} icona="swap-horizontal" testo="Trasferisci" onPress={apriTrasferimento} disabilitato={!connessa || chiamata.direzione !== 'entrata'} />
+          <Tasto c={c} icona="pause" testo={t('telefono.attesa')} attivo={chiamata.attesa} onPress={() => void telefono.attesa()} disabilitato={!connessa} />
+          <Tasto c={c} icona="swap-horizontal" testo={t('telefono.trasferisci')} onPress={apriTrasferimento} disabilitato={!connessa || chiamata.direzione !== 'entrata'} />
         </View>
       )}
 
       <View style={s.piede}>
         {tastierino ? (
           <Pressable onPress={() => setTastierino(false)} style={s.lato} hitSlop={12}>
-            <Text style={{ color: c.primario, fontSize: 16, fontWeight: '600' }}>Nascondi</Text>
+            <Text style={{ color: c.primario, fontSize: 16, fontWeight: '600' }} numberOfLines={1}>
+              {t('telefono.nascondi')}
+            </Text>
           </Pressable>
         ) : (
           <View style={s.lato} />
@@ -320,7 +324,7 @@ export default function SchermataChiamata() {
           onPress={() => void telefono.riaggancia()}
           style={({ pressed }) => [s.riaggancia, { backgroundColor: c.rosso, opacity: pressed ? 0.85 : 1 }]}
           accessibilityRole="button"
-          accessibilityLabel="Riaggancia"
+          accessibilityLabel={t('telefono.riaggancia')}
         >
           <Ionicons name="call" size={34} color="#FFFFFF" style={{ transform: [{ rotate: '135deg' }] }} />
         </Pressable>
@@ -352,7 +356,7 @@ export default function SchermataChiamata() {
       <Modal visible={lista !== null} transparent animationType="slide" onRequestClose={() => setLista(null)}>
         <Pressable style={s.velo} onPress={() => setLista(null)}>
           <View style={[s.foglio, { backgroundColor: c.superficie, maxHeight: '70%' }]}>
-            <Text style={[s.foglioTitolo, { color: c.testo }]}>Passa la chiamata a</Text>
+            <Text style={[s.foglioTitolo, { color: c.testo }]}>{t('telefono.passaA')}</Text>
             {lista && lista.length === 0 ? <ActivityIndicator color={c.primario} style={{ margin: spazio.l }} /> : null}
             <FlatList
               data={lista || []}

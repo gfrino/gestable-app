@@ -4,6 +4,7 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Alert, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { t } from '../../i18n'
 import { creaContatto, haCellulare } from '../../odoo/contatti'
 import { Pulsante } from '../../ui/Pulsante'
 import { Testata } from '../../ui/Testata'
@@ -36,11 +37,11 @@ export default function NuovoContatto() {
 
   async function conferma() {
     if (!nome.trim()) {
-      Alert.alert('Nuovo contatto', eAzienda ? "Scrivi il nome dell'azienda." : 'Scrivi il nome.')
+      Alert.alert(t('schede.nuovoContatto'), eAzienda ? t('schede.scriviNomeAzienda') : t('schede.scriviNome'))
       return
     }
     if (email.trim() && !/^\S+@\S+\.\S+$/.test(email.trim())) {
-      Alert.alert('Nuovo contatto', "L'email non sembra giusta.")
+      Alert.alert(t('schede.nuovoContatto'), t('schede.emailSbagliata'))
       return
     }
     setSalva(true)
@@ -48,23 +49,23 @@ export default function NuovoContatto() {
       const id = await creaContatto(server, { eAzienda, nome, azienda, funzione, telefono, cellulare, email })
       router.replace({ pathname: '/contatti/[id]', params: { id: String(id) } })
     } catch (e) {
-      Alert.alert('Contatto non salvato', e instanceof Error ? e.message : String(e))
+      Alert.alert(t('schede.contattoNonSalvato'), e instanceof Error ? e.message : String(e))
       setSalva(false)
     }
   }
 
   const campo = [s.campo, { backgroundColor: c.superficie, borderColor: c.bordo, color: c.testo }]
-  const etichetta = (t: string) => <Text style={[s.etichetta, { color: c.testo2 }]}>{t}</Text>
+  const etichetta = (testo: string) => <Text style={[s.etichetta, { color: c.testo2 }]}>{testo}</Text>
 
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom']}>
-      <Testata titolo="Nuovo contatto" />
+      <Testata titolo={t('schede.nuovoContatto')} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={s.contenuto} keyboardShouldPersistTaps="handled">
           <View style={[s.segmenti, { backgroundColor: c.superficie }]}>
             {[
-              { v: false, t: 'Persona' },
-              { v: true, t: 'Azienda' },
+              { v: false, t: t('schede.persona') },
+              { v: true, t: t('schede.azienda') },
             ].map((x) => {
               const attivo = x.v === eAzienda
               return (
@@ -75,33 +76,35 @@ export default function NuovoContatto() {
                   accessibilityRole="tab"
                   accessibilityState={{ selected: attivo }}
                 >
-                  <Text style={[s.segmentoTesto, { color: attivo ? c.primario : c.testo2 }]}>{x.t}</Text>
+                  <Text style={[s.segmentoTesto, { color: attivo ? c.primario : c.testo2 }]} numberOfLines={1}>
+                    {x.t}
+                  </Text>
                 </Pressable>
               )
             })}
           </View>
 
-          {etichetta(eAzienda ? 'Nome azienda' : 'Nome e cognome')}
+          {etichetta(eAzienda ? t('schede.nomeAzienda') : t('schede.nomeCognome'))}
           <TextInput style={campo} value={nome} onChangeText={setNome} autoFocus autoCapitalize="words" placeholderTextColor={c.testo3} />
 
           {!eAzienda ? (
             <>
-              {etichetta('Azienda (facoltativa)')}
+              {etichetta(t('schede.aziendaFacoltativa'))}
               <TextInput style={campo} value={azienda} onChangeText={setAzienda} autoCapitalize="words" />
-              {etichetta('Ruolo (facoltativo)')}
+              {etichetta(t('schede.ruoloFacoltativo'))}
               <TextInput style={campo} value={funzione} onChangeText={setFunzione} autoCapitalize="sentences" />
             </>
           ) : null}
 
-          {etichetta('Telefono')}
+          {etichetta(t('schede.telefono'))}
           <TextInput style={campo} value={telefono} onChangeText={setTelefono} keyboardType="phone-pad" textContentType="telephoneNumber" />
           {conCellulare ? (
             <>
-              {etichetta('Cellulare')}
+              {etichetta(t('schede.cellulare'))}
               <TextInput style={campo} value={cellulare} onChangeText={setCellulare} keyboardType="phone-pad" />
             </>
           ) : null}
-          {etichetta('Email')}
+          {etichetta(t('schede.email'))}
           <TextInput
             style={campo}
             value={email}
@@ -113,10 +116,10 @@ export default function NuovoContatto() {
           />
 
           <View style={{ height: spazio.s }} />
-          <Pulsante testo="Salva" onPress={conferma} occupato={salva} />
+          <Pulsante testo={t('comune.salva')} onPress={conferma} occupato={salva} />
           {!eAzienda && azienda.trim() ? (
             <Text style={[s.nota, { color: c.testo3 }]}>
-              Se in Odoo c&apos;è già un&apos;azienda con questo nome, il contatto viene collegato a lei.
+              {t('schede.notaAziendaEsistente')}
             </Text>
           ) : null}
         </ScrollView>

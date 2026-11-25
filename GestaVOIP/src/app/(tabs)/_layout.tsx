@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { Tabs, useRouter } from 'expo-router'
 import { useEffect, useRef } from 'react'
+import { t } from '../../i18n'
 import { conTelefono } from '../../odoo/sessione'
 import { useApp, useTelefono } from '../../voip/Contesto'
 import { inviaOdoo } from '../../ui/comandiOdoo'
@@ -46,7 +47,7 @@ export default function LayoutSchede() {
         name="index"
         options={{
           href: telefono ? undefined : null,
-          title: 'Tastierino',
+          title: t('schede.tastierino'),
           tabBarIcon: ({ color, size }) => <Ionicons name="keypad" color={color} size={size} />,
         }}
       />
@@ -54,21 +55,21 @@ export default function LayoutSchede() {
         name="recenti"
         options={{
           href: telefono ? undefined : null,
-          title: 'Recenti',
+          title: t('schede.recenti'),
           tabBarIcon: ({ color, size }) => <Ionicons name="time" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="contatti"
         options={{
-          title: 'Contatti',
+          title: t('schede.contatti'),
           tabBarIcon: ({ color, size }) => <Ionicons name="people" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
         name="calendario"
         options={{
-          title: 'Calendario',
+          title: t('schede.calendario'),
           tabBarIcon: ({ color, size }) => <Ionicons name="calendar" color={color} size={size} />,
         }}
       />

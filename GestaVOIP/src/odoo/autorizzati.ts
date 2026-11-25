@@ -12,6 +12,7 @@
 
 import { ed25519 } from '@noble/curves/ed25519'
 import * as SecureStore from 'expo-secure-store'
+import { t } from '../i18n'
 
 const URL_LISTA = 'https://ticinoweb.online/tw_app/allowlist'
 const CHIAVE_PUBBLICA = 'KJ4KGo4Gyb+817IWRbirytpVoYoiT4/JaPwPjTtHUZo='
@@ -115,7 +116,11 @@ export async function verificaServer(server: string): Promise<Esito> {
   return lista.servers.some((s) => s.origin === origine && s.apps.includes(APP)) ? 'autorizzato' : 'non-autorizzato'
 }
 
-export const MESSAGGIO_NON_AUTORIZZATO =
-  'Questo Odoo non è abilitato per GestaVOIP. Per attivarlo contatta ticinoWEB.'
-export const MESSAGGIO_NON_VERIFICABILE =
-  'Non riesco a verificare il server: controlla la connessione a internet e riprova.'
+/** Messaggi per l'utente, nella lingua dell'app al momento della chiamata. */
+export function messaggioNonAutorizzato(): string {
+  return t('accesso.nonAutorizzato')
+}
+
+export function messaggioNonVerificabile(): string {
+  return t('accesso.nonVerificabile')
+}

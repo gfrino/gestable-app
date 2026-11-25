@@ -8,6 +8,7 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useRef, useState } from 'react'
 import { ActivityIndicator, Pressable, RefreshControl, SectionList, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { t } from '../../i18n'
 import { cercaContatti, lettera, type Contatto, type Filtro } from '../../odoo/contatti'
 import { urlAvatar } from '../../odoo/lavoro'
 import { Avatar } from '../../ui/Avatar'
@@ -19,10 +20,11 @@ import { APP } from '../../odoo/capacita'
 import { RichiedeApp } from '../../ui/RichiedeApp'
 
 const PAGINA = 60
-const FILTRI: { valore: Filtro; testo: string }[] = [
-  { valore: 'tutti', testo: 'Tutti' },
-  { valore: 'aziende', testo: 'Aziende' },
-  { valore: 'persone', testo: 'Persone' },
+// Chiavi dei testi: t() si chiama mostrando la lista (la lingua puo' cambiare).
+const FILTRI: { valore: Filtro; chiave: string }[] = [
+  { valore: 'tutti', chiave: 'schede.filtroTutti' },
+  { valore: 'aziende', chiave: 'schede.filtroAziende' },
+  { valore: 'persone', chiave: 'schede.filtroPersone' },
 ]
 
 function ElencoContatti() {
@@ -119,13 +121,13 @@ function ElencoContatti() {
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
       <View style={s.testa}>
         <PulsanteMenu />
-        <Text style={[s.titolo, { color: c.testo }]}>Contatti</Text>
+        <Text style={[s.titolo, { color: c.testo }]}>{t('schede.contatti')}</Text>
         <Pressable
           onPress={() => router.push('/contatti/nuovo')}
           hitSlop={8}
           style={({ pressed }) => [s.piu, { backgroundColor: c.primario, opacity: pressed ? 0.85 : 1 }]}
           accessibilityRole="button"
-          accessibilityLabel="Nuovo contatto"
+          accessibilityLabel={t('schede.nuovoContatto')}
         >
           <Ionicons name="add" size={24} color={c.primarioTesto} />
         </Pressable>
@@ -137,12 +139,12 @@ function ElencoContatti() {
           style={[s.campo, { color: c.testo }]}
           value={testo}
           onChangeText={setTesto}
-          placeholder="Nome, azienda, email o numero"
+          placeholder={t('schede.cercaContattiSegnaposto')}
           placeholderTextColor={c.testo3}
           autoCorrect={false}
           clearButtonMode="while-editing"
           returnKeyType="search"
-          accessibilityLabel="Cerca un contatto"
+          accessibilityLabel={t('schede.cercaContatto')}
         />
       </View>
 
@@ -158,7 +160,7 @@ function ElencoContatti() {
               accessibilityState={{ selected: attivo }}
             >
               <Text style={[s.filtroTesto, { color: attivo ? c.primario : c.testo2 }]} numberOfLines={1}>
-                {f.testo}
+                {t(f.chiave)}
               </Text>
             </Pressable>
           )
@@ -182,7 +184,7 @@ function ElencoContatti() {
           ListEmptyComponent={
             <View style={s.vuotoBlocco}>
               <Ionicons name="people-outline" size={48} color={c.testo3} />
-              <Text style={[s.vuoto, { color: c.testo2 }]}>{testo ? 'Nessun contatto trovato.' : 'Nessun contatto.'}</Text>
+              <Text style={[s.vuoto, { color: c.testo2 }]}>{testo ? t('schede.nessunContattoTrovato') : t('schede.nessunContatto')}</Text>
             </View>
           }
           ListFooterComponent={altri ? <ActivityIndicator style={{ margin: spazio.l }} color={c.primario} /> : null}
@@ -222,7 +224,7 @@ function ElencoContatti() {
                     hitSlop={8}
                     style={({ pressed }) => [s.chiama, { backgroundColor: c.verdeTenue, opacity: pressed ? 0.7 : 1 }]}
                     accessibilityRole="button"
-                    accessibilityLabel={`Chiama ${item.nome}`}
+                    accessibilityLabel={t('schede.chiamaNome', { nome: item.nome })}
                   >
                     <Ionicons name="call" size={18} color={c.verde} />
                   </Pressable>
@@ -265,7 +267,7 @@ const s = StyleSheet.create({
 
 export default function Contatti() {
   return (
-    <RichiedeApp xmlid={APP.contatti} app="Contatti" titolo="Contatti" icona="people">
+    <RichiedeApp xmlid={APP.contatti} app={t('schede.contatti')} titolo={t('schede.contatti')} icona="people">
       <ElencoContatti />
     </RichiedeApp>
   )

@@ -6,6 +6,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useEffect, useState } from 'react'
 import { ActivityIndicator, Alert, FlatList, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
+import { t } from '../../i18n'
 import { cercaInvitati, cercaUtenti, creaInvitato, type Persona } from '../../odoo/calendario'
 import { urlAvatar } from '../../odoo/lavoro'
 import { Avatar } from '../Avatar'
@@ -36,14 +37,14 @@ export function CercaPersone({ aperto, server, tipo, scelti, chiudi, tocca }: Pr
       return
     }
     let valido = true
-    const t = setTimeout(() => {
+    const attesa = setTimeout(() => {
       ;(tipo === 'invitati' ? cercaInvitati(server, testo) : cercaUtenti(server, testo))
         .then((r) => valido && (setLista(r), setErrore('')))
         .catch((e: unknown) => valido && setErrore(e instanceof Error ? e.message : String(e)))
     }, 250)
     return () => {
       valido = false
-      clearTimeout(t)
+      clearTimeout(attesa)
     }
   }, [aperto, server, tipo, testo])
 
@@ -60,7 +61,7 @@ export function CercaPersone({ aperto, server, tipo, scelti, chiudi, tocca }: Pr
       tocca(p)
       setTesto('')
     } catch (e) {
-      Alert.alert('Invitato non aggiunto', e instanceof Error ? e.message : String(e))
+      Alert.alert(t('calendario.invitatoNonAggiunto'), e instanceof Error ? e.message : String(e))
     } finally {
       setCreo(false)
     }
@@ -70,20 +71,20 @@ export function CercaPersone({ aperto, server, tipo, scelti, chiudi, tocca }: Pr
   const emailNuova = tipo === 'invitati' && EMAIL.test(testo.trim()) && !lista?.some((p) => p.email.toLowerCase() === testo.trim().toLowerCase())
 
   return (
-    <Foglio aperto={aperto} titolo={tipo === 'invitati' ? 'Invitati' : 'Organizzatore'} chiudi={chiudiTutto}>
+    <Foglio aperto={aperto} titolo={tipo === 'invitati' ? t('calendario.invitati') : t('calendario.organizzatore')} chiudi={chiudiTutto}>
       <View style={[s.cerca, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
         <Ionicons name="search" size={18} color={c.testo3} />
         <TextInput
           style={[s.campo, { color: c.testo }]}
           value={testo}
           onChangeText={setTesto}
-          placeholder={tipo === 'invitati' ? 'Nome, email o azienda' : 'Nome o login'}
+          placeholder={tipo === 'invitati' ? t('calendario.cercaInvitati') : t('calendario.cercaUtenti')}
           placeholderTextColor={c.testo3}
           autoCapitalize="none"
           autoCorrect={false}
           autoFocus
           returnKeyType="search"
-          accessibilityLabel="Cerca"
+          accessibilityLabel={t('calendario.cerca')}
         />
       </View>
       {emailNuova ? (
@@ -97,7 +98,7 @@ export function CercaPersone({ aperto, server, tipo, scelti, chiudi, tocca }: Pr
             {creo ? <ActivityIndicator color={c.primario} /> : <Ionicons name="mail-outline" size={18} color={c.primario} />}
           </View>
           <Text style={[s.nome, { color: c.primario }]} numberOfLines={1}>
-            Invita {testo.trim()}
+            {t('calendario.invita', { email: testo.trim() })}
           </Text>
         </Pressable>
       ) : null}
@@ -110,7 +111,7 @@ export function CercaPersone({ aperto, server, tipo, scelti, chiudi, tocca }: Pr
           data={lista}
           keyExtractor={(p) => String(p.id)}
           keyboardShouldPersistTaps="handled"
-          ListEmptyComponent={<Text style={[s.vuoto, { color: c.testo2 }]}>Nessuno trovato.</Text>}
+          ListEmptyComponent={<Text style={[s.vuoto, { color: c.testo2 }]}>{t('calendario.nessunoTrovato')}</Text>}
           renderItem={({ item: p }) => {
             const scelto = ids.has(p.id)
             return (

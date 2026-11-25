@@ -23,14 +23,18 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { loc, t, tn } from '../../i18n'
 import {
   dettaglioEvento,
   GIORNI_SETTIMANA,
   giornoDi,
   giornoChiave,
+  lettereGiorni,
   linkVideoOdoo,
-  NOME_GIORNO,
+  nomeGiorno,
+  fraseOrdinale,
   opzioniEvento,
+  oraBreve,
   salvaEvento,
   settimanaDelMese,
   type Ambito,
@@ -50,23 +54,18 @@ import { raggio, spazio, useColori } from '../tema'
 import { CercaPersone } from './CercaPersone'
 import { SceltaGiorno, SceltaOra } from './Selettori'
 
-const DURATE = [
-  { minuti: 30, testo: '30 min' },
-  { minuti: 60, testo: '1 h' },
-  { minuti: 90, testo: '1 h 30' },
-  { minuti: 120, testo: '2 h' },
-  { minuti: 180, testo: '3 h' },
+/** Durate proposte: il testo e' una chiave (calendario.durata<minuti>). */
+const DURATE = [30, 60, 90, 120, 180]
+
+/** Tipi di ripetizione: chiavi del nome («Settimana») e dell'unita' («settimana/e»). */
+const TIPI: { tipo: TipoRipetizione; testo: string; unita: string }[] = [
+  { tipo: 'daily', testo: 'calendario.tipoGiorno', unita: 'calendario.unitaGiorno' },
+  { tipo: 'weekly', testo: 'calendario.tipoSettimana', unita: 'calendario.unitaSettimana' },
+  { tipo: 'monthly', testo: 'calendario.tipoMese', unita: 'calendario.unitaMese' },
+  { tipo: 'yearly', testo: 'calendario.tipoAnno', unita: 'calendario.unitaAnno' },
 ]
 
-const TIPI: { tipo: TipoRipetizione; testo: string; unita: [string, string] }[] = [
-  { tipo: 'daily', testo: 'Giorno', unita: ['giorno', 'giorni'] },
-  { tipo: 'weekly', testo: 'Settimana', unita: ['settimana', 'settimane'] },
-  { tipo: 'monthly', testo: 'Mese', unita: ['mese', 'mesi'] },
-  { tipo: 'yearly', testo: 'Anno', unita: ['anno', 'anni'] },
-]
-
-const LETTERE: Record<string, string> = { mon: 'L', tue: 'M', wed: 'M', thu: 'G', fri: 'V', sat: 'S', sun: 'D' }
-const ORDINALE: Record<string, string> = { '1': 'primo', '2': 'secondo', '3': 'terzo', '4': 'quarto', '-1': 'ultimo' }
+const maiuscola = (x: string) => x.charAt(0).toUpperCase() + x.slice(1)
 
 const VIDEO_ODOO = 'calendar/join_videocall'
 
@@ -83,10 +82,10 @@ function inizioProposto(giorno: string | undefined): Date {
   return d
 }
 
-const ora = (d: Date) => d.toLocaleTimeString('it-CH', { hour: '2-digit', minute: '2-digit' })
+const ora = oraBreve
 const giornoBreve = (d: Date) => {
-  const t = d.toLocaleDateString('it-CH', { weekday: 'short', day: 'numeric', month: 'short', year: d.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined })
-  return t.charAt(0).toUpperCase() + t.slice(1)
+  const x = d.toLocaleDateString(loc(), { weekday: 'short', day: 'numeric', month: 'short', year: d.getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined })
+  return x.charAt(0).toUpperCase() + x.slice(1)
 }
 
 function Chip({ testo, attivo, onPress }: { testo: string; attivo: boolean; onPress: () => void }) {
@@ -153,9 +152,9 @@ function Contatore({ valore, cambia, min = 1, max = 99 }: { valore: number; camb
   )
   return (
     <View style={s.contatore}>
-      {tasto('remove', valore - 1, 'Meno')}
+      {tasto('remove', valore - 1, t('calendario.meno'))}
       <Text style={[s.contatoreTesto, { color: c.testo }]}>{valore}</Text>
-      {tasto('add', valore + 1, 'Più')}
+      {tasto('add', valore + 1, t('calendario.piu'))}
     </View>
   )
 }
@@ -211,7 +210,7 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
       }
       const e = await dettaglioEvento(server, uid, id)
       if (!e) {
-        throw new Error('Appuntamento non trovato.')
+        throw new Error(t('calendario.nonTrovato'))
       }
       const modulo: Modulo = {
         titolo: e.titolo,
@@ -243,7 +242,7 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
     }
   }, [server, uid, id, giorno, sessione?.utente.name, sessione?.utente.login])
 
-  const titoloPagina = id === null ? 'Nuovo appuntamento' : 'Modifica'
+  const titoloPagina = id === null ? t('calendario.nuovo') : t('calendario.modificaTitolo')
 
   if (!m || !opzioni) {
     return (
@@ -268,11 +267,11 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
 
   function nuovaFine(d: Date) {
     if (!m!.tuttoIlGiorno && d <= m!.inizio) {
-      Alert.alert('Fine', 'La fine deve essere dopo l\'inizio.')
+      Alert.alert(t('calendario.fine'), t('calendario.fineDopoInizio'))
       return
     }
     if (m!.tuttoIlGiorno && giornoChiave(d) < giornoChiave(m!.inizio)) {
-      Alert.alert('Fine', 'L\'ultimo giorno non può essere prima del primo.')
+      Alert.alert(t('calendario.fine'), t('calendario.ultimoPrimaDelPrimo'))
       return
     }
     cambia({ fine: d })
@@ -299,7 +298,7 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
         try {
           cambia({ video: await linkVideoOdoo(server) })
         } catch (e) {
-          Alert.alert('Videochiamata', e instanceof Error ? e.message : String(e))
+          Alert.alert(t('calendario.videochiamata'), e instanceof Error ? e.message : String(e))
         }
       }
     } else {
@@ -309,16 +308,16 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
 
   async function salva(ambito?: Ambito) {
     if (!m!.titolo.trim()) {
-      Alert.alert(titoloPagina, 'Scrivi il titolo.')
+      Alert.alert(titoloPagina, t('calendario.scriviTitolo'))
       return
     }
     // Una serie: a quali appuntamenti si applica la modifica.
     if (prima?.inSerie && !ambito) {
-      Alert.alert('Appuntamento che si ripete', 'Quali appuntamenti vuoi modificare?', [
-        { text: 'Solo questo', onPress: () => void salva('self_only') },
-        { text: 'Questo e i successivi', onPress: () => void salva('future_events') },
-        { text: 'Tutti', onPress: () => void salva('all_events') },
-        { text: 'Annulla', style: 'cancel' },
+      Alert.alert(t('calendario.serieTitolo'), t('calendario.serieModifica'), [
+        { text: t('calendario.soloQuesto'), onPress: () => void salva('self_only') },
+        { text: t('calendario.questoESuccessivi'), onPress: () => void salva('future_events') },
+        { text: t('calendario.tutti'), onPress: () => void salva('all_events') },
+        { text: t('comune.annulla'), style: 'cancel' },
       ])
       return
     }
@@ -327,14 +326,14 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
       await salvaEvento(server, uid, id, m!, prima, ambito)
       router.back()
     } catch (e) {
-      Alert.alert('Appuntamento non salvato', e instanceof Error ? e.message : String(e))
+      Alert.alert(t('calendario.nonSalvato'), e instanceof Error ? e.message : String(e))
       setSalvo(false)
     }
   }
 
   const video = !m.video ? 'nessuna' : m.video.includes(VIDEO_ODOO) ? 'odoo' : 'link'
   const r = m.ripetizione
-  const unita = r ? TIPI.find((t) => t.tipo === r.tipo)!.unita : ['', '']
+  const unita = r ? TIPI.find((x) => x.tipo === r.tipo)!.unita : ''
   const campo = [s.campo, { backgroundColor: c.sfondo, borderColor: c.bordo, color: c.testo }]
 
   return (
@@ -345,55 +344,55 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
           <TextInput
             style={[s.campo, s.titolo, { backgroundColor: c.superficie, borderColor: c.bordo, color: c.testo }]}
             value={m.titolo}
-            onChangeText={(t) => cambia({ titolo: t })}
-            placeholder="Titolo"
+            onChangeText={(x) => cambia({ titolo: x })}
+            placeholder={t('calendario.titoloCampo')}
             placeholderTextColor={c.testo3}
             autoFocus={id === null}
             returnKeyType="done"
-            accessibilityLabel="Titolo"
+            accessibilityLabel={t('calendario.titoloCampo')}
           />
 
-          <Sezione titolo="Quando">
+          <Sezione titolo={t('calendario.quando')}>
             <View style={s.riga}>
-              <Text style={[s.voce, { color: c.testo }]}>Tutto il giorno</Text>
+              <Text style={[s.voce, { color: c.testo }]}>{t('calendario.tuttoIlGiorno')}</Text>
               <Switch value={m.tuttoIlGiorno} onValueChange={(v) => cambia({ tuttoIlGiorno: v })} trackColor={{ true: c.primario }} />
             </View>
             <View style={s.riga}>
-              <Text style={[s.voceCorta, { color: c.testo2 }]}>{m.tuttoIlGiorno ? 'Dal' : 'Inizio'}</Text>
-              <Bottone testo={giornoBreve(m.inizio)} onPress={() => setAperto('giornoInizio')} etichetta="Giorno di inizio" />
-              {!m.tuttoIlGiorno ? <Bottone testo={ora(m.inizio)} onPress={() => setAperto('oraInizio')} etichetta="Ora di inizio" /> : null}
+              <Text style={[s.voceCorta, { color: c.testo2 }]}>{m.tuttoIlGiorno ? t('calendario.dal') : t('calendario.inizio')}</Text>
+              <Bottone testo={giornoBreve(m.inizio)} onPress={() => setAperto('giornoInizio')} etichetta={t('calendario.giornoInizio')} />
+              {!m.tuttoIlGiorno ? <Bottone testo={ora(m.inizio)} onPress={() => setAperto('oraInizio')} etichetta={t('calendario.oraInizio')} /> : null}
             </View>
             <View style={s.riga}>
-              <Text style={[s.voceCorta, { color: c.testo2 }]}>{m.tuttoIlGiorno ? 'Al' : 'Fine'}</Text>
-              <Bottone testo={giornoBreve(m.fine)} onPress={() => setAperto('giornoFine')} etichetta="Giorno di fine" />
-              {!m.tuttoIlGiorno ? <Bottone testo={ora(m.fine)} onPress={() => setAperto('oraFine')} etichetta="Ora di fine" /> : null}
+              <Text style={[s.voceCorta, { color: c.testo2 }]}>{m.tuttoIlGiorno ? t('calendario.al') : t('calendario.fine')}</Text>
+              <Bottone testo={giornoBreve(m.fine)} onPress={() => setAperto('giornoFine')} etichetta={t('calendario.giornoFine')} />
+              {!m.tuttoIlGiorno ? <Bottone testo={ora(m.fine)} onPress={() => setAperto('oraFine')} etichetta={t('calendario.oraFine')} /> : null}
             </View>
             {!m.tuttoIlGiorno ? (
               <View style={s.chips}>
-                {DURATE.map((d) => (
+                {DURATE.map((minuti) => (
                   <Chip
-                    key={d.minuti}
-                    testo={d.testo}
-                    attivo={durata === d.minuti * 60_000}
-                    onPress={() => cambia({ fine: new Date(m.inizio.getTime() + d.minuti * 60_000) })}
+                    key={minuti}
+                    testo={t(`calendario.durata${minuti}`)}
+                    attivo={durata === minuti * 60_000}
+                    onPress={() => cambia({ fine: new Date(m.inizio.getTime() + minuti * 60_000) })}
                   />
                 ))}
               </View>
             ) : null}
           </Sezione>
 
-          <Sezione titolo="Persone">
+          <Sezione titolo={t('calendario.persone')}>
             <Pressable
               onPress={() => setAperto('organizzatore')}
               style={({ pressed }) => [s.persona, pressed && { opacity: 0.7 }]}
               accessibilityRole="button"
-              accessibilityLabel="Cambia organizzatore"
+              accessibilityLabel={t('calendario.cambiaOrganizzatore')}
             >
               <Avatar url={organizzatore ? urlAvatar(server, 'res.users', organizzatore.id) : undefined} nome={organizzatore?.nome || '?'} lato={36} />
               <View style={{ flex: 1 }}>
-                <Text style={[s.sotto, { color: c.testo2 }]}>Organizzatore</Text>
+                <Text style={[s.sotto, { color: c.testo2 }]}>{t('calendario.organizzatore')}</Text>
                 <Text style={[s.nome, { color: c.testo }]} numberOfLines={1}>
-                  {organizzatore?.nome || 'Nessuno'}
+                  {organizzatore?.nome || t('comune.nessuno')}
                 </Text>
               </View>
               <Ionicons name="chevron-forward" size={18} color={c.testo3} />
@@ -416,43 +415,43 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
                   onPress={() => cambia({ invitati: m.invitati.filter((x) => x.id !== p.id) })}
                   hitSlop={10}
                   accessibilityRole="button"
-                  accessibilityLabel={`Togli ${p.nome}`}
+                  accessibilityLabel={t('calendario.togli', { nome: p.nome })}
                 >
                   <Ionicons name="close-circle" size={24} color={c.testo3} />
                 </Pressable>
               </View>
             ))}
-            <Bottone testo="Aggiungi invitati" icona="person-add-outline" onPress={() => setAperto('invitati')} />
+            <Bottone testo={t('calendario.aggiungiInvitati')} icona="person-add-outline" onPress={() => setAperto('invitati')} />
           </Sezione>
 
-          <Sezione titolo="Dove">
+          <Sezione titolo={t('calendario.dove')}>
             <TextInput
               style={campo}
               value={m.luogo}
-              onChangeText={(t) => cambia({ luogo: t })}
-              placeholder="Luogo"
+              onChangeText={(x) => cambia({ luogo: x })}
+              placeholder={t('calendario.luogo')}
               placeholderTextColor={c.testo3}
-              accessibilityLabel="Luogo"
+              accessibilityLabel={t('calendario.luogo')}
             />
             {opzioni.haVideo ? (
               <>
-                <Text style={[s.sotto, { color: c.testo2 }]}>Videochiamata</Text>
+                <Text style={[s.sotto, { color: c.testo2 }]}>{t('calendario.videochiamata')}</Text>
                 <View style={s.chips}>
-                  <Chip testo="Nessuna" attivo={video === 'nessuna'} onPress={() => void sceltaVideo('nessuna')} />
+                  <Chip testo={t('calendario.nessuna')} attivo={video === 'nessuna'} onPress={() => void sceltaVideo('nessuna')} />
                   <Chip testo="Odoo" attivo={video === 'odoo'} onPress={() => void sceltaVideo('odoo')} />
-                  <Chip testo="Altro link" attivo={video === 'link'} onPress={() => void sceltaVideo('link')} />
+                  <Chip testo={t('calendario.altroLink')} attivo={video === 'link'} onPress={() => void sceltaVideo('link')} />
                 </View>
                 {video === 'link' ? (
                   <TextInput
                     style={campo}
                     value={m.video}
-                    onChangeText={(t) => cambia({ video: t })}
+                    onChangeText={(x) => cambia({ video: x })}
                     placeholder="https://meet.google.com/..."
                     placeholderTextColor={c.testo3}
                     autoCapitalize="none"
                     autoCorrect={false}
                     keyboardType="url"
-                    accessibilityLabel="Link della videochiamata"
+                    accessibilityLabel={t('calendario.linkVideo')}
                   />
                 ) : video === 'odoo' ? (
                   <Text style={[s.sotto, { color: c.testo3 }]} numberOfLines={1}>
@@ -465,33 +464,33 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
 
           {opzioni.haRipetizione ? (
             <Sezione
-              titolo="Ripetizione"
+              titolo={t('calendario.ripetizione')}
               destra={
                 <Switch
                   value={!!r}
                   onValueChange={(v) => (v ? rip({}) : cambia({ ripetizione: null }))}
                   trackColor={{ true: c.primario }}
-                  accessibilityLabel="Si ripete"
+                  accessibilityLabel={t('calendario.siRipete')}
                 />
               }
             >
               {r ? (
                 <>
                   <View style={s.chips}>
-                    {TIPI.map((t) => (
-                      <Chip key={t.tipo} testo={t.testo} attivo={r.tipo === t.tipo} onPress={() => rip({ tipo: t.tipo })} />
+                    {TIPI.map((x) => (
+                      <Chip key={x.tipo} testo={t(x.testo)} attivo={r.tipo === x.tipo} onPress={() => rip({ tipo: x.tipo })} />
                     ))}
                   </View>
                   <View style={s.riga}>
-                    <Text style={[s.voce, { color: c.testo }]}>Ogni</Text>
+                    <Text style={[s.voce, { color: c.testo }]}>{t('calendario.ogni')}</Text>
                     <Contatore valore={r.ogni} cambia={(n) => rip({ ogni: n })} />
                     <Text style={[s.voceCorta, { color: c.testo }]} numberOfLines={1}>
-                      {r.ogni === 1 ? unita[0] : unita[1]}
+                      {tn(unita, r.ogni)}
                     </Text>
                   </View>
                   {r.tipo === 'weekly' ? (
                     <View style={s.giorni}>
-                      {GIORNI_SETTIMANA.map((g) => {
+                      {GIORNI_SETTIMANA.map((g, i) => {
                         const attivo = r.giorni.includes(g)
                         return (
                           <Pressable
@@ -502,10 +501,10 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
                             }}
                             style={[s.giorno, { borderColor: attivo ? c.primario : c.bordo, backgroundColor: attivo ? c.primario : c.sfondo }]}
                             accessibilityRole="button"
-                            accessibilityLabel={NOME_GIORNO[g]}
+                            accessibilityLabel={nomeGiorno(g)}
                             accessibilityState={{ selected: attivo }}
                           >
-                            <Text style={[s.giornoTesto, { color: attivo ? c.primarioTesto : c.testo }]}>{LETTERE[g]}</Text>
+                            <Text style={[s.giornoTesto, { color: attivo ? c.primarioTesto : c.testo }]}>{lettereGiorni()[i]}</Text>
                           </Pressable>
                         )
                       })}
@@ -513,20 +512,20 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
                   ) : null}
                   {r.tipo === 'monthly' ? (
                     <View style={s.chips}>
-                      <Chip testo={`Il giorno ${m.inizio.getDate()}`} attivo={r.mesePer === 'date'} onPress={() => rip({ mesePer: 'date' })} />
+                      <Chip testo={t('calendario.chipGiornoDelMese', { n: m.inizio.getDate() })} attivo={r.mesePer === 'date'} onPress={() => rip({ mesePer: 'date' })} />
                       <Chip
-                        testo={`Il ${ORDINALE[settimanaDelMese(m.inizio)]} ${NOME_GIORNO[giornoDi(m.inizio)]}`}
+                        testo={maiuscola(fraseOrdinale(settimanaDelMese(m.inizio), giornoDi(m.inizio)))}
                         attivo={r.mesePer === 'day'}
                         onPress={() => rip({ mesePer: 'day' })}
                       />
                     </View>
                   ) : null}
-                  <Text style={[s.sotto, { color: c.testo2 }]}>Fine</Text>
+                  <Text style={[s.sotto, { color: c.testo2 }]}>{t('calendario.fineRipetizione')}</Text>
                   <View style={s.chips}>
-                    <Chip testo="Mai" attivo={r.fine === 'forever'} onPress={() => rip({ fine: 'forever' })} />
-                    <Chip testo="Dopo un numero di volte" attivo={r.fine === 'count'} onPress={() => rip({ fine: 'count' })} />
+                    <Chip testo={t('calendario.mai')} attivo={r.fine === 'forever'} onPress={() => rip({ fine: 'forever' })} />
+                    <Chip testo={t('calendario.dopoVolte')} attivo={r.fine === 'count'} onPress={() => rip({ fine: 'count' })} />
                     <Chip
-                      testo="In una data"
+                      testo={t('calendario.inUnaData')}
                       attivo={r.fine === 'end_date'}
                       onPress={() => rip({ fine: 'end_date', finoAl: r.finoAl || giornoChiave(new Date(m.inizio.getTime() + 30 * 86_400_000)) })}
                     />
@@ -534,23 +533,23 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
                   {r.fine === 'count' ? (
                     <View style={s.riga}>
                       <Contatore valore={r.volte} cambia={(n) => rip({ volte: n })} max={999} />
-                      <Text style={[s.voce, { color: c.testo }]}>{r.volte === 1 ? 'volta' : 'volte'}</Text>
+                      <Text style={[s.voce, { color: c.testo }]}>{tn('calendario.volte', r.volte)}</Text>
                     </View>
                   ) : r.fine === 'end_date' ? (
                     <View style={s.riga}>
-                      <Text style={[s.voceCorta, { color: c.testo2 }]}>Fino al</Text>
+                      <Text style={[s.voceCorta, { color: c.testo2 }]}>{t('calendario.finoAl')}</Text>
                       <Bottone testo={giornoBreve(new Date(`${r.finoAl}T12:00:00`))} onPress={() => setAperto('finoAl')} />
                     </View>
                   ) : null}
                 </>
               ) : (
-                <Text style={[s.sotto, { color: c.testo3 }]}>Non si ripete</Text>
+                <Text style={[s.sotto, { color: c.testo3 }]}>{t('calendario.nonSiRipete')}</Text>
               )}
             </Sezione>
           ) : null}
 
           {opzioni.promemoria.length ? (
-            <Sezione titolo="Promemoria">
+            <Sezione titolo={t('calendario.promemoria')}>
               <View style={s.chips}>
                 {opzioni.promemoria.map((p) => {
                   const attivo = m.promemoria.includes(p.id)
@@ -568,7 +567,7 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
           ) : null}
 
           {opzioni.etichette.length ? (
-            <Sezione titolo="Etichette">
+            <Sezione titolo={t('calendario.etichette')}>
               <View style={s.chips}>
                 {opzioni.etichette.map((e) => {
                   const attivo = m.etichette.includes(e.id)
@@ -585,10 +584,10 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
             </Sezione>
           ) : null}
 
-          <Sezione titolo="Visibilità">
+          <Sezione titolo={t('calendario.visibilita')}>
             {opzioni.calendari.length > 1 ? (
               <>
-                <Text style={[s.sotto, { color: c.testo2 }]}>Calendario</Text>
+                <Text style={[s.sotto, { color: c.testo2 }]}>{t('calendario.calendario')}</Text>
                 <View style={s.chips}>
                   {opzioni.calendari.map((k) => (
                     <Chip key={k.id} testo={k.nome} attivo={m.calendarioId === k.id} onPress={() => cambia({ calendarioId: k.id })} />
@@ -598,10 +597,10 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
             ) : null}
             {opzioni.privacy.length ? (
               <>
-                <Text style={[s.sotto, { color: c.testo2 }]}>Privacy</Text>
+                <Text style={[s.sotto, { color: c.testo2 }]}>{t('calendario.privacy')}</Text>
                 <View style={s.chips}>
                   {opzioni.privacyFacoltativa ? (
-                    <Chip testo="Predefinita" attivo={!m.privacy} onPress={() => cambia({ privacy: '' })} />
+                    <Chip testo={t('calendario.predefinita')} attivo={!m.privacy} onPress={() => cambia({ privacy: '' })} />
                   ) : null}
                   {opzioni.privacy.map((p) => (
                     <Chip key={p.valore} testo={p.nome} attivo={m.privacy === p.valore} onPress={() => cambia({ privacy: p.valore })} />
@@ -611,7 +610,7 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
             ) : null}
             {opzioni.mostraCome.length ? (
               <>
-                <Text style={[s.sotto, { color: c.testo2 }]}>Mostra come</Text>
+                <Text style={[s.sotto, { color: c.testo2 }]}>{t('calendario.mostraCome')}</Text>
                 <View style={s.chips}>
                   {opzioni.mostraCome.map((p) => (
                     <Chip key={p.valore} testo={p.nome} attivo={m.mostraCome === p.valore} onPress={() => cambia({ mostraCome: p.valore })} />
@@ -621,58 +620,58 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
             ) : null}
           </Sezione>
 
-          <Sezione titolo="Descrizione">
+          <Sezione titolo={t('calendario.descrizione')}>
             <TextInput
               style={[campo, s.area]}
               value={m.descrizione}
-              onChangeText={(t) => cambia({ descrizione: t })}
-              placeholder="Visibile agli invitati"
+              onChangeText={(x) => cambia({ descrizione: x })}
+              placeholder={t('calendario.visibileInvitati')}
               placeholderTextColor={c.testo3}
               multiline
               textAlignVertical="top"
-              accessibilityLabel="Descrizione"
+              accessibilityLabel={t('calendario.descrizione')}
             />
           </Sezione>
 
           {opzioni.haNote ? (
-            <Sezione titolo="Note interne">
+            <Sezione titolo={t('calendario.noteInterne')}>
               <TextInput
                 style={[campo, s.area]}
                 value={m.note}
-                onChangeText={(t) => cambia({ note: t })}
-                placeholder="Solo per i colleghi"
+                onChangeText={(x) => cambia({ note: x })}
+                placeholder={t('calendario.soloColleghi')}
                 placeholderTextColor={c.testo3}
                 multiline
                 textAlignVertical="top"
-                accessibilityLabel="Note interne"
+                accessibilityLabel={t('calendario.noteInterne')}
               />
             </Sezione>
           ) : null}
 
-          <Pulsante testo="Salva" onPress={() => void salva()} occupato={salvo} />
+          <Pulsante testo={t('comune.salva')} onPress={() => void salva()} occupato={salvo} />
         </ScrollView>
       </KeyboardAvoidingView>
 
       <SceltaGiorno
         aperto={aperto === 'giornoInizio'}
-        titolo={m.tuttoIlGiorno ? 'Primo giorno' : 'Giorno di inizio'}
+        titolo={m.tuttoIlGiorno ? t('calendario.primoGiorno') : t('calendario.giornoInizio')}
         valore={m.inizio}
         chiudi={() => setAperto(null)}
         scegli={nuovoInizio}
       />
       <SceltaGiorno
         aperto={aperto === 'giornoFine'}
-        titolo={m.tuttoIlGiorno ? 'Ultimo giorno' : 'Giorno di fine'}
+        titolo={m.tuttoIlGiorno ? t('calendario.ultimoGiorno') : t('calendario.giornoFine')}
         valore={m.fine}
         chiudi={() => setAperto(null)}
         scegli={nuovaFine}
       />
-      <SceltaOra aperto={aperto === 'oraInizio'} titolo="Ora di inizio" valore={m.inizio} chiudi={() => setAperto(null)} scegli={nuovoInizio} />
-      <SceltaOra aperto={aperto === 'oraFine'} titolo="Ora di fine" valore={m.fine} chiudi={() => setAperto(null)} scegli={nuovaFine} />
+      <SceltaOra aperto={aperto === 'oraInizio'} titolo={t('calendario.oraInizio')} valore={m.inizio} chiudi={() => setAperto(null)} scegli={nuovoInizio} />
+      <SceltaOra aperto={aperto === 'oraFine'} titolo={t('calendario.oraFine')} valore={m.fine} chiudi={() => setAperto(null)} scegli={nuovaFine} />
       {r ? (
         <SceltaGiorno
           aperto={aperto === 'finoAl'}
-          titolo="Ultima ripetizione"
+          titolo={t('calendario.ultimaRipetizione')}
           valore={new Date(`${r.finoAl || giornoChiave(m.inizio)}T12:00:00`)}
           chiudi={() => setAperto(null)}
           scegli={(d) => rip({ finoAl: giornoChiave(d) })}

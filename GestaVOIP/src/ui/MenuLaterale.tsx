@@ -11,6 +11,7 @@ import { useRouter, type Href } from 'expo-router'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ActivityIndicator, Alert, Animated, AppState, Easing, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { loc, t, tn } from '../i18n'
 import { cambiaPresenza, contatori, presenza, urlAvatar, type Contatori, type Presenza } from '../odoo/lavoro'
 import { conTelefono } from '../odoo/sessione'
 import { useApp } from '../voip/Contesto'
@@ -114,7 +115,7 @@ export function PulsanteMenu({ chiaro }: { chiaro?: boolean }) {
       hitSlop={12}
       style={({ pressed }) => [s.pulsante, { backgroundColor: pressed ? c.superficie2 : 'transparent' }]}
       accessibilityRole="button"
-      accessibilityLabel={totale ? `Menu, ${totale} cose da vedere` : 'Menu'}
+      accessibilityLabel={totale ? tn('accesso.menuDaVedere', totale) : t('accesso.menu')}
     >
       <Ionicons name="menu" size={26} color={chiaro ? '#FFFFFF' : c.testo} />
       {totale ? <View style={[s.pallino, { backgroundColor: c.rosso, borderColor: c.sfondo }]} /> : null}
@@ -192,7 +193,7 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
     try {
       setPres(await cambiaPresenza(server))
     } catch (e) {
-      Alert.alert('Presenze', e instanceof Error ? e.message : String(e))
+      Alert.alert(t('accesso.presenze'), e instanceof Error ? e.message : String(e))
     } finally {
       setCambia(false)
     }
@@ -200,12 +201,12 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
 
   function chiediUscita() {
     const avviso = conTelefono(sessione)
-      ? 'Esci da Odoo su questo telefono: il telefono smette di squillare finché non rientri.'
-      : 'Esci da Odoo su questo telefono.'
-    Alert.alert('Uscire?', avviso, [
-      { text: 'Annulla', style: 'cancel' },
+      ? t('accesso.uscireTelefono')
+      : t('accesso.uscireSenzaTelefono')
+    Alert.alert(t('accesso.uscireTitolo'), avviso, [
+      { text: t('comune.annulla'), style: 'cancel' },
       {
-        text: 'Esci',
+        text: t('comune.esci'),
         style: 'destructive',
         onPress: () => {
           chiudi()
@@ -220,14 +221,13 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
   }
 
   const x = scorre.interpolate({ inputRange: [0, 1], outputRange: [-LARGHEZZA - 20, 0] })
-  const telefono = conTelefono(sessione)
   const nome = sessione.utente.name || sessione.utente.login
-  const entrata = pres?.entrata?.toLocaleTimeString('it-CH', { hour: '2-digit', minute: '2-digit' })
+  const entrata = pres?.entrata?.toLocaleTimeString(loc(), { hour: '2-digit', minute: '2-digit' })
 
   return (
     <Modal visible transparent animationType="none" onRequestClose={chiudi} statusBarTranslucent>
       <Animated.View style={[StyleSheet.absoluteFill, s.velo, { opacity: scorre }]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={chiudi} accessibilityLabel="Chiudi il menu" />
+        <Pressable style={StyleSheet.absoluteFill} onPress={chiudi} accessibilityLabel={t('accesso.chiudiMenu')} />
       </Animated.View>
       <Animated.View
         style={[
@@ -253,10 +253,10 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
             <View style={[s.punto, { backgroundColor: pres.dentro ? c.verde : c.rosso }]} />
             <View style={{ flex: 1 }}>
               <Text style={[s.presenzaTitolo, { color: c.testo }]} numberOfLines={1}>
-                {pres.dentro ? `Al lavoro dalle ${entrata || '—'}` : 'Non al lavoro'}
+                {pres.dentro ? t('accesso.alLavoroDalle', { ora: entrata || '—' }) : t('accesso.nonAlLavoro')}
               </Text>
               <Text style={[s.presenzaTesto, { color: c.testo2 }]} numberOfLines={1}>
-                Oggi {oreBreve(pres.oreOggi)}
+                {t('accesso.oggi', { ore: oreBreve(pres.oreOggi) })}
               </Text>
             </View>
             <Pressable
@@ -267,13 +267,13 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
                 { backgroundColor: pres.dentro ? c.rossoTenue : c.verdeTenue, opacity: pressed ? 0.8 : 1 },
               ]}
               accessibilityRole="button"
-              accessibilityLabel={pres.dentro ? 'Registra uscita' : 'Registra entrata'}
+              accessibilityLabel={pres.dentro ? t('accesso.registraUscita') : t('accesso.registraEntrata')}
             >
               {cambia ? (
                 <ActivityIndicator size="small" color={pres.dentro ? c.rosso : c.verde} />
               ) : (
                 <Text style={[s.timbraTesto, { color: pres.dentro ? c.rosso : c.verde }]} numberOfLines={1}>
-                  {pres.dentro ? 'Esci' : 'Entra'}
+                  {pres.dentro ? t('accesso.timbraUscita') : t('accesso.timbraEntrata')}
                 </Text>
               )}
             </Pressable>
@@ -284,15 +284,15 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
           {/* Chi e' entrato dalla pagina di Odoo (Google, Microsoft) le ha nella vista Odoo. */}
           {sessione.utente.uid ? (
             <>
-              <Voce c={c} icona="chatbubbles" testo="Messaggi" numero={n.messaggi} onPress={() => vai('/messaggi')} />
-              <Voce c={c} icona="checkmark-done-circle" testo="Attività" numero={n.attivita} onPress={() => vai('/attivita')} />
+              <Voce c={c} icona="chatbubbles" testo={t('accesso.messaggi')} numero={n.messaggi} onPress={() => vai('/messaggi')} />
+              <Voce c={c} icona="checkmark-done-circle" testo={t('accesso.attivita')} numero={n.attivita} onPress={() => vai('/attivita')} />
             </>
           ) : null}
-          {telefono ? <Voce c={c} icona="settings" testo="Impostazioni" onPress={() => vai('/impostazioni')} /> : null}
+          <Voce c={c} icona="settings" testo={t('impostazioni.titolo')} onPress={() => vai('/impostazioni')} />
         </View>
 
         <View style={{ flex: 1 }} />
-        <Voce c={c} icona="log-out-outline" testo="Esci" onPress={chiediUscita} pericolo />
+        <Voce c={c} icona="log-out-outline" testo={t('comune.esci')} onPress={chiediUscita} pericolo />
         <Text style={[s.versione, { color: c.testo3 }]}>
           GestaVOIP {Application.nativeApplicationVersion || ''}
         </Text>

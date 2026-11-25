@@ -20,6 +20,7 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { t } from '../i18n'
 import { ErroreOdoo, normalizzaIndirizzo, type InfoServer } from '../odoo/client'
 import { useApp } from '../voip/Contesto'
 import { raggio, spazio, useColori } from '../ui/tema'
@@ -42,7 +43,7 @@ export default function Login() {
   async function verifica() {
     const url = normalizzaIndirizzo(indirizzo)
     if (!url) {
-      setErrore("Scrivi l'indirizzo del tuo Odoo.")
+      setErrore(t('accesso.scriviIndirizzo'))
       return
     }
     setOccupato(true)
@@ -59,7 +60,7 @@ export default function Login() {
 
   async function accedi() {
     if (!info || !email.trim() || !password) {
-      setErrore('Scrivi email e password.')
+      setErrore(t('accesso.scriviEmailPassword'))
       return
     }
     setOccupato(true)
@@ -78,7 +79,7 @@ export default function Login() {
 
   async function confermaCodice() {
     if (!info || !codice.trim()) {
-      setErrore('Scrivi il codice.')
+      setErrore(t('accesso.scriviCodice'))
       return
     }
     setOccupato(true)
@@ -120,13 +121,15 @@ export default function Login() {
       }}
       style={[s.server, { backgroundColor: c.primarioTenue }]}
       accessibilityRole="button"
-      accessibilityLabel="Cambia server"
+      accessibilityLabel={t('accesso.cambiaServer')}
     >
       <Text style={[s.serverNome, { color: c.primario }]} numberOfLines={1}>
         {info?.company || info?.db || server.replace(/^https?:\/\//, '')}
       </Text>
       <Text style={[s.serverUrl, { color: c.testo2 }]} numberOfLines={1}>
-        {info?.company || info?.db ? `${server.replace(/^https?:\/\//, '')} · cambia` : 'Cambia indirizzo'}
+        {info?.company || info?.db
+          ? t('accesso.indirizzoCambia', { indirizzo: server.replace(/^https?:\/\//, '') })
+          : t('accesso.cambiaIndirizzo')}
       </Text>
     </Pressable>
   )
@@ -139,18 +142,16 @@ export default function Login() {
         <ScrollView contentContainerStyle={s.contenuto} keyboardShouldPersistTaps="handled">
           <Image source={require('../../assets/logo.png')} style={s.logo} resizeMode="contain" accessibilityIgnoresInvertColors />
           <Text style={[s.titolo, { color: c.testo }]}>GestaVOIP</Text>
-          <Text style={[s.sottotitolo, { color: c.testo2 }]}>
-            Il telefono dell&apos;ufficio, collegato al tuo Odoo.
-          </Text>
+          <Text style={[s.sottotitolo, { color: c.testo2 }]}>{t('accesso.sottotitolo')}</Text>
 
           {!info ? (
             <View style={s.blocco}>
-              <Text style={[s.etichetta, { color: c.testo2 }]}>Indirizzo di Odoo</Text>
+              <Text style={[s.etichetta, { color: c.testo2 }]}>{t('accesso.indirizzoOdoo')}</Text>
               <TextInput
                 style={campo}
                 value={indirizzo}
                 onChangeText={setIndirizzo}
-                placeholder="es. odoo.miaazienda.ch"
+                placeholder={t('accesso.indirizzoEsempio')}
                 placeholderTextColor={c.testo3}
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -158,19 +159,16 @@ export default function Login() {
                 returnKeyType="next"
                 onSubmitEditing={verifica}
               />
-              <Pulsante testo="Continua" onPress={verifica} occupato={occupato} />
+              <Pulsante testo={t('accesso.continua')} onPress={verifica} occupato={occupato} />
             </View>
           ) : chiediCodice ? (
             <View style={s.blocco}>
               {cambiaServer}
               <View style={[s.nota, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
-                <Text style={[s.notaTitolo, { color: c.testo }]}>Verifica in due passaggi</Text>
-                <Text style={[s.notaTesto, { color: c.testo2 }]}>
-                  Scrivi il codice dell&apos;app di autenticazione (o quello arrivato per email). Serve
-                  solo a questo accesso: poi l&apos;app resta collegata.
-                </Text>
+                <Text style={[s.notaTitolo, { color: c.testo }]}>{t('accesso.dueFattori')}</Text>
+                <Text style={[s.notaTesto, { color: c.testo2 }]}>{t('accesso.dueFattoriTesto')}</Text>
               </View>
-              <Text style={[s.etichetta, { color: c.testo2 }]}>Codice</Text>
+              <Text style={[s.etichetta, { color: c.testo2 }]}>{t('accesso.codice')}</Text>
               <TextInput
                 style={[campo, s.codice]}
                 value={codice}
@@ -185,10 +183,10 @@ export default function Login() {
                 returnKeyType="go"
                 onSubmitEditing={confermaCodice}
               />
-              <Pulsante testo="Conferma" onPress={confermaCodice} occupato={occupato} />
+              <Pulsante testo={t('accesso.conferma')} onPress={confermaCodice} occupato={occupato} />
               <Pressable onPress={annullaCodice} hitSlop={8} style={s.indietro} accessibilityRole="button">
                 <Text style={[s.indietroTesto, { color: c.primario }]} numberOfLines={1}>
-                  Torna alla password
+                  {t('accesso.tornaPassword')}
                 </Text>
               </Pressable>
             </View>
@@ -197,14 +195,11 @@ export default function Login() {
               {cambiaServer}
               {!info.voip ? (
                 <View style={[s.nota, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
-                  <Text style={[s.notaTitolo, { color: c.testo }]}>Questo Odoo non ha il telefono</Text>
-                  <Text style={[s.notaTesto, { color: c.testo2 }]}>
-                    Manca il modulo VOIP AI: l&apos;app funziona lo stesso, con contatti, calendario,
-                    messaggi, attività e Odoo, senza telefonate.
-                  </Text>
+                  <Text style={[s.notaTitolo, { color: c.testo }]}>{t('accesso.senzaTelefono')}</Text>
+                  <Text style={[s.notaTesto, { color: c.testo2 }]}>{t('accesso.senzaTelefonoTesto')}</Text>
                 </View>
               ) : null}
-              <Text style={[s.etichetta, { color: c.testo2 }]}>Email</Text>
+              <Text style={[s.etichetta, { color: c.testo2 }]}>{t('accesso.email')}</Text>
               <TextInput
                 style={campo}
                 value={email}
@@ -216,7 +211,7 @@ export default function Login() {
                 autoComplete="email"
                 returnKeyType="next"
               />
-              <Text style={[s.etichetta, { color: c.testo2 }]}>Password</Text>
+              <Text style={[s.etichetta, { color: c.testo2 }]}>{t('accesso.password')}</Text>
               <TextInput
                 style={campo}
                 value={password}
@@ -227,14 +222,14 @@ export default function Login() {
                 returnKeyType="go"
                 onSubmitEditing={accedi}
               />
-              <Pulsante testo="Accedi" onPress={accedi} occupato={occupato} />
+              <Pulsante testo={t('accesso.accedi')} onPress={accedi} occupato={occupato} />
               {!info.voip ? (
                 // Chi entra con Google o Microsoft non ha una password di Odoo:
                 // entra dalla pagina di Odoo (le schede dell'app chiedono poi
                 // l'accesso con email e password).
                 <Pressable onPress={apriOdoo} hitSlop={8} style={s.indietro} accessibilityRole="button">
                   <Text style={[s.indietroTesto, { color: c.primario }]} numberOfLines={1}>
-                    Accedi con Google o Microsoft
+                    {t('accesso.accediGoogle')}
                   </Text>
                 </Pressable>
               ) : null}

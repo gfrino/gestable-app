@@ -23,7 +23,8 @@ import {
   type NativeSyntheticEvent,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { delGiorno, eventi, giornoChiave, giornoEsteso, type Evento } from '../../odoo/calendario'
+import { lingua, loc, t, tn } from '../../i18n'
+import { delGiorno, eventi, giornoChiave, giornoEsteso, lettereGiorni, oraBreve, type Evento } from '../../odoo/calendario'
 import { PulsanteMenu } from '../../ui/MenuLaterale'
 import { raggio, spazio, useColori } from '../../ui/tema'
 import { useApp } from '../../voip/Contesto'
@@ -31,7 +32,6 @@ import { APP } from '../../odoo/capacita'
 import { RichiedeApp } from '../../ui/RichiedeApp'
 
 const SETTIMANE = 52 // avanti e indietro da oggi
-const LETTERE = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
 
 function lunedi(d: Date): Date {
   const x = new Date(d.getFullYear(), d.getMonth(), d.getDate())
@@ -46,18 +46,15 @@ function piuGiorni(d: Date, n: number): Date {
   return x
 }
 
-function ora(d: Date): string {
-  return d.toLocaleTimeString('it-CH', { hour: '2-digit', minute: '2-digit' })
-}
-
 function VistaCalendario() {
   const c = useColori()
   const router = useRouter()
   const navigation = useNavigation()
   const { width, fontScale } = useWindowDimensions()
-  // Colonna delle ore larga quanto «00:00» con la dimensione del testo scelta
-  // nelle impostazioni del telefono (con il testo grande andava a capo).
-  const larghezzaOre = Math.ceil(58 * Math.max(1, fontScale))
+  // Colonna delle ore larga quanto «00:00» (in inglese «12:30 PM») con la
+  // dimensione del testo scelta nelle impostazioni del telefono (con il testo
+  // grande andava a capo).
+  const larghezzaOre = Math.ceil((lingua() === 'it' ? 58 : 86) * Math.max(1, fontScale))
   const { sessione } = useApp()
   const server = sessione?.server || ''
   const uid = sessione?.utente.uid || 0
@@ -155,7 +152,7 @@ function VistaCalendario() {
 
   const settimana = perSettimana[giornoChiave(inizioSettimana(pagina))]
   const delScelto = settimana ? delGiorno(settimana, scelto) : null
-  const titoloMese = scelto.toLocaleDateString('it-CH', { month: 'long', year: 'numeric' })
+  const titoloMese = scelto.toLocaleDateString(loc(), { month: 'long', year: 'numeric' })
 
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
@@ -170,7 +167,7 @@ function VistaCalendario() {
           accessibilityRole="button"
         >
           <Text style={[s.oggiTesto, { color: c.primario }]} numberOfLines={1}>
-            Oggi
+            {t('calendario.oggi')}
           </Text>
         </Pressable>
         <Pressable
@@ -178,7 +175,7 @@ function VistaCalendario() {
           hitSlop={8}
           style={({ pressed }) => [s.piu, { backgroundColor: c.primario, opacity: pressed ? 0.85 : 1 }]}
           accessibilityRole="button"
-          accessibilityLabel="Nuovo appuntamento"
+          accessibilityLabel={t('calendario.nuovo')}
         >
           <Ionicons name="add" size={24} color={c.primarioTesto} />
         </Pressable>
@@ -201,7 +198,7 @@ function VistaCalendario() {
           const conEventi = perSettimana[giornoChiave(inizio)] || []
           return (
             <View style={[s.settimana, { width }]}>
-              {LETTERE.map((lettera, g) => {
+              {lettereGiorni().map((lettera, g) => {
                 const giorno = piuGiorni(inizio, g)
                 const chiave = giornoChiave(giorno)
                 const eScelto = chiave === giornoChiave(scelto)
@@ -246,7 +243,7 @@ function VistaCalendario() {
         ) : !delScelto.length ? (
           <View style={s.vuotoBlocco}>
             <Ionicons name="calendar-clear-outline" size={48} color={c.testo3} />
-            <Text style={[s.vuoto, { color: c.testo2 }]}>Nessun appuntamento.</Text>
+            <Text style={[s.vuoto, { color: c.testo2 }]}>{t('calendario.nessunAppuntamento')}</Text>
           </View>
         ) : (
           delScelto.map((e) => {
@@ -263,14 +260,14 @@ function VistaCalendario() {
               >
                 <View style={[s.ore, { width: larghezzaOre }]}>
                   {e.tuttoIlGiorno ? (
-                    <Text style={[s.tutto, { color: c.primario }]}>Tutto il giorno</Text>
+                    <Text style={[s.tutto, { color: c.primario }]}>{t('calendario.tuttoIlGiorno')}</Text>
                   ) : (
                     <>
                       <Text style={[s.oraInizio, { color: c.testo }]} numberOfLines={1}>
-                        {ora(e.inizio)}
+                        {oraBreve(e.inizio)}
                       </Text>
                       <Text style={[s.oraFine, { color: c.testo3 }]} numberOfLines={1}>
-                        {ora(e.fine)}
+                        {oraBreve(e.fine)}
                       </Text>
                     </>
                   )}
@@ -282,7 +279,7 @@ function VistaCalendario() {
                     </Text>
                     {inCorso ? (
                       <View style={[s.ora, { backgroundColor: c.verdeTenue }]}>
-                        <Text style={[s.oraTesto, { color: c.verde }]}>Ora</Text>
+                        <Text style={[s.oraTesto, { color: c.verde }]}>{t('calendario.adesso')}</Text>
                       </View>
                     ) : null}
                   </View>
@@ -297,13 +294,13 @@ function VistaCalendario() {
                   {e.video ? (
                     <View style={s.dettaglio}>
                       <Ionicons name="videocam-outline" size={14} color={c.testo2} />
-                      <Text style={[s.dettaglioTesto, { color: c.testo2 }]}>Videochiamata</Text>
+                      <Text style={[s.dettaglioTesto, { color: c.testo2 }]}>{t('calendario.videochiamata')}</Text>
                     </View>
                   ) : null}
                   {e.partecipanti > 1 ? (
                     <View style={s.dettaglio}>
                       <Ionicons name="people-outline" size={14} color={c.testo2} />
-                      <Text style={[s.dettaglioTesto, { color: c.testo2 }]}>{e.partecipanti} partecipanti</Text>
+                      <Text style={[s.dettaglioTesto, { color: c.testo2 }]}>{tn('calendario.partecipanti', e.partecipanti)}</Text>
                     </View>
                   ) : null}
                 </View>
@@ -351,7 +348,7 @@ const s = StyleSheet.create({
 
 export default function Calendario() {
   return (
-    <RichiedeApp xmlid={APP.calendario} app="Calendario" titolo="Calendario" icona="calendar">
+    <RichiedeApp xmlid={APP.calendario} app={t('calendario.app')} titolo={t('calendario.titolo')} icona="calendar">
       <VistaCalendario />
     </RichiedeApp>
   )

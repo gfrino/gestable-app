@@ -7,6 +7,7 @@
  */
 
 import { Platform } from 'react-native'
+import { t } from '../i18n'
 import { callKw, ErroreOdoo, rpc } from '../odoo/client'
 
 export const PIATTAFORMA = Platform.OS === 'ios' ? 'ios' : 'android'
@@ -15,7 +16,7 @@ type Esito = { status: 'success' | 'error'; message?: string }
 
 function controlla<T extends Esito>(r: T): T {
   if (r.status !== 'success') {
-    throw new ErroreOdoo('server', r.message || 'Operazione non riuscita.')
+    throw new ErroreOdoo('server', r.message || t('telefono.operazioneNonRiuscita'))
   }
   return r
 }

@@ -7,11 +7,10 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
-import { giornoChiave } from '../../odoo/calendario'
+import { lingua, loc, t } from '../../i18n'
+import { giornoChiave, lettereGiorni } from '../../odoo/calendario'
 import { Foglio } from '../Foglio'
 import { raggio, spazio, useColori } from '../tema'
-
-const LETTERE = ['L', 'M', 'M', 'G', 'V', 'S', 'D']
 
 function stessoGiorno(a: Date, b: Date): boolean {
   return giornoChiave(a) === giornoChiave(b)
@@ -51,24 +50,24 @@ export function SceltaGiorno({
     celle.push(null)
   }
   const oggi = new Date()
-  const nomeMese = mese.toLocaleDateString('it-CH', { month: 'long', year: 'numeric' })
+  const nomeMese = mese.toLocaleDateString(loc(), { month: 'long', year: 'numeric' })
   const sposta = (n: number) => setMese(new Date(mese.getFullYear(), mese.getMonth() + n, 1))
 
   return (
-    <Foglio aperto={aperto} titolo={titolo} chiudi={chiudi} fatto="Chiudi">
+    <Foglio aperto={aperto} titolo={titolo} chiudi={chiudi} fatto={t('comune.chiudi')}>
       <View style={s.mese}>
-        <Pressable onPress={() => sposta(-1)} hitSlop={10} style={s.freccia} accessibilityLabel="Mese prima" accessibilityRole="button">
+        <Pressable onPress={() => sposta(-1)} hitSlop={10} style={s.freccia} accessibilityLabel={t('calendario.mesePrima')} accessibilityRole="button">
           <Ionicons name="chevron-back" size={24} color={c.primario} />
         </Pressable>
         <Text style={[s.meseNome, { color: c.testo }]} numberOfLines={1}>
           {nomeMese.charAt(0).toUpperCase() + nomeMese.slice(1)}
         </Text>
-        <Pressable onPress={() => sposta(1)} hitSlop={10} style={s.freccia} accessibilityLabel="Mese dopo" accessibilityRole="button">
+        <Pressable onPress={() => sposta(1)} hitSlop={10} style={s.freccia} accessibilityLabel={t('calendario.meseDopo')} accessibilityRole="button">
           <Ionicons name="chevron-forward" size={24} color={c.primario} />
         </Pressable>
       </View>
       <View style={s.griglia}>
-        {LETTERE.map((l, i) => (
+        {lettereGiorni().map((l, i) => (
           <Text key={`l${i}`} style={[s.lettera, { color: i > 4 ? c.testo3 : c.testo2 }]}>
             {l}
           </Text>
@@ -91,7 +90,7 @@ export function SceltaGiorno({
               }}
               accessibilityRole="button"
               accessibilityState={{ selected: scelto }}
-              accessibilityLabel={d.toLocaleDateString('it-CH', { weekday: 'long', day: 'numeric', month: 'long' })}
+              accessibilityLabel={d.toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'long' })}
             >
               <View style={[s.numero, scelto && { backgroundColor: c.primario }]}>
                 <Text
@@ -115,13 +114,18 @@ export function SceltaGiorno({
         style={s.oggi}
         accessibilityRole="button"
       >
-        <Text style={[s.oggiTesto, { color: c.primario }]}>Vai a oggi</Text>
+        <Text style={[s.oggiTesto, { color: c.primario }]}>{t('calendario.vaiAOggi')}</Text>
       </Pressable>
     </Foglio>
   )
 }
 
 const MINUTI = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55]
+
+/** Il tasto di un'ora: «09» in italiano, «9 AM» in inglese (12 ore). */
+function nomeOra(h: number, dodici: boolean): string {
+  return dodici ? `${h % 12 || 12} ${h < 12 ? 'AM' : 'PM'}` : String(h).padStart(2, '0')
+}
 
 /** Foglio con le ore (0-23) e i minuti (a 5): si sceglie l'ora, poi i minuti. */
 export function SceltaOra({
@@ -138,15 +142,22 @@ export function SceltaOra({
   scegli: (d: Date) => void
 }) {
   const c = useColori()
-  const tasto = (testo: string, attivo: boolean, onPress: () => void, chiave: string) => (
+  // In inglese le ore a 12 («12 AM» ... «11 PM»): tasti piu' larghi, 4 per riga.
+  const dodici = lingua() === 'en'
+  const tasto = (testo: string, attivo: boolean, onPress: () => void, chiave: string, largo = false) => (
     <Pressable
       key={chiave}
       onPress={onPress}
-      style={[s.tasto, { borderColor: attivo ? c.primario : c.bordo, backgroundColor: attivo ? c.primario : c.superficie }]}
+      style={[s.tasto, largo && s.tastoLargo, { borderColor: attivo ? c.primario : c.bordo, backgroundColor: attivo ? c.primario : c.superficie }]}
       accessibilityRole="button"
       accessibilityState={{ selected: attivo }}
     >
-      <Text style={[s.tastoTesto, { color: attivo ? c.primarioTesto : c.testo }]} numberOfLines={1}>
+      <Text
+        style={[s.tastoTesto, largo && s.tastoTestoLargo, { color: attivo ? c.primarioTesto : c.testo }]}
+        numberOfLines={1}
+        adjustsFontSizeToFit={largo}
+        minimumFontScale={0.7}
+      >
         {testo}
       </Text>
     </Pressable>
@@ -159,13 +170,13 @@ export function SceltaOra({
   return (
     <Foglio aperto={aperto} titolo={titolo} chiudi={chiudi}>
       <ScrollView contentContainerStyle={s.ore}>
-        <Text style={[s.sezione, { color: c.testo2 }]}>Ora</Text>
+        <Text style={[s.sezione, { color: c.testo2 }]}>{t('calendario.ora')}</Text>
         <View style={s.tasti}>
           {Array.from({ length: 24 }, (_, h) =>
-            tasto(String(h).padStart(2, '0'), valore.getHours() === h, () => scegli(conOra(h, valore.getMinutes())), `h${h}`),
+            tasto(nomeOra(h, dodici), valore.getHours() === h, () => scegli(conOra(h, valore.getMinutes())), `h${h}`, dodici),
           )}
         </View>
-        <Text style={[s.sezione, { color: c.testo2 }]}>Minuti</Text>
+        <Text style={[s.sezione, { color: c.testo2 }]}>{t('calendario.minuti')}</Text>
         <View style={s.tasti}>
           {MINUTI.map((m) =>
             tasto(
@@ -200,4 +211,6 @@ const s = StyleSheet.create({
   tasti: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
   tasto: { width: '15%', minHeight: 44, borderRadius: raggio.m, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   tastoTesto: { fontSize: 17, fontWeight: '700', fontVariant: ['tabular-nums'] },
+  tastoLargo: { width: '23%', paddingHorizontal: 4 },
+  tastoTestoLargo: { fontSize: 16 },
 })

@@ -7,6 +7,7 @@
 import type { ReactNode } from 'react'
 import { Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context'
+import { t } from '../i18n'
 import { spazio, useColori } from './tema'
 
 type Props = {
@@ -18,7 +19,7 @@ type Props = {
   fatto?: string
 }
 
-export function Foglio({ aperto, titolo, chiudi, children, fatto = 'Fine' }: Props) {
+export function Foglio({ aperto, titolo, chiudi, children, fatto = t('comune.fine') }: Props) {
   const c = useColori()
   return (
     <Modal visible={aperto} animationType="slide" presentationStyle="pageSheet" onRequestClose={chiudi}>

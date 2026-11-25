@@ -1,0 +1,87 @@
+/** Testi: area «lavoro» (vedi src/i18n/index.ts). Chiavi «lavoro.nome». */
+
+export const it = {
+  // Date e ore brevi (liste dei messaggi, intestazioni dei giorni)
+  'lavoro.oggi': 'Oggi',
+  'lavoro.ieri': 'Ieri',
+  'lavoro.ieriBreve': 'ieri',
+
+  // Messaggi: chat e notifiche
+  'lavoro.messaggi.titolo': 'Messaggi',
+  'lavoro.messaggi.tutteLette': 'Tutte lette',
+  'lavoro.messaggi.chat': 'Chat',
+  'lavoro.messaggi.notifiche': 'Notifiche',
+  'lavoro.messaggi.nessunaChat': 'Nessuna chat.',
+  'lavoro.messaggi.tu': 'Tu',
+  'lavoro.messaggi.nessunaNotifica': 'Nessuna notifica da leggere.',
+
+  // Una chat
+  'lavoro.chat.chat': 'Chat',
+  'lavoro.chat.canale': 'Canale',
+  'lavoro.chat.nonInviato': 'Messaggio non inviato',
+  'lavoro.chat.vuota': 'Ancora nessun messaggio.',
+  'lavoro.chat.allegati_uno': '{n} allegato (aprili in Odoo)',
+  'lavoro.chat.allegati_piu': '{n} allegati (aprili in Odoo)',
+  'lavoro.chat.scrivi': 'Scrivi un messaggio',
+  'lavoro.chat.messaggio': 'Messaggio',
+  'lavoro.chat.invia': 'Invia',
+
+  // Attivita'
+  'lavoro.attivita.titolo': 'Attività',
+  'lavoro.attivita.tipo': 'Attività',
+  'lavoro.attivita.daFare_uno': '{n} da fare',
+  'lavoro.attivita.daFare_piu': '{n} da fare',
+  'lavoro.attivita.inRitardo': 'In ritardo',
+  'lavoro.attivita.prossime': 'Prossime',
+  'lavoro.attivita.oggi': 'oggi',
+  'lavoro.attivita.ieri': 'ieri',
+  'lavoro.attivita.domani': 'domani',
+  'lavoro.attivita.giorniFa_uno': '{n} giorno fa',
+  'lavoro.attivita.giorniFa_piu': '{n} giorni fa',
+  'lavoro.attivita.traGiorni_uno': 'tra {n} giorno',
+  'lavoro.attivita.traGiorni_piu': 'tra {n} giorni',
+  'lavoro.attivita.vuoto': 'Nessuna attività: tutto fatto.',
+  'lavoro.attivita.apreRecord': 'Apre il record in Odoo',
+  'lavoro.attivita.segnaFatta': 'Segna fatta',
+}
+
+export const en: Record<keyof typeof it, string> = {
+  'lavoro.oggi': 'Today',
+  'lavoro.ieri': 'Yesterday',
+  'lavoro.ieriBreve': 'Yesterday',
+
+  'lavoro.messaggi.titolo': 'Messages',
+  'lavoro.messaggi.tutteLette': 'Mark all read',
+  'lavoro.messaggi.chat': 'Chats',
+  'lavoro.messaggi.notifiche': 'Inbox',
+  'lavoro.messaggi.nessunaChat': 'No chats.',
+  'lavoro.messaggi.tu': 'You',
+  'lavoro.messaggi.nessunaNotifica': 'No unread notifications.',
+
+  'lavoro.chat.chat': 'Chat',
+  'lavoro.chat.canale': 'Channel',
+  'lavoro.chat.nonInviato': 'Message not sent',
+  'lavoro.chat.vuota': 'No messages yet.',
+  'lavoro.chat.allegati_uno': '{n} attachment (open it in Odoo)',
+  'lavoro.chat.allegati_piu': '{n} attachments (open them in Odoo)',
+  'lavoro.chat.scrivi': 'Write a message',
+  'lavoro.chat.messaggio': 'Message',
+  'lavoro.chat.invia': 'Send',
+
+  'lavoro.attivita.titolo': 'Activities',
+  'lavoro.attivita.tipo': 'Activity',
+  'lavoro.attivita.daFare_uno': '{n} to do',
+  'lavoro.attivita.daFare_piu': '{n} to do',
+  'lavoro.attivita.inRitardo': 'Overdue',
+  'lavoro.attivita.prossime': 'Upcoming',
+  'lavoro.attivita.oggi': 'today',
+  'lavoro.attivita.ieri': 'yesterday',
+  'lavoro.attivita.domani': 'tomorrow',
+  'lavoro.attivita.giorniFa_uno': '{n} day ago',
+  'lavoro.attivita.giorniFa_piu': '{n} days ago',
+  'lavoro.attivita.traGiorni_uno': 'in {n} day',
+  'lavoro.attivita.traGiorni_piu': 'in {n} days',
+  'lavoro.attivita.vuoto': 'No activities: all done.',
+  'lavoro.attivita.apreRecord': 'Opens the record in Odoo',
+  'lavoro.attivita.segnaFatta': 'Mark as done',
+}

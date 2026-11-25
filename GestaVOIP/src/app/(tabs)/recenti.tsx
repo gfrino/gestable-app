@@ -5,6 +5,7 @@ import { useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { loc, t } from '../../i18n'
 import { PulsanteMenu } from '../../ui/MenuLaterale'
 import { registroChiamate, type VoceRegistro } from '../../voip/api'
 import { useApp } from '../../voip/Contesto'
@@ -15,11 +16,11 @@ function quando(data: string): string {
   // Odoo manda le date in UTC senza fuso: lo si aggiunge prima di convertirle.
   const d = new Date(data.replace(' ', 'T') + 'Z')
   const oggi = new Date()
-  const ora = d.toLocaleTimeString('it-CH', { hour: '2-digit', minute: '2-digit' })
+  const ora = d.toLocaleTimeString(loc(), { hour: '2-digit', minute: '2-digit' })
   if (d.toDateString() === oggi.toDateString()) {
     return ora
   }
-  return `${d.toLocaleDateString('it-CH', { day: '2-digit', month: '2-digit' })} ${ora}`
+  return `${d.toLocaleDateString(loc(), { day: '2-digit', month: '2-digit' })} ${ora}`
 }
 
 function durata(secondi: number): string {
@@ -27,7 +28,7 @@ function durata(secondi: number): string {
     return ''
   }
   const m = Math.floor(secondi / 60)
-  return m ? `${m} min ${secondi % 60} s` : `${secondi} s`
+  return m ? t('schede.durataMinuti', { m, s: secondi % 60 }) : t('schede.durataSecondi', { s: secondi })
 }
 
 export default function Recenti() {
@@ -65,7 +66,7 @@ export default function Recenti() {
     try {
       await telefono.chiama(v.caller_number, v.partner_id ? v.partner_id[1] : '')
     } catch (e) {
-      Alert.alert('Chiamata non partita', e instanceof Error ? e.message : String(e))
+      Alert.alert(t('schede.chiamataNonPartita'), e instanceof Error ? e.message : String(e))
     }
   }
 
@@ -73,7 +74,7 @@ export default function Recenti() {
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
       <View style={s.testa}>
         <PulsanteMenu />
-        <Text style={[s.titolo, { color: c.testo }]}>Recenti</Text>
+        <Text style={[s.titolo, { color: c.testo }]}>{t('schede.recenti')}</Text>
       </View>
       {errore ? <Text style={[s.errore, { color: c.rosso }]}>{errore}</Text> : null}
       <FlatList
@@ -81,19 +82,19 @@ export default function Recenti() {
         keyExtractor={(v) => String(v.id)}
         refreshControl={<RefreshControl refreshing={carica} onRefresh={aggiorna} tintColor={c.primario} />}
         ListEmptyComponent={
-          carica ? null : <Text style={[s.vuoto, { color: c.testo3 }]}>Nessuna chiamata, per ora.</Text>
+          carica ? null : <Text style={[s.vuoto, { color: c.testo3 }]}>{t('schede.nessunaChiamata')}</Text>
         }
         ItemSeparatorComponent={() => <View style={[s.sep, { backgroundColor: c.bordo }]} />}
         renderItem={({ item }) => {
           const entrata = item.direction === 'inbound'
           const persa = entrata && (item.status === 'no-answer' || !item.duration)
-          const nome = item.partner_id ? item.partner_id[1] : item.caller_number || 'Sconosciuto'
+          const nome = item.partner_id ? item.partner_id[1] : item.caller_number || t('schede.sconosciuto')
           return (
             <Pressable
               onPress={() => richiama(item)}
               style={({ pressed }) => [s.voce, { backgroundColor: pressed ? c.superficie2 : c.superficie }]}
               accessibilityRole="button"
-              accessibilityLabel={`Richiama ${nome}`}
+              accessibilityLabel={t('schede.richiama', { nome })}
             >
               <Ionicons
                 name={entrata ? 'arrow-down' : 'arrow-up'}
@@ -106,7 +107,7 @@ export default function Recenti() {
                 </Text>
                 <Text style={[s.sub, { color: c.testo2 }]} numberOfLines={1}>
                   {[item.partner_id ? item.caller_number : '', durata(item.duration)].filter(Boolean).join(' · ') ||
-                    (entrata ? 'In entrata' : 'In uscita')}
+                    (entrata ? t('schede.inEntrata') : t('schede.inUscita'))}
                 </Text>
               </View>
               <Text style={[s.ora, { color: c.testo3 }]}>{quando(item.create_date)}</Text>

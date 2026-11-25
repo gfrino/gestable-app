@@ -13,6 +13,7 @@
  * (odoo.__WOWL_DEBUG__) e, se non c'e', i link classici /web#menu_id=.
  */
 
+import { lingua, t } from '../i18n'
 import { APP_NATIVE } from '../odoo/capacita'
 
 export const PRIMA_DEL_CARICAMENTO = `
@@ -70,9 +71,13 @@ const CSS = `
 }
 `
 
-export const DOPO_IL_CARICAMENTO = `
+/** I testi della home sono nella lingua dell'app al momento in cui si costruisce lo script. */
+export function dopoIlCaricamento(): string {
+  const testi = { lingua: lingua(), cerca: t('accesso.cercaApp'), vuoto: t('accesso.nessunaApp') }
+  return `
 (function () {
   var NATIVE = ${JSON.stringify(APP_NATIVE)};
+  var TESTI = ${JSON.stringify(testi)};
   if (!document.getElementById('gv-stile')) {
     var st = document.createElement('style'); st.id = 'gv-stile'; st.textContent = ${JSON.stringify(CSS)};
     (document.head || document.documentElement).appendChild(st);
@@ -140,14 +145,17 @@ export const DOPO_IL_CARICAMENTO = `
     }
     var home = document.getElementById('gv-home');
     if (!home) {
-      home = document.createElement('div'); home.id = 'gv-home'; home.lang = 'it';
+      home = document.createElement('div'); home.id = 'gv-home';
       home.innerHTML = '<div class="gv-cerca"><i class="fa fa-search" style="opacity:.45"></i>' +
-        '<input type="search" placeholder="Cerca un\\'app" autocomplete="off" enterkeyhint="search"></div>' +
-        '<div class="gv-griglia"></div><div class="gv-vuoto" style="display:none">Nessuna app con questo nome.</div>';
+        '<input type="search" autocomplete="off" enterkeyhint="search"></div>' +
+        '<div class="gv-griglia"></div><div class="gv-vuoto" style="display:none"></div>';
       document.body.appendChild(home);
       home.querySelector('input').addEventListener('input', function (ev) { disegna(home, servizioMenu().getApps(), ev.target.value); });
     }
-    var campo = home.querySelector('input'); campo.value = '';
+    // Testi nella lingua dell'app (vedi dopoIlCaricamento).
+    home.lang = TESTI.lingua;
+    home.querySelector('.gv-vuoto').textContent = TESTI.vuoto;
+    var campo = home.querySelector('input'); campo.value = ''; campo.placeholder = TESTI.cerca;
     disegna(home, apps, '');
     home.style.display = 'block';
     home.scrollTop = 0;
@@ -163,6 +171,7 @@ export const DOPO_IL_CARICAMENTO = `
 })();
 true;
 `
+}
 
 /** Comandi per la pagina, da passare a injectJavaScript. */
 export const MOSTRA_HOME = 'window.__gvHome && window.__gvHome(); true;'

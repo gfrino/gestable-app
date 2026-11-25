@@ -8,6 +8,7 @@
  * in tutti e due i casi deve intervenire l'amministratore del suo Odoo.
  */
 
+import { t } from '../i18n'
 import { ErroreOdoo } from './client'
 
 /** Gli identificativi dei menu che l'app sa usare. */
@@ -52,7 +53,7 @@ async function leggiMenu(server: string): Promise<Set<string> | null> {
   }
   // Senza accesso Odoo rimanda alla pagina di login (HTML, non JSON).
   if (r.url.includes('/web/login') || (r.headers.get('content-type') || '').includes('text/html')) {
-    throw new ErroreOdoo('sessione', 'La sessione e\' scaduta: accedi di nuovo.')
+    throw new ErroreOdoo('sessione', t('accesso.sessioneScaduta'))
   }
   if (!r.ok) {
     return null

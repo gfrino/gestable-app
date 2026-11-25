@@ -10,12 +10,14 @@ import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useState, type ReactNode } from 'react'
 import { ActivityIndicator, Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { loc, t } from '../../i18n'
 import {
   descriviRipetizione,
   dettaglioEvento,
   eliminaEvento,
-  ETICHETTE_STATO,
+  etichettaStato,
   opzioniEvento,
+  oraBreve,
   rispondi,
   type Ambito,
   type Opzioni,
@@ -34,10 +36,12 @@ function coloreStato(stato: Partecipante['stato'], c: Colori): string {
 }
 
 function quando(e: Scheda): string {
-  const giorno = (d: Date) => d.toLocaleDateString('it-CH', { weekday: 'long', day: 'numeric', month: 'long' })
-  const ora = (d: Date) => d.toLocaleTimeString('it-CH', { hour: '2-digit', minute: '2-digit' })
+  const giorno = (d: Date) => d.toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'long' })
+  const ora = oraBreve
   if (e.tuttoIlGiorno) {
-    return e.dal === e.al ? `${giorno(e.inizio)} · tutto il giorno` : `dal ${giorno(e.inizio)} al ${giorno(e.fine)}`
+    return e.dal === e.al
+      ? t('calendario.quandoTuttoIlGiorno', { giorno: giorno(e.inizio) })
+      : t('calendario.quandoDalAl', { da: giorno(e.inizio), a: giorno(e.fine) })
   }
   if (e.inizio.toDateString() === e.fine.toDateString()) {
     return `${giorno(e.inizio)} · ${ora(e.inizio)}–${ora(e.fine)}`
@@ -82,7 +86,7 @@ export default function Appuntamento() {
         setE(d)
         setOpzioni(o)
       } else {
-        setErrore('Appuntamento non trovato.')
+        setErrore(t('calendario.nonTrovato'))
       }
     } catch (err) {
       setErrore(err instanceof Error ? err.message : String(err))
@@ -102,7 +106,7 @@ export default function Appuntamento() {
       await rispondi(server, p.id, stato)
       await carica()
     } catch (err) {
-      Alert.alert('Risposta non inviata', err instanceof Error ? err.message : String(err))
+      Alert.alert(t('calendario.rispostaNonInviata'), err instanceof Error ? err.message : String(err))
     } finally {
       setInvio('')
     }
@@ -111,7 +115,7 @@ export default function Appuntamento() {
   function apriVideo(url: string) {
     // Le stanze di Odoo (Discuss) hanno un indirizzo relativo al server.
     const completo = /^https?:/i.test(url) ? url : `${server}${url.startsWith('/') ? '' : '/'}${url}`
-    Linking.openURL(completo).catch(() => Alert.alert('Videochiamata', 'Il link non si apre.'))
+    Linking.openURL(completo).catch(() => Alert.alert(t('calendario.videochiamata'), t('calendario.linkNonSiApre')))
   }
 
   function apriMappa(luogo: string) {
@@ -125,7 +129,7 @@ export default function Appuntamento() {
       await eliminaEvento(server, Number(id), ambito)
       router.back()
     } catch (err) {
-      Alert.alert('Appuntamento non eliminato', err instanceof Error ? err.message : String(err))
+      Alert.alert(t('calendario.nonEliminato'), err instanceof Error ? err.message : String(err))
       setElimino(false)
     }
   }
@@ -135,17 +139,17 @@ export default function Appuntamento() {
       return
     }
     if (e.inSerie) {
-      Alert.alert('Elimina appuntamento', 'Si ripete: quali vuoi eliminare? Non si può annullare.', [
-        { text: 'Solo questo', style: 'destructive', onPress: () => void elimina('self_only') },
-        { text: 'Questo e i successivi', style: 'destructive', onPress: () => void elimina('future_events') },
-        { text: 'Tutti', style: 'destructive', onPress: () => void elimina('all_events') },
-        { text: 'Annulla', style: 'cancel' },
+      Alert.alert(t('calendario.eliminaTitolo'), t('calendario.eliminaSerie'), [
+        { text: t('calendario.soloQuesto'), style: 'destructive', onPress: () => void elimina('self_only') },
+        { text: t('calendario.questoESuccessivi'), style: 'destructive', onPress: () => void elimina('future_events') },
+        { text: t('calendario.tutti'), style: 'destructive', onPress: () => void elimina('all_events') },
+        { text: t('comune.annulla'), style: 'cancel' },
       ])
       return
     }
-    Alert.alert('Elimina appuntamento', `«${e.titolo}» sparisce dal calendario di Odoo di tutti gli invitati. Non si può annullare.`, [
-      { text: 'Annulla', style: 'cancel' },
-      { text: 'Elimina', style: 'destructive', onPress: () => void elimina() },
+    Alert.alert(t('calendario.eliminaTitolo'), t('calendario.eliminaUno', { titolo: e.titolo }), [
+      { text: t('comune.annulla'), style: 'cancel' },
+      { text: t('comune.elimina'), style: 'destructive', onPress: () => void elimina() },
     ])
   }
 
@@ -157,7 +161,7 @@ export default function Appuntamento() {
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom']}>
       <Testata
-        titolo="Appuntamento"
+        titolo={t('calendario.appuntamento')}
         destra={
           e?.puoModificare ? (
             <Pressable
@@ -167,7 +171,7 @@ export default function Appuntamento() {
               accessibilityRole="button"
             >
               <Text style={[s.modificaTesto, { color: c.primario }]} numberOfLines={1}>
-                Modifica
+                {t('comune.modifica')}
               </Text>
             </Pressable>
           ) : undefined
@@ -182,10 +186,10 @@ export default function Appuntamento() {
           <Text style={[s.titolo, { color: c.testo }]}>{e.titolo}</Text>
           {e.etichette.length ? (
             <View style={s.etichette}>
-              {e.etichette.map((t) => (
-                <View key={t.id} style={[s.pillola, { backgroundColor: c.primarioTenue }]}>
+              {e.etichette.map((x) => (
+                <View key={x.id} style={[s.pillola, { backgroundColor: c.primarioTenue }]}>
                   <Text style={[s.pillolaTesto, { color: c.primario }]} numberOfLines={1}>
-                    {t.nome}
+                    {x.nome}
                   </Text>
                 </View>
               ))}
@@ -222,14 +226,14 @@ export default function Appuntamento() {
             >
               <Ionicons name="videocam" size={20} color={c.primarioTesto} />
               <Text style={[s.videoTesto, { color: c.primarioTesto }]} numberOfLines={1}>
-                Entra nella videochiamata
+                {t('calendario.entraVideo')}
               </Text>
             </Pressable>
           ) : null}
 
           {io ? (
             <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
-              <Text style={[s.etichetta, { color: c.testo2 }]}>La tua risposta</Text>
+              <Text style={[s.etichetta, { color: c.testo2 }]}>{t('calendario.tuaRisposta')}</Text>
               <View style={s.risposte}>
                 {(['accepted', 'tentative', 'declined'] as const).map((stato) => {
                   const attiva = io.stato === stato
@@ -247,7 +251,7 @@ export default function Appuntamento() {
                         <ActivityIndicator size="small" color={attiva ? '#FFFFFF' : colore} />
                       ) : (
                         <Text style={[s.rispostaTesto, { color: attiva ? '#FFFFFF' : c.testo }]} numberOfLines={1}>
-                          {stato === 'accepted' ? 'Ci sono' : stato === 'tentative' ? 'Forse' : 'No'}
+                          {t(stato === 'accepted' ? 'calendario.rispostaSi' : stato === 'tentative' ? 'calendario.rispostaForse' : 'calendario.rispostaNo')}
                         </Text>
                       )}
                     </Pressable>
@@ -258,26 +262,26 @@ export default function Appuntamento() {
           ) : null}
 
           <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
-            <Text style={[s.etichetta, { color: c.testo2 }]}>Organizzatore</Text>
+            <Text style={[s.etichetta, { color: c.testo2 }]}>{t('calendario.organizzatore')}</Text>
             <View style={s.persona}>
               <Avatar url={e.organizzatoreId ? urlAvatar(server, 'res.users', e.organizzatoreId) : undefined} nome={e.organizzatore || '?'} lato={36} />
               <Text style={[s.personaNome, { color: c.testo }]} numberOfLines={1}>
-                {e.organizzatore || 'Nessuno'}
+                {e.organizzatore || t('comune.nessuno')}
               </Text>
             </View>
             <View style={[s.linea, { backgroundColor: c.bordo }]} />
-            <Text style={[s.etichetta, { color: c.testo2 }]}>Invitati · {e.persone.length}</Text>
+            <Text style={[s.etichetta, { color: c.testo2 }]}>{t('calendario.invitatiConteggio', { n: e.persone.length })}</Text>
             {e.persone.map((p) => (
               <View key={p.id} style={s.persona}>
                 <Avatar url={p.partnerId ? urlAvatar(server, 'res.partner', p.partnerId) : undefined} nome={p.nome} lato={36} />
                 <Text style={[s.personaNome, { color: c.testo }]} numberOfLines={1}>
                   {p.nome}
-                  {p.io ? ' (tu)' : ''}
+                  {p.io ? t('calendario.tu') : ''}
                 </Text>
                 <View style={[s.stato, { backgroundColor: c.sfondo }]}>
                   <View style={[s.statoPunto, { backgroundColor: coloreStato(p.stato, c) }]} />
                   <Text style={[s.statoTesto, { color: c.testo2 }]} numberOfLines={1}>
-                    {ETICHETTE_STATO[p.stato]}
+                    {etichettaStato(p.stato)}
                   </Text>
                 </View>
               </View>
@@ -286,7 +290,7 @@ export default function Appuntamento() {
 
           {e.descrizione ? (
             <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
-              <Text style={[s.etichetta, { color: c.testo2 }]}>Descrizione</Text>
+              <Text style={[s.etichetta, { color: c.testo2 }]}>{t('calendario.descrizione')}</Text>
               <Text style={[s.nota, { color: c.testo }]} selectable>
                 {e.descrizione}
               </Text>
@@ -294,7 +298,7 @@ export default function Appuntamento() {
           ) : null}
           {e.note ? (
             <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
-              <Text style={[s.etichetta, { color: c.testo2 }]}>Note interne</Text>
+              <Text style={[s.etichetta, { color: c.testo2 }]}>{t('calendario.noteInterne')}</Text>
               <Text style={[s.nota, { color: c.testo }]} selectable>
                 {e.note}
               </Text>
@@ -303,14 +307,14 @@ export default function Appuntamento() {
 
           {e.calendario || privacy || mostraCome ? (
             <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
-              <Text style={[s.etichetta, { color: c.testo2 }]}>Visibilità</Text>
-              {e.calendario ? <Text style={[s.nota, { color: c.testo }]}>Calendario: {e.calendario.nome}</Text> : null}
-              {privacy ? <Text style={[s.nota, { color: c.testo }]}>Privacy: {privacy}</Text> : null}
-              {mostraCome ? <Text style={[s.nota, { color: c.testo }]}>Mostra come: {mostraCome}</Text> : null}
+              <Text style={[s.etichetta, { color: c.testo2 }]}>{t('calendario.visibilita')}</Text>
+              {e.calendario ? <Text style={[s.nota, { color: c.testo }]}>{t('calendario.calendarioDi', { nome: e.calendario.nome })}</Text> : null}
+              {privacy ? <Text style={[s.nota, { color: c.testo }]}>{t('calendario.privacyDi', { nome: privacy })}</Text> : null}
+              {mostraCome ? <Text style={[s.nota, { color: c.testo }]}>{t('calendario.mostraComeDi', { nome: mostraCome })}</Text> : null}
             </View>
           ) : null}
 
-          {e.puoModificare ? <Pulsante testo="Elimina" variante="pericolo" onPress={chiediElimina} occupato={elimino} /> : null}
+          {e.puoModificare ? <Pulsante testo={t('comune.elimina')} variante="pericolo" onPress={chiediElimina} occupato={elimino} /> : null}
         </ScrollView>
       )}
     </SafeAreaView>

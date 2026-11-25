@@ -1,11 +1,18 @@
-/** Disponibilita', centralino, account. Le stesse leve del softphone in Odoo. */
+/**
+ * Lingua, disponibilita', centralino, account. Le leve del telefono (le stesse
+ * del softphone in Odoo) solo con VOIP AI; la lingua per tutti.
+ */
 
 import * as Application from 'expo-application'
 import { useFocusEffect } from 'expo-router'
 import * as Updates from 'expo-updates'
 import { useCallback, useState } from 'react'
-import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import Ionicons from '@expo/vector-icons/Ionicons'
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { LINGUE, linguaTelefono, loc, t, type SceltaLingua } from '../i18n'
+import { useLingua } from '../i18n/Lingua'
+import { conTelefono } from '../odoo/sessione'
 import { preferenze, type Preferenze } from '../voip/api'
 import { useApp, useTelefono } from '../voip/Contesto'
 import { telefono } from '../voip/telefono'
@@ -31,20 +38,22 @@ function aggiornamento(): string {
   if (Updates.isEmbeddedLaunch || !Updates.createdAt) {
     return ''
   }
-  const quando = Updates.createdAt.toLocaleString('it-CH', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
-  return ` · aggiornamento del ${quando}`
+  const quando = Updates.createdAt.toLocaleString(loc(), { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' })
+  return t('impostazioni.aggiornamento', { quando })
 }
 
 export default function Impostazioni() {
   const c = useColori()
   const { sessione, esci } = useApp()
   const { disponibile } = useTelefono()
+  const { scelta, cambia } = useLingua()
+  const telefonoAttivo = conTelefono(sessione)
   const [pref, setPref] = useState<Preferenze | null>(null)
   const [uscita, setUscita] = useState(false)
 
   useFocusEffect(
     useCallback(() => {
-      if (sessione) {
+      if (sessione && conTelefono(sessione)) {
         preferenze(sessione.server).then(setPref).catch(() => setPref(null))
       }
     }, [sessione]),
@@ -59,7 +68,7 @@ export default function Impostazioni() {
       setPref(r)
     } catch (e) {
       // L'ultimo del centralino non puo' togliersi: il server spiega perche'.
-      Alert.alert('Centralino', e instanceof Error ? e.message : String(e))
+      Alert.alert(t('impostazioni.centralinoErrore'), e instanceof Error ? e.message : String(e))
     }
   }
 
@@ -67,15 +76,15 @@ export default function Impostazioni() {
     try {
       await telefono.impostaDisponibile(valore)
     } catch (e) {
-      Alert.alert('Disponibilita', e instanceof Error ? e.message : String(e))
+      Alert.alert(t('impostazioni.disponibilitaErrore'), e instanceof Error ? e.message : String(e))
     }
   }
 
   function chiediUscita() {
-    Alert.alert('Uscire da GestaVOIP?', 'Il telefono smette di squillare finche\' non rientri.', [
-      { text: 'Annulla', style: 'cancel' },
+    Alert.alert(t('impostazioni.esciTitolo'), t(telefonoAttivo ? 'impostazioni.esciTelefono' : 'impostazioni.esciSenzaTelefono'), [
+      { text: t('comune.annulla'), style: 'cancel' },
       {
-        text: 'Esci',
+        text: t('comune.esci'),
         style: 'destructive',
         onPress: async () => {
           setUscita(true)
@@ -86,39 +95,63 @@ export default function Impostazioni() {
   }
 
   const scheda = [s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]
+  const nomeTelefono = LINGUE.find((l) => l.valore === linguaTelefono())?.nome || ''
+  const scelte: { valore: SceltaLingua; nome: string; testo?: string }[] = [
+    { valore: 'auto', nome: t('impostazioni.linguaAuto'), testo: t('impostazioni.linguaAutoTesto', { lingua: nomeTelefono }) },
+    ...LINGUE,
+  ]
 
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
-      <Testata titolo="Impostazioni" />
+      <Testata titolo={t('impostazioni.titolo')} />
       <ScrollView contentContainerStyle={s.contenuto}>
 
-        <View style={scheda}>
-          <Riga
-            c={c}
-            titolo="Disponibile"
-            testo={disponibile ? 'Le chiamate squillano su questo telefono.' : 'Questo telefono non squilla.'}
-          >
-            <Switch value={disponibile} onValueChange={disponibilita} trackColor={{ true: c.verde }} />
-          </Riga>
-          <View style={[s.sep, { backgroundColor: c.bordo }]} />
-          <Riga
-            c={c}
-            titolo="Ricevo le chiamate del centralino"
-            testo="Spento: ti chiamano solo sul tuo interno o numero diretto."
-          >
-            <Switch
-              value={!!pref?.inbound_ring}
-              onValueChange={centralino}
-              disabled={!pref}
-              trackColor={{ true: c.primario }}
-            />
-          </Riga>
-        </View>
+        {telefonoAttivo ? (
+          <>
+            <View style={scheda}>
+              <Riga
+                c={c}
+                titolo={t('impostazioni.disponibile')}
+                testo={disponibile ? t('impostazioni.disponibileSi') : t('impostazioni.disponibileNo')}
+              >
+                <Switch value={disponibile} onValueChange={disponibilita} trackColor={{ true: c.verde }} />
+              </Riga>
+              <View style={[s.sep, { backgroundColor: c.bordo }]} />
+              <Riga c={c} titolo={t('impostazioni.centralino')} testo={t('impostazioni.centralinoTesto')}>
+                <Switch
+                  value={!!pref?.inbound_ring}
+                  onValueChange={centralino}
+                  disabled={!pref}
+                  trackColor={{ true: c.primario }}
+                />
+              </Riga>
+            </View>
 
+            <View style={scheda}>
+              <Riga c={c} titolo={t('impostazioni.interno')} testo={pref?.extension || '-'} />
+              <View style={[s.sep, { backgroundColor: c.bordo }]} />
+              <Riga c={c} titolo={t('impostazioni.numeroDiretto')} testo={pref?.direct_number || t('comune.nessuno')} />
+            </View>
+          </>
+        ) : null}
+
+        <Text style={[s.sezione, { color: c.testo2 }]}>{t('impostazioni.lingua')}</Text>
         <View style={scheda}>
-          <Riga c={c} titolo="Interno" testo={pref?.extension || '-'} />
-          <View style={[s.sep, { backgroundColor: c.bordo }]} />
-          <Riga c={c} titolo="Numero diretto" testo={pref?.direct_number || 'Nessuno'} />
+          {scelte.map((l, i) => (
+            <View key={l.valore}>
+              {i > 0 ? <View style={[s.sep, { backgroundColor: c.bordo }]} /> : null}
+              <Pressable
+                onPress={() => void cambia(l.valore)}
+                style={({ pressed }) => pressed && { backgroundColor: c.superficie2 }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: scelta === l.valore }}
+              >
+                <Riga c={c} titolo={l.nome} testo={l.testo}>
+                  {scelta === l.valore ? <Ionicons name="checkmark" size={22} color={c.primario} /> : null}
+                </Riga>
+              </Pressable>
+            </View>
+          ))}
         </View>
 
         <View style={scheda}>
@@ -131,7 +164,7 @@ export default function Impostazioni() {
           />
         </View>
 
-        <Pulsante testo="Esci" variante="pericolo" onPress={chiediUscita} occupato={uscita} />
+        <Pulsante testo={t('comune.esci')} variante="pericolo" onPress={chiediUscita} occupato={uscita} />
         <Text style={[s.versione, { color: c.testo3 }]}>
           GestaVOIP {Application.nativeApplicationVersion || ''} ({Application.nativeBuildVersion || ''})
           {aggiornamento()}
@@ -149,5 +182,6 @@ const s = StyleSheet.create({
   rigaTitolo: { fontSize: 16, fontWeight: '600' },
   rigaTesto: { fontSize: 13, marginTop: 2 },
   sep: { height: StyleSheet.hairlineWidth, marginLeft: spazio.l },
+  sezione: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: -spazio.s, marginLeft: spazio.xs },
   versione: { textAlign: 'center', fontSize: 12, marginTop: spazio.s },
 })

@@ -16,8 +16,9 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { loc, t, tn } from '../../i18n'
 import { inviaChat, messaggiChat, segnaLetta, type MessaggioChat } from '../../odoo/lavoro'
-import { htmlDaTesto, testoDaHtml } from '../../odoo/testo'
+import { htmlDaTesto, oraBreve, testoDaHtml } from '../../odoo/testo'
 import { useMenu } from '../../ui/MenuLaterale'
 import { Testata } from '../../ui/Testata'
 import { spazio, useColori } from '../../ui/tema'
@@ -30,13 +31,13 @@ function giorno(d: Date | null): string {
   const oggi = new Date()
   const stesso = (a: Date, b: Date) => a.toDateString() === b.toDateString()
   if (stesso(d, oggi)) {
-    return 'Oggi'
+    return t('lavoro.oggi')
   }
   const ieri = new Date(oggi.getTime() - 86_400_000)
   if (stesso(d, ieri)) {
-    return 'Ieri'
+    return t('lavoro.ieri')
   }
-  return d.toLocaleDateString('it-CH', { weekday: 'long', day: 'numeric', month: 'long' })
+  return d.toLocaleDateString(loc(), { weekday: 'long', day: 'numeric', month: 'long' })
 }
 
 export default function Conversazione() {
@@ -69,7 +70,7 @@ export default function Conversazione() {
       }
     } catch (e) {
       if (!messaggi) {
-        Alert.alert('Messaggi', e instanceof Error ? e.message : String(e))
+        Alert.alert(t('lavoro.messaggi.titolo'), e instanceof Error ? e.message : String(e))
       }
     }
     // messaggi resta fuori: serve solo a non ripetere l'avviso a ogni giro.
@@ -80,8 +81,8 @@ export default function Conversazione() {
   useFocusEffect(
     useCallback(() => {
       void carica()
-      const t = setInterval(() => void carica(), 5_000)
-      return () => clearInterval(t)
+      const timer = setInterval(() => void carica(), 5_000)
+      return () => clearInterval(timer)
     }, [carica]),
   )
 
@@ -96,7 +97,7 @@ export default function Conversazione() {
       setTesto('')
       await carica()
     } catch (e) {
-      Alert.alert('Messaggio non inviato', e instanceof Error ? e.message : String(e))
+      Alert.alert(t('lavoro.chat.nonInviato'), e instanceof Error ? e.message : String(e))
     } finally {
       setInvio(false)
     }
@@ -106,7 +107,7 @@ export default function Conversazione() {
 
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom']}>
-      <Testata titolo={tipo === 'chat' ? nome || 'Chat' : `# ${nome || 'Canale'}`} />
+      <Testata titolo={tipo === 'chat' ? nome || t('lavoro.chat.chat') : `# ${nome || t('lavoro.chat.canale')}`} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {!messaggi ? (
           <ActivityIndicator style={{ marginTop: spazio.xxl }} color={c.primario} />
@@ -118,7 +119,7 @@ export default function Conversazione() {
             keyExtractor={(m) => String(m.id)}
             contentContainerStyle={s.contenuto}
             keyboardShouldPersistTaps="handled"
-            ListEmptyComponent={<Text style={[s.vuoto, { color: c.testo3 }]}>Ancora nessun messaggio.</Text>}
+            ListEmptyComponent={<Text style={[s.vuoto, { color: c.testo3 }]}>{t('lavoro.chat.vuota')}</Text>}
             renderItem={({ item, index }) => {
               // La lista e' rovesciata: il messaggio "prima" e' quello all'indice successivo.
               const prima = dati[index + 1]
@@ -149,11 +150,11 @@ export default function Conversazione() {
                       ) : null}
                       {item.allegati ? (
                         <Text style={[s.allegato, { color: item.mio ? c.primarioTesto : c.testo2 }]}>
-                          {item.allegati === 1 ? '1 allegato' : `${item.allegati} allegati`} (aprili in Odoo)
+                          {tn('lavoro.chat.allegati', item.allegati)}
                         </Text>
                       ) : null}
                       <Text style={[s.ora, { color: item.mio ? c.primarioTesto : c.testo3 }]}>
-                        {item.data?.toLocaleTimeString('it-CH', { hour: '2-digit', minute: '2-digit' })}
+                        {item.data ? oraBreve(item.data) : null}
                       </Text>
                     </View>
                   </View>
@@ -168,10 +169,10 @@ export default function Conversazione() {
             style={[s.campo, { backgroundColor: c.superficie, borderColor: c.bordo, color: c.testo }]}
             value={testo}
             onChangeText={setTesto}
-            placeholder="Scrivi un messaggio"
+            placeholder={t('lavoro.chat.scrivi')}
             placeholderTextColor={c.testo3}
             multiline
-            accessibilityLabel="Messaggio"
+            accessibilityLabel={t('lavoro.chat.messaggio')}
           />
           <Pressable
             onPress={invia}
@@ -181,7 +182,7 @@ export default function Conversazione() {
               { backgroundColor: testo.trim() ? c.primario : c.superficie2, opacity: pressed ? 0.8 : 1 },
             ]}
             accessibilityRole="button"
-            accessibilityLabel="Invia"
+            accessibilityLabel={t('lavoro.chat.invia')}
           >
             {invio ? (
               <ActivityIndicator size="small" color={c.primarioTesto} />

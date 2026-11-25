@@ -2,6 +2,7 @@ import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
 import { ActivityIndicator, View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
+import { ProviderLingua, useLingua } from '../i18n/Lingua'
 import { conTelefono } from '../odoo/sessione'
 import { ProviderApp, useApp } from '../voip/Contesto'
 import { ProviderMenu } from '../ui/MenuLaterale'
@@ -33,6 +34,8 @@ function Navigazione() {
         <Stack.Screen name="calendario/modifica" options={{ presentation: 'modal' }} />
         <Stack.Screen name="contatti/[id]" />
         <Stack.Screen name="contatti/nuovo" options={{ presentation: 'modal' }} />
+        {/* Per tutti: la lingua si sceglie anche senza telefono. */}
+        <Stack.Screen name="impostazioni" />
       </Stack.Protected>
       {/* Il telefono: solo con VOIP AI. */}
       <Stack.Protected guard={fase === 'dentro' && telefono}>
@@ -40,7 +43,6 @@ function Navigazione() {
           name="chiamata"
           options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', gestureEnabled: false }}
         />
-        <Stack.Screen name="impostazioni" />
       </Stack.Protected>
       <Stack.Protected guard={fase !== 'dentro'}>
         <Stack.Screen name="login" />
@@ -49,15 +51,25 @@ function Navigazione() {
   )
 }
 
+/** Cambiando lingua si ridisegnano menu e schermate; sessione e telefono restano. */
+function ConLingua() {
+  const { lingua } = useLingua()
+  return (
+    <ProviderMenu key={lingua}>
+      <Navigazione />
+    </ProviderMenu>
+  )
+}
+
 export default function Radice() {
   return (
     <SafeAreaProvider>
-      <ProviderApp>
-        <StatusBar style="auto" />
-        <ProviderMenu>
-          <Navigazione />
-        </ProviderMenu>
-      </ProviderApp>
+      <ProviderLingua>
+        <ProviderApp>
+          <StatusBar style="auto" />
+          <ConLingua />
+        </ProviderApp>
+      </ProviderLingua>
     </SafeAreaProvider>
   )
 }

@@ -8,6 +8,7 @@ import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { loc, t, tn } from '../i18n'
 import { attivita as caricaAttivita, completaAttivita, percorsoRecord, type Attivita } from '../odoo/lavoro'
 import { testoDaHtml } from '../odoo/testo'
 import { inviaOdoo, rottaOdoo } from '../ui/comandiOdoo'
@@ -16,10 +17,11 @@ import { Testata } from '../ui/Testata'
 import { raggio, spazio, useColori, type Colori } from '../ui/tema'
 import { useApp } from '../voip/Contesto'
 
+// Il titolo e' la chiave del testo: si traduce quando si disegna (la lingua puo' cambiare).
 const SEZIONI: { stato: Attivita['stato']; titolo: string }[] = [
-  { stato: 'overdue', titolo: 'In ritardo' },
-  { stato: 'today', titolo: 'Oggi' },
-  { stato: 'planned', titolo: 'Prossime' },
+  { stato: 'overdue', titolo: 'lavoro.attivita.inRitardo' },
+  { stato: 'today', titolo: 'lavoro.oggi' },
+  { stato: 'planned', titolo: 'lavoro.attivita.prossime' },
 ]
 
 function quando(a: Attivita): string {
@@ -30,21 +32,21 @@ function quando(a: Attivita): string {
   oggi.setHours(12, 0, 0, 0)
   const giorni = Math.round((a.scadenza.getTime() - oggi.getTime()) / 86_400_000)
   if (giorni === 0) {
-    return 'oggi'
+    return t('lavoro.attivita.oggi')
   }
   if (giorni === -1) {
-    return 'ieri'
+    return t('lavoro.attivita.ieri')
   }
   if (giorni === 1) {
-    return 'domani'
+    return t('lavoro.attivita.domani')
   }
   if (giorni < 0) {
-    return `${-giorni} giorni fa`
+    return tn('lavoro.attivita.giorniFa', -giorni)
   }
   if (giorni < 7) {
-    return `tra ${giorni} giorni`
+    return tn('lavoro.attivita.traGiorni', giorni)
   }
-  return a.scadenza.toLocaleDateString('it-CH', { day: 'numeric', month: 'short' })
+  return a.scadenza.toLocaleDateString(loc(), { day: 'numeric', month: 'short' })
 }
 
 function colore(stato: Attivita['stato'], c: Colori): string {
@@ -100,7 +102,7 @@ export default function SchermataAttivita() {
         n.delete(a.id)
         return n
       })
-      Alert.alert('Attività', e instanceof Error ? e.message : String(e))
+      Alert.alert(t('lavoro.attivita.tipo'), e instanceof Error ? e.message : String(e))
     }
   }
 
@@ -120,7 +122,7 @@ export default function SchermataAttivita() {
 
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
-      <Testata titolo="Attività" sottotitolo={lista ? `${lista.length} da fare` : undefined} />
+      <Testata titolo={t('lavoro.attivita.titolo')} sottotitolo={lista ? tn('lavoro.attivita.daFare', lista.length) : undefined} />
       {errore && !lista ? (
         <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>
       ) : !lista ? (
@@ -135,13 +137,13 @@ export default function SchermataAttivita() {
           ListEmptyComponent={
             <View style={s.vuotoBlocco}>
               <Ionicons name="sunny" size={56} color={c.ambra} />
-              <Text style={[s.vuoto, { color: c.testo2, marginTop: spazio.s }]}>Nessuna attività: tutto fatto.</Text>
+              <Text style={[s.vuoto, { color: c.testo2, marginTop: spazio.s }]}>{t('lavoro.attivita.vuoto')}</Text>
             </View>
           }
           renderSectionHeader={({ section }) => (
             <View style={s.sezione}>
               <View style={[s.sezionePunto, { backgroundColor: colore(section.stato, c) }]} />
-              <Text style={[s.sezioneTitolo, { color: c.testo }]}>{section.titolo}</Text>
+              <Text style={[s.sezioneTitolo, { color: c.testo }]}>{t(section.titolo)}</Text>
               <Text style={[s.sezioneNumero, { color: c.testo3 }]}>{section.data.length}</Text>
             </View>
           )}
@@ -156,7 +158,7 @@ export default function SchermataAttivita() {
                   { backgroundColor: pressed ? c.superficie2 : c.superficie, borderColor: c.bordo, opacity: fatta ? 0.5 : 1 },
                 ]}
                 accessibilityRole="button"
-                accessibilityHint="Apre il record in Odoo"
+                accessibilityHint={t('lavoro.attivita.apreRecord')}
               >
                 <View style={{ flex: 1, gap: 3 }}>
                   <View style={s.rigaSopra}>
@@ -184,7 +186,7 @@ export default function SchermataAttivita() {
                   hitSlop={10}
                   style={[s.spunta, { borderColor: fatta ? c.verde : c.bordo, backgroundColor: fatta ? c.verde : 'transparent' }]}
                   accessibilityRole="button"
-                  accessibilityLabel="Segna fatta"
+                  accessibilityLabel={t('lavoro.attivita.segnaFatta')}
                 >
                   <Ionicons name="checkmark" size={20} color={fatta ? '#FFFFFF' : c.testo3} />
                 </Pressable>

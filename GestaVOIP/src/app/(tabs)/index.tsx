@@ -10,6 +10,7 @@ import { useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { Alert, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { t } from '../../i18n'
 import { cercaContatti, type Contatto } from '../../voip/api'
 import { conTelefono } from '../../odoo/sessione'
 import { useApp } from '../../voip/Contesto'
@@ -83,12 +84,12 @@ function Tastierino() {
   function premi(cifra: string) {
     void Haptics.selectionAsync()
     setScelto(null)
-    setTesto((t) => t + cifra)
+    setTesto((x) => x + cifra)
   }
 
   function cancella() {
     setScelto(null)
-    setTesto((t) => t.slice(0, -1))
+    setTesto((x) => x.slice(0, -1))
   }
 
   function scegli(voce: Contatto) {
@@ -123,7 +124,7 @@ function Tastierino() {
       setTesto('')
       setScelto(null)
     } catch (e) {
-      Alert.alert('Chiamata non partita', e instanceof Error ? e.message : String(e))
+      Alert.alert(t('schede.chiamataNonPartita'), e instanceof Error ? e.message : String(e))
     }
   }
 
@@ -163,19 +164,19 @@ function Tastierino() {
               style={[s.inputNome, { color: c.testo }]}
               value={nome}
               onChangeText={setNome}
-              placeholder="Nome, azienda o numero"
+              placeholder={t('schede.cercaNomeSegnaposto')}
               placeholderTextColor={c.testo3}
               autoFocus
               autoCorrect={false}
               autoCapitalize="words"
               returnKeyType="search"
               clearButtonMode="while-editing"
-              accessibilityLabel="Cerca un contatto"
+              accessibilityLabel={t('schede.cercaContatto')}
             />
           </View>
-          <Pressable onPress={chiudiNome} hitSlop={12} accessibilityRole="button" accessibilityLabel="Torna al tastierino">
+          <Pressable onPress={chiudiNome} hitSlop={12} accessibilityRole="button" accessibilityLabel={t('schede.tornaTastierino')}>
             <Text style={[s.annulla, { color: c.primario }]} numberOfLines={1}>
-              Tastierino
+              {t('schede.tastierino')}
             </Text>
           </Pressable>
         </View>
@@ -191,10 +192,10 @@ function Tastierino() {
           ) : (
             <Text style={[s.vuoto, { color: c.testo3 }]}>
               {termine.length < minimo
-                ? 'Scrivi almeno due lettere del nome o dell\'azienda.'
+                ? t('schede.scriviDueLettere')
                 : trovati.termine === termine
-                  ? 'Nessun contatto trovato in Odoo.'
-                  : 'Cerco in Odoo…'}
+                  ? t('schede.nessunoInOdoo')
+                  : t('schede.cercoInOdoo')}
             </Text>
           )}
         </KeyboardAvoidingView>
@@ -218,9 +219,9 @@ function Tastierino() {
           numberOfLines={1}
           adjustsFontSizeToFit
           minimumFontScale={0.5}
-          accessibilityLabel="Numero da chiamare"
+          accessibilityLabel={t('schede.numeroDaChiamare')}
         >
-          {scelto ? scelto.name : testo || 'Numero'}
+          {scelto ? scelto.name : testo || t('schede.numero')}
         </Text>
         {scelto ? (
           <Text style={[s.dettaglio, { color: c.testo2 }]} numberOfLines={1}>
@@ -256,11 +257,11 @@ function Tastierino() {
             hitSlop={12}
             style={s.latoTasto}
             accessibilityRole="button"
-            accessibilityLabel="Cerca un contatto per nome"
+            accessibilityLabel={t('schede.cercaPerNome')}
           >
             <Ionicons name="search" size={26} color={c.testo2} />
             <Text style={[s.latoTesto, { color: c.testo2 }]} numberOfLines={1}>
-              Nome
+              {t('schede.nome')}
             </Text>
           </Pressable>
         </View>
@@ -268,7 +269,7 @@ function Tastierino() {
           onPress={chiama}
           style={({ pressed }) => [s.chiama, { backgroundColor: c.verde, opacity: pressed ? 0.8 : 1 }]}
           accessibilityRole="button"
-          accessibilityLabel="Chiama"
+          accessibilityLabel={t('schede.chiama')}
         >
           <Ionicons name="call" size={32} color="#FFFFFF" />
         </Pressable>
@@ -282,7 +283,7 @@ function Tastierino() {
               }}
               hitSlop={16}
               accessibilityRole="button"
-              accessibilityLabel="Cancella"
+              accessibilityLabel={t('schede.cancella')}
             >
               <Ionicons name="backspace-outline" size={28} color={c.testo2} />
             </Pressable>

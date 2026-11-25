@@ -4,7 +4,8 @@
 
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Alert } from 'react-native'
-import { MESSAGGIO_NON_AUTORIZZATO, MESSAGGIO_NON_VERIFICABILE, verificaServer as autorizzato } from '../odoo/autorizzati'
+import { t } from '../i18n'
+import { messaggioNonAutorizzato, messaggioNonVerificabile, verificaServer as autorizzato } from '../odoo/autorizzati'
 import { accedi, accediDallaPagina, confermaCodice, dimenticaContesto, ErroreOdoo, esci, infoServer, infoSessione, sessioneAutomatica, type InfoServer, type Utente } from '../odoo/client'
 import { dimenticaMenu } from '../odoo/capacita'
 import { conTelefono, dimenticaSessione, leggiSessione, salvaSessione, type Sessione } from '../odoo/sessione'
@@ -55,7 +56,7 @@ export function ProviderApp({ children }: { children: ReactNode }) {
         autorizzato(s.server).then((esito) => {
           if (vivo && esito === 'non-autorizzato') {
             void chiudiLocale()
-            Alert.alert('Server non abilitato', MESSAGGIO_NON_AUTORIZZATO)
+            Alert.alert(t('accesso.serverNonAbilitato'), messaggioNonAutorizzato())
           }
         })
       }
@@ -98,10 +99,10 @@ export function ProviderApp({ children }: { children: ReactNode }) {
         // e' abilitato lo sa subito, senza digitare la password.
         const esito = await autorizzato(indirizzo)
         if (esito === 'non-autorizzato') {
-          throw new ErroreOdoo('server', MESSAGGIO_NON_AUTORIZZATO)
+          throw new ErroreOdoo('server', messaggioNonAutorizzato())
         }
         if (esito === 'non-verificabile') {
-          throw new ErroreOdoo('rete', MESSAGGIO_NON_VERIFICABILE)
+          throw new ErroreOdoo('rete', messaggioNonVerificabile())
         }
         const info = await infoServer(indirizzo)
         // Odoo demo (accesso senza password): si entra subito, come nel browser.
