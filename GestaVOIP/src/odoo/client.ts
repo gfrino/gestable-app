@@ -201,6 +201,34 @@ export async function accediDallaPagina(base: string, login: string, password: s
   throw new ErroreOdoo('accesso', 'Email o password non corrette.')
 }
 
+/**
+ * Odoo che apre la sessione da solo (le istanze demo con tw_demo_odoo entrano
+ * come l'utente demo appena si apre /web/login): l'utente collegato, o null
+ * per un Odoo normale, che mostra la pagina di accesso.
+ */
+export async function sessioneAutomatica(base: string): Promise<(Utente & { db: string }) | null> {
+  const controllo = new AbortController()
+  const timer = setTimeout(() => controllo.abort(), TIMEOUT_MS)
+  try {
+    // Dopo l'accesso Odoo rimanda a «redirect»: una pagina pubblica, perche'
+    // su iOS il cookie appena ricevuto non viaggia con il rinvio e /odoo
+    // rimanderebbe di nuovo al login, in un giro senza fine.
+    await fetch(`${base}/web/login?redirect=${encodeURIComponent('/web/health')}`, {
+      credentials: 'include',
+      signal: controllo.signal,
+    })
+  } catch {
+    // Si guarda lo stesso se la sessione c'e'.
+  } finally {
+    clearTimeout(timer)
+  }
+  try {
+    return await infoSessione(base)
+  } catch {
+    return null
+  }
+}
+
 /** Utente e database della sessione aperta, o null se non c'e' (o aspetta il codice). */
 export async function infoSessione(base: string): Promise<(Utente & { db: string }) | null> {
   try {

@@ -5,7 +5,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Alert } from 'react-native'
 import { MESSAGGIO_NON_AUTORIZZATO, MESSAGGIO_NON_VERIFICABILE, verificaServer as autorizzato } from '../odoo/autorizzati'
-import { accedi, accediDallaPagina, confermaCodice, ErroreOdoo, esci, infoServer, infoSessione, type InfoServer, type Utente } from '../odoo/client'
+import { accedi, accediDallaPagina, confermaCodice, ErroreOdoo, esci, infoServer, infoSessione, sessioneAutomatica, type InfoServer, type Utente } from '../odoo/client'
 import { dimenticaMenu } from '../odoo/capacita'
 import { conTelefono, dimenticaSessione, leggiSessione, salvaSessione, type Sessione } from '../odoo/sessione'
 import { segnalaErrore, utenteCrash } from '../ui/crash'
@@ -102,7 +102,15 @@ export function ProviderApp({ children }: { children: ReactNode }) {
         if (esito === 'non-verificabile') {
           throw new ErroreOdoo('rete', MESSAGGIO_NON_VERIFICABILE)
         }
-        return infoServer(indirizzo)
+        const info = await infoServer(indirizzo)
+        // Odoo demo (accesso senza password): si entra subito, come nel browser.
+        if (!info.voip) {
+          const demo = await sessioneAutomatica(indirizzo)
+          if (demo) {
+            await apri(indirizzo, info, demo)
+          }
+        }
+        return info
       },
       entra: async (server, info, email, password) => {
         // Con VOIP AI si conosce il database e si entra via JSON; senza, dalla

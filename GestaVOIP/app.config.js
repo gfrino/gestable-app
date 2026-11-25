@@ -58,7 +58,7 @@ module.exports = {
 
     ios: {
       bundleIdentifier: IDENTIFICATIVO,
-      buildNumber: '5',
+      buildNumber: '6',
       supportsTablet: false,
       ...(firebaseIos ? { googleServicesFile: './GoogleService-Info.plist' } : {}),
       infoPlist: {
