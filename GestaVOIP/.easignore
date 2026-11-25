@@ -1,0 +1,47 @@
+# Cosa NON va caricato su EAS per le build. Con questo file EAS ignora i
+# .gitignore: e' la loro unione, tranne google-services.json, che deve
+# arrivare alla build Android (resta fuori da git, il repo e' pubblico).
+# Stesso file in locale e su EAS = stessa impronta OTA (runtime version).
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+expo-env.d.ts
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.keystore
+*.p8
+*.p12
+*.key
+*.mobileprovision
+*.pem
+
+# Credenziali (google-services.json escluso di proposito)
+GoogleService-Info.plist
+.env
+.env.*
+
+# Metro / debug / macOS / typescript
+.metro-health-check*
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+.DS_Store
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android
+
+# Video delle chiamate (dati reali di clienti)
+store/*.mp4
+store/*.MP4
+store/*.mov
+store/*.MOV

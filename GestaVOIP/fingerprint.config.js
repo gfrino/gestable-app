@@ -6,8 +6,8 @@
  * ogni build nuova cambierebbe l'impronta e gli aggiornamenti pubblicati per
  * le build precedenti non arriverebbero piu'.
  *
- * Firebase per Android (google-services.json e plugins/firebase-android) c'e' solo dove c'e' il file: su EAS dalla variabile
- * GOOGLE_SERVICES_JSON, in locale se il file e' nella cartella. Non tocca
+ * Firebase per Android (google-services.json e plugins/firebase-android) c'e' solo dove c'e' il file
+ * (in questa cartella, fuori da git; su EAS arriva con .easignore). Non tocca
  * iOS, quindi resta fuori dall'impronta: altrimenti gli aggiornamenti iOS
  * pubblicati con il file presente non arriverebbero alle build iOS (fatte
  * senza). Le build Android si fanno sempre con Firebase.
@@ -34,7 +34,8 @@ function senzaFirebaseAndroid(testo) {
 /** @type {import('expo/fingerprint').Config} */
 module.exports = {
   sourceSkips: ['ExpoConfigVersions'],
-  ignorePaths: ['plugins/firebase-android.js'],
+  // .easignore decide solo cosa caricare su EAS (serve a portarci google-services.json).
+  ignorePaths: ['plugins/firebase-android.js', '.easignore'],
   fileHookTransform: (source, chunk) => {
     if (source.type === 'contents' && source.id === 'expoConfig' && typeof chunk === 'string') {
       return senzaFirebaseAndroid(chunk)

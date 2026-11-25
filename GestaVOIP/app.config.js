@@ -17,12 +17,13 @@ const IDENTIFICATIVO = 'com.ticinoweb.gestavoip'
 // I file di Firebase arrivano dal progetto Firebase e non stanno nel repo
 // (che e' pubblico). Senza, l'app si compila lo stesso: le chiamate in uscita
 // funzionano, mancano solo le push Android e i report dei crash.
-// Su EAS il file Android arriva dalla variabile d'ambiente di tipo file
-// GOOGLE_SERVICES_JSON (ambiente production); in locale basta metterlo qui.
+// google-services.json sta in questa cartella (fuori da git, copia in
+// ~/.config/gestavoip/) e arriva su EAS grazie a .easignore: stesso file in
+// locale e nella build, quindi la stessa impronta OTA.
 const esiste = (file) => fs.existsSync(path.join(__dirname, file))
 // Una build iOS su EAS lo ignora: su iOS Firebase non c'e' (vedi plugins/firebase-android.js).
 const buildIos = process.env.EAS_BUILD_PLATFORM === 'ios'
-const fileAndroid = buildIos ? '' : process.env.GOOGLE_SERVICES_JSON || (esiste('google-services.json') ? './google-services.json' : '')
+const fileAndroid = !buildIos && esiste('google-services.json') ? './google-services.json' : ''
 const firebaseAndroid = !!fileAndroid
 const firebaseIos = esiste('GoogleService-Info.plist')
 const firebase = firebaseAndroid || firebaseIos
