@@ -54,7 +54,8 @@ const CSS = `
 #gv-home .gv-app:active .gv-icona { transform: scale(.92); }
 #gv-home .gv-icona { width: 62px; height: 62px; border-radius: 17px; display: flex; align-items: center; justify-content: center;
   background: #FFFFFF; box-shadow: 0 2px 6px rgba(20,24,40,.10), 0 0 0 1px rgba(20,24,40,.04); overflow: hidden; transition: transform .12s ease; }
-#gv-home .gv-icona img { width: 100%; height: 100%; object-fit: cover; }
+#gv-home .gv-icona { padding: 9px; box-sizing: border-box; }
+#gv-home .gv-icona img { width: 100%; height: 100%; object-fit: contain; border-radius: 9px; }
 #gv-home .gv-icona i { font-size: 28px; }
 #gv-home .gv-nome { font-size: 12px; line-height: 1.2; text-align: center; max-width: 78px; overflow: hidden;
   -webkit-hyphens: auto; hyphens: auto; overflow-wrap: anywhere;
