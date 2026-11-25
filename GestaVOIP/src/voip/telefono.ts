@@ -74,6 +74,8 @@ export type StatoTelefono = {
   motivo: string
   /** Tentativo di registrazione fallito (0 = nessuno): il testo lo compone la UI nella lingua scelta. */
   tentativo: number
+  /** Il server Odoo si sta riavviando (502/503/504): si riprova da soli, non e' un guasto vero. */
+  occupato: boolean
   disponibile: boolean
   chiamata: Chiamata | null
   audio: AudioDevice[]
@@ -86,6 +88,7 @@ const STATO_INIZIALE: StatoTelefono = {
   registrazione: 'spento',
   motivo: '',
   tentativo: 0,
+  occupato: false,
   disponibile: true,
   chiamata: null,
   audio: [],
@@ -228,7 +231,7 @@ export class Telefono {
       this.rinnovo = null
     }
     if (this.stato.registrazione !== 'pronto') {
-      this.aggiorna({ registrazione: 'collegamento', motivo })
+      this.aggiorna({ registrazione: 'collegamento', motivo, occupato: false })
     }
 
     for (let tentativo = 0; mia === this.generazione; tentativo += 1) {
@@ -242,12 +245,12 @@ export class Telefono {
           if (this.stato.disponibile) {
             await api.disponibilita(this.sessione.server, this.dispositivo, true, etichetta())
           }
-          this.aggiorna({ registrazione: 'pronto', motivo: '' })
+          this.aggiorna({ registrazione: 'pronto', motivo: '', occupato: false })
         } else {
           // Senza Push Credential sul server Twilio non saprebbe come
           // svegliare il telefono: le chiamate in uscita vanno, quelle in
           // arrivo no. Meglio dirlo che fingere di essere raggiungibili.
-          this.aggiorna({ registrazione: 'senza-push', motivo: 'Push non configurate sul server' })
+          this.aggiorna({ registrazione: 'senza-push', motivo: 'Push non configurate sul server', occupato: false })
         }
         const fra = Math.max(30_000, token.ttl * 1000 - ANTICIPO_RINNOVO_MS)
         this.rinnovo = setTimeout(() => void this.registra('rinnovo programmato'), fra)
@@ -259,8 +262,9 @@ export class Telefono {
           this.suSessioneScaduta?.()
           return
         }
+        const occupato = e instanceof ErroreOdoo && e.tipo === 'occupato'
         const messaggio = e instanceof Error ? e.message : String(e)
-        this.aggiorna({ registrazione: 'guasto', motivo: messaggio, tentativo: tentativo + 1 })
+        this.aggiorna({ registrazione: 'guasto', motivo: messaggio, tentativo: tentativo + 1, occupato })
         await new Promise((r) => setTimeout(r, ATTESE_MS[Math.min(tentativo, ATTESE_MS.length - 1)]))
       }
     }

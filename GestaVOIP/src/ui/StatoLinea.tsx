@@ -6,7 +6,7 @@ import { raggio, spazio, useColori } from './tema'
 /** Una riga che dice se il telefono squilla davvero, e se no perche'. */
 export function StatoLinea() {
   const c = useColori()
-  const { registrazione, motivo, tentativo, disponibile } = useTelefono()
+  const { registrazione, motivo, tentativo, occupato, disponibile } = useTelefono()
 
   let testo = t('telefono.linea.pronto')
   let colore = c.verde
@@ -21,6 +21,11 @@ export function StatoLinea() {
     sfondo = c.superficie2
   } else if (registrazione === 'senza-push') {
     testo = t('telefono.linea.senzaPush')
+    colore = c.ambra
+    sfondo = c.ambraTenue
+  } else if (registrazione === 'guasto' && occupato) {
+    // Odoo si sta riavviando: passa da solo, niente codici d'errore all'operatore.
+    testo = t('telefono.linea.serverOccupato')
     colore = c.ambra
     sfondo = c.ambraTenue
   } else if (registrazione === 'guasto') {

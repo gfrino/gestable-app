@@ -9,7 +9,8 @@
 
 import { t } from '../i18n'
 
-export type TipoErrore = 'sessione' | 'rete' | 'server' | 'accesso' | 'modulo' | 'codice'
+/** occupato = Odoo si sta riavviando o e' sovraccarico (502/503/504 dal proxy): passa da solo. */
+export type TipoErrore = 'sessione' | 'rete' | 'server' | 'occupato' | 'accesso' | 'modulo' | 'codice'
 
 export class ErroreOdoo extends Error {
   tipo: TipoErrore
@@ -66,6 +67,9 @@ export async function rpc<T>(
 
   if (risposta.status === 404) {
     throw new ErroreOdoo('modulo', t('accesso.erroreModulo'))
+  }
+  if (risposta.status === 502 || risposta.status === 503 || risposta.status === 504) {
+    throw new ErroreOdoo('occupato', t('accesso.erroreOccupato'))
   }
   if (!risposta.ok) {
     throw new ErroreOdoo('server', t('accesso.erroreStato', { stato: risposta.status }))

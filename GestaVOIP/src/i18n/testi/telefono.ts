@@ -48,6 +48,7 @@ export const it = {
   'telefono.linea.guasto': 'Non collegato: {motivo}',
   'telefono.linea.guastoRiprovo': 'Non collegato: riprovo da solo',
   'telefono.linea.tentativo': '{motivo} (tentativo {n})',
+  'telefono.linea.serverOccupato': 'Server Odoo in riavvio: riprovo da solo',
   'telefono.erroreSconosciuto': 'errore sconosciuto',
 
   // Risposte del centralino senza messaggio
@@ -95,6 +96,7 @@ export const en: Record<keyof typeof it, string> = {
   'telefono.linea.guasto': 'Not connected: {motivo}',
   'telefono.linea.guastoRiprovo': 'Not connected: retrying automatically',
   'telefono.linea.tentativo': '{motivo} (attempt {n})',
+  'telefono.linea.serverOccupato': 'Odoo server restarting: retrying automatically',
   'telefono.erroreSconosciuto': 'unknown error',
 
   'telefono.operazioneNonRiuscita': 'The operation failed.',
