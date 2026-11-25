@@ -54,7 +54,10 @@ function VistaCalendario() {
   const c = useColori()
   const router = useRouter()
   const navigation = useNavigation()
-  const { width } = useWindowDimensions()
+  const { width, fontScale } = useWindowDimensions()
+  // Colonna delle ore larga quanto «00:00» con la dimensione del testo scelta
+  // nelle impostazioni del telefono (con il testo grande andava a capo).
+  const larghezzaOre = Math.ceil(58 * Math.max(1, fontScale))
   const { sessione } = useApp()
   const server = sessione?.server || ''
   const uid = sessione?.utente.uid || 0
@@ -158,7 +161,7 @@ function VistaCalendario() {
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
       <View style={s.testa}>
         <PulsanteMenu />
-        <Text style={[s.mese, { color: c.testo }]} numberOfLines={1}>
+        <Text style={[s.mese, { color: c.testo }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
           {titoloMese.charAt(0).toUpperCase() + titoloMese.slice(1)}
         </Text>
         <Pressable
@@ -258,13 +261,17 @@ function VistaCalendario() {
                   { backgroundColor: pressed ? c.superficie2 : c.superficie, borderColor: inCorso ? c.primario : c.bordo, opacity: passato ? 0.6 : 1 },
                 ]}
               >
-                <View style={s.ore}>
+                <View style={[s.ore, { width: larghezzaOre }]}>
                   {e.tuttoIlGiorno ? (
                     <Text style={[s.tutto, { color: c.primario }]}>Tutto il giorno</Text>
                   ) : (
                     <>
-                      <Text style={[s.oraInizio, { color: c.testo }]}>{ora(e.inizio)}</Text>
-                      <Text style={[s.oraFine, { color: c.testo3 }]}>{ora(e.fine)}</Text>
+                      <Text style={[s.oraInizio, { color: c.testo }]} numberOfLines={1}>
+                        {ora(e.inizio)}
+                      </Text>
+                      <Text style={[s.oraFine, { color: c.testo3 }]} numberOfLines={1}>
+                        {ora(e.fine)}
+                      </Text>
                     </>
                   )}
                 </View>
@@ -314,7 +321,7 @@ const s = StyleSheet.create({
   pagina: { flex: 1 },
   testa: { flexDirection: 'row', alignItems: 'center', gap: spazio.s, paddingHorizontal: spazio.m, paddingVertical: spazio.s },
   mese: { flex: 1, fontSize: 26, fontWeight: '800', letterSpacing: -0.3 },
-  oggi: { height: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  oggi: { minHeight: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   oggiTesto: { fontSize: 15, fontWeight: '700' },
   piu: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   striscia: { flexGrow: 0 },
@@ -328,7 +335,7 @@ const s = StyleSheet.create({
   agenda: { padding: spazio.l, paddingBottom: spazio.xxl, gap: spazio.s },
   giornoTitolo: { fontSize: 17, fontWeight: '700', marginBottom: spazio.xs },
   evento: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, padding: spazio.m, borderRadius: raggio.l, borderWidth: 1 },
-  ore: { width: 58, alignItems: 'flex-start' },
+  ore: { alignItems: 'flex-start' },
   oraInizio: { fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
   oraFine: { fontSize: 13, fontVariant: ['tabular-nums'], marginTop: 2 },
   tutto: { fontSize: 12, fontWeight: '700', lineHeight: 15 },

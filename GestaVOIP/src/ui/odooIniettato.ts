@@ -13,6 +13,8 @@
  * (odoo.__WOWL_DEBUG__) e, se non c'e', i link classici /web#menu_id=.
  */
 
+import { APP_NATIVE } from '../odoo/capacita'
+
 export const PRIMA_DEL_CARICAMENTO = `
 (function () {
   window.__GESTAVOIP__ = true;
@@ -70,6 +72,7 @@ const CSS = `
 
 export const DOPO_IL_CARICAMENTO = `
 (function () {
+  var NATIVE = ${JSON.stringify(APP_NATIVE)};
   if (!document.getElementById('gv-stile')) {
     var st = document.createElement('style'); st.id = 'gv-stile'; st.textContent = ${JSON.stringify(CSS)};
     (document.head || document.documentElement).appendChild(st);
@@ -105,7 +108,12 @@ export const DOPO_IL_CARICAMENTO = `
     var griglia = home.querySelector('.gv-griglia');
     griglia.innerHTML = '';
     var f = (filtro || '').trim().toLowerCase();
-    var scelte = apps.filter(function (a) { return !f || String(a.name).toLowerCase().indexOf(f) !== -1; });
+    // Calendario, Contatti e Discuss hanno le loro schermate nell'app: fuori
+    // dalla griglia, ma si trovano ancora cercandoli per nome.
+    var scelte = apps.filter(function (a) {
+      if (!f) { return NATIVE.indexOf(a.xmlid) === -1; }
+      return String(a.name).toLowerCase().indexOf(f) !== -1;
+    });
     home.querySelector('.gv-vuoto').style.display = scelte.length ? 'none' : 'block';
     scelte.forEach(function (app) {
       var b = document.createElement('button'); b.type = 'button'; b.className = 'gv-app';

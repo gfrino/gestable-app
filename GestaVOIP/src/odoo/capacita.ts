@@ -14,7 +14,14 @@ import { ErroreOdoo } from './client'
 export const APP = {
   calendario: 'calendar.mail_menu_calendar',
   contatti: 'contacts.menu_contacts',
+  messaggi: 'mail.menu_root_discuss',
 } as const
+
+/**
+ * Le app di Odoo che l'app mostra con schermate sue: nella griglia della
+ * scheda Odoo non compaiono (si trovano lo stesso cercandole per nome).
+ */
+export const APP_NATIVE: readonly string[] = [APP.calendario, APP.contatti, APP.messaggi]
 
 const DURATA_MS = 10 * 60_000
 const TIMEOUT_MS = 15_000
