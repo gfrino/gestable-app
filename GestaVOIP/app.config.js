@@ -17,8 +17,13 @@ const IDENTIFICATIVO = 'com.ticinoweb.gestavoip'
 // I file di Firebase arrivano dal progetto Firebase e non stanno nel repo
 // (che e' pubblico). Senza, l'app si compila lo stesso: le chiamate in uscita
 // funzionano, mancano solo le push Android e i report dei crash.
+// Su EAS il file Android arriva dalla variabile d'ambiente di tipo file
+// GOOGLE_SERVICES_JSON (ambiente production); in locale basta metterlo qui.
 const esiste = (file) => fs.existsSync(path.join(__dirname, file))
-const firebaseAndroid = esiste('google-services.json')
+// Una build iOS su EAS lo ignora: su iOS Firebase non c'e' (vedi plugins/firebase-android.js).
+const buildIos = process.env.EAS_BUILD_PLATFORM === 'ios'
+const fileAndroid = buildIos ? '' : process.env.GOOGLE_SERVICES_JSON || (esiste('google-services.json') ? './google-services.json' : '')
+const firebaseAndroid = !!fileAndroid
 const firebaseIos = esiste('GoogleService-Info.plist')
 const firebase = firebaseAndroid || firebaseIos
 
@@ -77,7 +82,7 @@ module.exports = {
     android: {
       package: IDENTIFICATIVO,
       versionCode: 5,
-      ...(firebaseAndroid ? { googleServicesFile: './google-services.json' } : {}),
+      ...(firebaseAndroid ? { googleServicesFile: fileAndroid } : {}),
       adaptiveIcon: {
         backgroundColor: '#FFFFFF',
         foregroundImage: './assets/android-icon-foreground.png',
@@ -117,7 +122,10 @@ module.exports = {
           ios: { useFrameworks: 'dynamic' },
         },
       ],
-      ...(firebase ? ['@react-native-firebase/app', '@react-native-firebase/crashlytics'] : []),
+      // Firebase: su Android per le chiamate in arrivo (FCM) e i crash; su iOS
+      // solo se un giorno ci sara' anche GoogleService-Info.plist.
+      ...(firebaseIos ? ['@react-native-firebase/app'] : []),
+      ...(firebaseAndroid ? ['./plugins/firebase-android'] : []),
       // iOS 27 vuole le scene: senza, l'app si chiude all'avvio.
       './plugins/ciclo-scene-ios',
     ],
