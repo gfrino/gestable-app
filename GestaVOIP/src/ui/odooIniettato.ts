@@ -60,8 +60,8 @@ export const AURORA =
 const CSS = `
 .o_main_navbar { display: none !important; }
 /* Menu mobile di Odoo aperto solo per leggerne le voci: resta invisibile. */
-.gv-raccolta .o_burger_menu, .gv-raccolta .o-overlay-container, .gv-raccolta .offcanvas-backdrop,
-.gv-raccolta .modal-backdrop { opacity: 0 !important; transition: none !important; }
+.gv-raccolta .o_burger_menu, .gv-raccolta .o_burger_menu_backdrop, .gv-raccolta .offcanvas-backdrop,
+.gv-raccolta .modal-backdrop { opacity: 0 !important; transition: none !important; pointer-events: none !important; }
 #gv-home { position: fixed; inset: 0; z-index: 1040; overflow-y: auto; -webkit-overflow-scrolling: touch;
   background: #EEF2F8; color: #151826; font-family: -apple-system, system-ui, sans-serif;
   padding: 18px 16px 40px; opacity: 0; transform: translateY(8px); transition: opacity .18s ease, transform .18s ease; }
@@ -225,23 +225,38 @@ export function dopoIlCaricamento(): string {
     return Array.prototype.slice.call(b.querySelectorAll('a.text-body, a.dropdown-item, button.dropdown-item'))
       .filter(function (el) { var t = testoVoce(el); return t && escluse.indexOf(t) === -1 && !el.classList.contains('dropdown-toggle'); });
   }
-  function conBurger(fare) {
+  // Apre il menu mobile di Odoo restando invisibile (classe gv-raccolta), aspetta che
+  // compaiano le voci dell'account e passa il menu a fare(); la classe si toglie
+  // solo quando il menu di Odoo e' di nuovo chiuso.
+  function conBurger(fare, poi) {
     var t = document.querySelector('.o_mobile_menu_toggle');
     if (!t) { fare(null); return; }
     document.documentElement.classList.add('gv-raccolta');
-    var fatto = false;
-    function fine() { setTimeout(function () { document.documentElement.classList.remove('gv-raccolta'); }, 450); }
     t.click();
-    var prove = 0;
+    var prove = 0, aperto = false;
     (function aspetta() {
       var b = document.querySelector('.o_burger_menu');
-      if (b && vociBurger(b).length) { fatto = true; fare(b); fine(); return; }
-      if (++prove < 25) { setTimeout(aspetta, 60); } else if (!fatto) { fare(null); fine(); }
+      if (b && vociBurger(b).length) { fare(b); poi(b); return; }
+      // Odoo 17 dentro un'app mostra le sezioni: le voci dell'account si aprono dalla barra in alto.
+      var barra = b && b.querySelector('.o_burger_menu_topbar');
+      if (barra && !aperto) { aperto = true; barra.click(); }
+      if (++prove < 30) { setTimeout(aspetta, 60); } else { fare(null); poi(b); }
     })();
   }
   function chiudiBurger(b) {
-    var x = b && b.querySelector('.o_sidebar_close');
-    if (x) { x.click(); }
+    var sel = ['.o_burger_menu_close', '.o_sidebar_close', '.btn-close'];
+    for (var i = 0; i < sel.length; i++) {
+      var x = (b && b.querySelector(sel[i])) || document.querySelector(sel[i]);
+      if (x) { x.click(); break; }
+    }
+    var prove = 0;
+    (function attesa() {
+      var aperto = document.querySelector('.o_burger_menu_backdrop') || (document.querySelector('.o_burger_menu') && document.querySelector('.o_burger_menu').getBoundingClientRect().left < window.innerWidth - 2);
+      if (!aperto || prove > 40) { document.documentElement.classList.remove('gv-raccolta'); return; }
+      if (prove === 6) { var bd = document.querySelector('.o_burger_menu_backdrop, .offcanvas-backdrop'); if (bd) { bd.click(); } }
+      if (prove === 12) { document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true })); }
+      prove++; setTimeout(attesa, 60);
+    })();
   }
   function homeAVista() {
     var h = document.getElementById('gv-home');
@@ -269,14 +284,13 @@ export function dopoIlCaricamento(): string {
     }
     conBurger(function (b) {
       var testi = b ? vociBurger(b).map(testoVoce) : [];
-      chiudiBurger(b);
       window.__gvVociTesti = testi;
       var utente = testi.map(function (t, i) {
         var nota = VOCI_NOTE.filter(function (n) { return tr(n[0]) === t; })[0];
         return { i: i, id: nota ? nota[1] : '', testo: t };
       });
       try { window.ReactNativeWebView.postMessage('gv-pannello:' + JSON.stringify({ app: app, sezioni: sezioni, utente: utente })); } catch (e) {}
-    });
+    }, chiudiBurger);
   };
   window.__gvScegli = function (id) {
     var svc = servizioMenu();
@@ -289,8 +303,8 @@ export function dopoIlCaricamento(): string {
     nascondi();
     conBurger(function (b) {
       var el = b ? vociBurger(b).filter(function (x) { return testoVoce(x) === cerca; })[0] : null;
-      if (el) { el.click(); } else { chiudiBurger(b); }
-    });
+      if (el) { el.click(); }
+    }, chiudiBurger);
   };
 })();
 true;
