@@ -59,6 +59,9 @@ export const AURORA =
 
 const CSS = `
 .o_main_navbar { display: none !important; }
+/* Menu mobile di Odoo aperto solo per leggerne le voci: resta invisibile. */
+.gv-raccolta .o_burger_menu, .gv-raccolta .o-overlay-container, .gv-raccolta .offcanvas-backdrop,
+.gv-raccolta .modal-backdrop { opacity: 0 !important; transition: none !important; }
 #gv-home { position: fixed; inset: 0; z-index: 1040; overflow-y: auto; -webkit-overflow-scrolling: touch;
   background: #EEF2F8; color: #151826; font-family: -apple-system, system-ui, sans-serif;
   padding: 18px 16px 40px; opacity: 0; transform: translateY(8px); transition: opacity .18s ease, transform .18s ease; }
@@ -198,10 +201,96 @@ export function dopoIlCaricamento(): string {
   }
   window.__gvHome = mostra;
   window.__gvNascondiHome = nascondi;
-  window.__gvPannello = function () {
-    nascondi();
+  // Menu di destra, disegnato dall'app: qui si raccolgono le sezioni dell'app di
+  // Odoo aperta e le voci del menu utente, e si eseguono quelle scelte.
+  // Le voci del menu utente di Odoo (preferenze, supporto, documentazione...)
+  // esistono solo nel suo menu mobile: lo si apre invisibile, si leggono e si
+  // richiude. Esci e Installa app si riconoscono dal testo tradotto da Odoo.
+  function tr(k) {
+    try {
+      var m = window.odoo.loader.modules.get('@web/core/l10n/translation');
+      var g = m.translatedTermsGlobal || {}, f = m.translatedTerms || {};
+      if (g[k]) { return g[k]; }
+      if (typeof f[k] === 'string') { return f[k]; }
+      // Odoo 18+: un dizionario per modulo (web, mail, website...).
+      for (var mod in f) { if (f[mod] && typeof f[mod] === 'object' && f[mod][k]) { return f[mod][k]; } }
+      return k;
+    } catch (e) { return k; }
+  }
+  var VOCI_NOTE = [['Documentation', 'documentation'], ['Support', 'support'], ['My Preferences', 'profile'],
+    ['My Profile', 'profile'], ['Shortcuts', 'shortcuts'], ['My Odoo.com account', 'odoo_account'], ['My Subscription', 'subscription']];
+  function testoVoce(el) { return (el.innerText || '').split('\\n')[0].trim(); }
+  function vociBurger(b) {
+    var escluse = [tr('Log out'), tr('Install App')];
+    return Array.prototype.slice.call(b.querySelectorAll('a.text-body, a.dropdown-item, button.dropdown-item'))
+      .filter(function (el) { var t = testoVoce(el); return t && escluse.indexOf(t) === -1 && !el.classList.contains('dropdown-toggle'); });
+  }
+  function conBurger(fare) {
     var t = document.querySelector('.o_mobile_menu_toggle');
-    if (t) { t.click(); }
+    if (!t) { fare(null); return; }
+    document.documentElement.classList.add('gv-raccolta');
+    var fatto = false;
+    function fine() { setTimeout(function () { document.documentElement.classList.remove('gv-raccolta'); }, 450); }
+    t.click();
+    var prove = 0;
+    (function aspetta() {
+      var b = document.querySelector('.o_burger_menu');
+      if (b && vociBurger(b).length) { fatto = true; fare(b); fine(); return; }
+      if (++prove < 25) { setTimeout(aspetta, 60); } else if (!fatto) { fare(null); fine(); }
+    })();
+  }
+  function chiudiBurger(b) {
+    var x = b && b.querySelector('.o_sidebar_close');
+    if (x) { x.click(); }
+  }
+  function homeAVista() {
+    var h = document.getElementById('gv-home');
+    return !!h && h.style.display !== 'none' && h.classList.contains('gv-visibile');
+  }
+  window.__gvPannello = function () {
+    var svc = servizioMenu();
+    var app = null, sezioni = [];
+    if (svc && svc.getCurrentApp && !homeAVista()) {
+      var a = svc.getCurrentApp();
+      if (a) {
+        app = { id: a.id, nome: String(a.name || '') };
+        var albero = svc.getMenuAsTree(a.id) || {};
+        (albero.childrenTree || []).forEach(function (m) {
+          var foglie = [];
+          (function giu(n) {
+            (n.childrenTree || []).forEach(function (f) {
+              if (f.childrenTree && f.childrenTree.length) { giu(f); } else { foglie.push({ id: f.id, nome: String(f.name || '') }); }
+            });
+          })(m);
+          if (foglie.length) { sezioni.push({ nome: String(m.name || ''), voci: foglie }); }
+          else { sezioni.push({ nome: '', voci: [{ id: m.id, nome: String(m.name || '') }] }); }
+        });
+      }
+    }
+    conBurger(function (b) {
+      var testi = b ? vociBurger(b).map(testoVoce) : [];
+      chiudiBurger(b);
+      window.__gvVociTesti = testi;
+      var utente = testi.map(function (t, i) {
+        var nota = VOCI_NOTE.filter(function (n) { return tr(n[0]) === t; })[0];
+        return { i: i, id: nota ? nota[1] : '', testo: t };
+      });
+      try { window.ReactNativeWebView.postMessage('gv-pannello:' + JSON.stringify({ app: app, sezioni: sezioni, utente: utente })); } catch (e) {}
+    });
+  };
+  window.__gvScegli = function (id) {
+    var svc = servizioMenu();
+    var m = svc && svc.getMenu ? svc.getMenu(id) : null;
+    if (m) { nascondi(); svc.selectMenu(m); }
+  };
+  window.__gvVoceUtente = function (i) {
+    var cerca = (window.__gvVociTesti || [])[i];
+    if (!cerca) { return; }
+    nascondi();
+    conBurger(function (b) {
+      var el = b ? vociBurger(b).filter(function (x) { return testoVoce(x) === cerca; })[0] : null;
+      if (el) { el.click(); } else { chiudiBurger(b); }
+    });
   };
 })();
 true;
@@ -211,6 +300,8 @@ true;
 /** Comandi per la pagina, da passare a injectJavaScript. */
 export const MOSTRA_HOME = 'window.__gvHome && window.__gvHome(); true;'
 export const APRI_PANNELLO = 'window.__gvPannello && window.__gvPannello(); true;'
+export const scegliMenu = (id: number) => `window.__gvScegli && window.__gvScegli(${Number(id)}); true;`
+export const voceUtente = (i: number) => `window.__gvVoceUtente && window.__gvVoceUtente(${Number(i)}); true;`
 
 export function vaiA(percorso: string): string {
   // Stesso percorso e hash diverso (/web#...): il client di Odoo non ricarica da

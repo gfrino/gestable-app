@@ -27,7 +27,8 @@ import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTyp
 import { t } from '../i18n'
 import { ascoltaOdoo, prendiInAttesa, type ComandoOdoo } from './comandiOdoo'
 import { PulsanteMenu } from './MenuLaterale'
-import { APRI_PANNELLO, AURORA, AURORA_CHIARA, dopoIlCaricamento, MOSTRA_HOME, PRIMA_DEL_CARICAMENTO, vaiA } from './odooIniettato'
+import { MenuOdoo, type DatiPannello } from './MenuOdoo'
+import { APRI_PANNELLO, AURORA, AURORA_CHIARA, dopoIlCaricamento, MOSTRA_HOME, PRIMA_DEL_CARICAMENTO, scegliMenu, vaiA, voceUtente } from './odooIniettato'
 import { Pulsante } from './Pulsante'
 import { spazio, useColori } from './tema'
 import { Caricamento } from './Caricamento'
@@ -71,6 +72,8 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
   const [errore, setErrore] = useState(false)
   const [chiave, setChiave] = useState(0)
   const [nelLogin, setNelLogin] = useState(false)
+  // Menu di destra: si apre quando la pagina manda sezioni e voci (gv-pannello:).
+  const [pannello, setPannello] = useState<DatiPannello | null>(null)
   // Con la griglia delle app a vista la barra in alto e' trasparente sopra la
   // stessa sfumatura «Aurora» della pagina (scura o chiara), senza stacco.
   const scuro = useColorScheme() === 'dark'
@@ -213,6 +216,12 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
             const m = e.nativeEvent.data
             if (m === 'gv-home:1' || m === 'gv-home:0') {
               setHome(m === 'gv-home:1')
+            } else if (m.startsWith('gv-pannello:')) {
+              try {
+                setPannello(JSON.parse(m.slice('gv-pannello:'.length)) as DatiPannello)
+              } catch {
+                // messaggio rovinato: il menu resta chiuso
+              }
             }
           }}
           onLayout={(e) => {
@@ -254,6 +263,13 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
           onRenderProcessGone={() => setChiave((k) => k + 1)}
         />
       )}
+      <MenuOdoo
+        dati={pannello}
+        azienda={titolo || host(server)}
+        chiudi={() => setPannello(null)}
+        scegliMenu={(id) => vista.current?.injectJavaScript(scegliMenu(id))}
+        scegliUtente={(i) => vista.current?.injectJavaScript(voceUtente(i))}
+      />
     </SafeAreaView>
   )
 }
