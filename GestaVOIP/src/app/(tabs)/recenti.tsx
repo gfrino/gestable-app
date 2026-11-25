@@ -5,6 +5,7 @@ import { useFocusEffect } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { Alert, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { PulsanteMenu } from '../../ui/MenuLaterale'
 import { registroChiamate, type VoceRegistro } from '../../voip/api'
 import { useApp } from '../../voip/Contesto'
 import { telefono } from '../../voip/telefono'
@@ -70,7 +71,10 @@ export default function Recenti() {
 
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
-      <Text style={[s.titolo, { color: c.testo }]}>Recenti</Text>
+      <View style={s.testa}>
+        <PulsanteMenu />
+        <Text style={[s.titolo, { color: c.testo }]}>Recenti</Text>
+      </View>
       {errore ? <Text style={[s.errore, { color: c.rosso }]}>{errore}</Text> : null}
       <FlatList
         data={voci}
@@ -117,7 +121,8 @@ export default function Recenti() {
 
 const s = StyleSheet.create({
   pagina: { flex: 1 },
-  titolo: { fontSize: 30, fontWeight: '700', paddingHorizontal: spazio.xl, paddingVertical: spazio.m },
+  testa: { flexDirection: 'row', alignItems: 'center', gap: spazio.xs, paddingHorizontal: spazio.m, paddingVertical: spazio.s },
+  titolo: { fontSize: 30, fontWeight: '700' },
   errore: { paddingHorizontal: spazio.xl, marginBottom: spazio.s },
   vuoto: { textAlign: 'center', marginTop: spazio.xxl },
   sep: { height: StyleSheet.hairlineWidth, marginLeft: 56 },

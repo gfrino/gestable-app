@@ -12,6 +12,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { cercaContatti, type Contatto } from '../../voip/api'
 import { useApp } from '../../voip/Contesto'
 import { telefono } from '../../voip/telefono'
+import { PulsanteMenu } from '../../ui/MenuLaterale'
 import { StatoLinea } from '../../ui/StatoLinea'
 import { raggio, spazio, useColori } from '../../ui/tema'
 
@@ -185,7 +186,11 @@ export default function Tastierino() {
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
       <View style={s.alto}>
+        <View style={s.altoLato}>
+          <PulsanteMenu />
+        </View>
         <StatoLinea />
+        <View style={s.altoLato} />
       </View>
 
       <View style={s.display}>
@@ -271,7 +276,8 @@ export default function Tastierino() {
 
 const s = StyleSheet.create({
   pagina: { flex: 1, paddingHorizontal: spazio.xl },
-  alto: { paddingTop: spazio.m, alignItems: 'center' },
+  alto: { paddingTop: spazio.s, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  altoLato: { width: 44 },
   display: { minHeight: 96, justifyContent: 'center', paddingVertical: spazio.l },
   numero: { fontSize: 34, fontWeight: '500', letterSpacing: 1, textAlign: 'center' },
   dettaglio: { fontSize: 14, textAlign: 'center', marginTop: 4 },

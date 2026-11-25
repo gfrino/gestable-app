@@ -6,9 +6,10 @@ import { useApp } from '../voip/Contesto'
 import { VistaOdoo } from '../ui/VistaOdoo'
 
 export default function SoloOdoo() {
-  const { sessione, esci } = useApp()
+  const { sessione } = useApp()
   if (!sessione) {
     return null
   }
-  return <VistaOdoo server={sessione.server} esci={() => void esci()} />
+  // Per uscire: menu ☰ › Esci.
+  return <VistaOdoo server={sessione.server} />
 }

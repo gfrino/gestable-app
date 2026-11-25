@@ -4,6 +4,7 @@ import { ActivityIndicator, View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { conTelefono } from '../odoo/sessione'
 import { ProviderApp, useApp } from '../voip/Contesto'
+import { ProviderMenu } from '../ui/MenuLaterale'
 import { useColori } from '../ui/tema'
 
 function Navigazione() {
@@ -27,6 +28,13 @@ function Navigazione() {
           name="chiamata"
           options={{ presentation: 'fullScreenModal', animation: 'slide_from_bottom', gestureEnabled: false }}
         />
+        <Stack.Screen name="impostazioni" />
+      </Stack.Protected>
+      {/* Dal menu laterale, con o senza telefono. */}
+      <Stack.Protected guard={fase === 'dentro'}>
+        <Stack.Screen name="messaggi/index" />
+        <Stack.Screen name="messaggi/[id]" />
+        <Stack.Screen name="attivita" />
       </Stack.Protected>
       {/* Odoo senza VOIP AI: niente telefono, solo Odoo. */}
       <Stack.Protected guard={fase === 'dentro' && !telefono}>
@@ -44,7 +52,9 @@ export default function Radice() {
     <SafeAreaProvider>
       <ProviderApp>
         <StatusBar style="auto" />
-        <Navigazione />
+        <ProviderMenu>
+          <Navigazione />
+        </ProviderMenu>
       </ProviderApp>
     </SafeAreaProvider>
   )

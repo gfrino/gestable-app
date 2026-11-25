@@ -2,6 +2,7 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { Tabs, useRouter } from 'expo-router'
 import { useEffect, useRef } from 'react'
 import { useTelefono } from '../../voip/Contesto'
+import { inviaOdoo } from '../../ui/comandiOdoo'
 import { useColori } from '../../ui/tema'
 
 export default function LayoutSchede() {
@@ -51,16 +52,11 @@ export default function LayoutSchede() {
       />
       <Tabs.Screen
         name="odoo"
+        // Il tasto Odoo porta sempre alla home di Odoo, anche se si e' gia' li'.
+        listeners={{ tabPress: () => inviaOdoo({ tipo: 'home' }) }}
         options={{
           title: 'Odoo',
           tabBarIcon: ({ color, size }) => <Ionicons name="apps" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="impostazioni"
-        options={{
-          title: 'Impostazioni',
-          tabBarIcon: ({ color, size }) => <Ionicons name="settings" color={color} size={size} />,
         }}
       />
     </Tabs>

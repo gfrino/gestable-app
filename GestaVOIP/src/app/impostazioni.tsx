@@ -6,11 +6,12 @@ import * as Updates from 'expo-updates'
 import { useCallback, useState } from 'react'
 import { Alert, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { preferenze, type Preferenze } from '../../voip/api'
-import { useApp, useTelefono } from '../../voip/Contesto'
-import { telefono } from '../../voip/telefono'
-import { Pulsante } from '../../ui/Pulsante'
-import { raggio, spazio, useColori, type Colori } from '../../ui/tema'
+import { preferenze, type Preferenze } from '../voip/api'
+import { useApp, useTelefono } from '../voip/Contesto'
+import { telefono } from '../voip/telefono'
+import { Pulsante } from '../ui/Pulsante'
+import { Testata } from '../ui/Testata'
+import { raggio, spazio, useColori, type Colori } from '../ui/tema'
 
 function Riga({ titolo, testo, children, c }: { titolo: string; testo?: string; children?: React.ReactNode; c: Colori }) {
   return (
@@ -88,8 +89,8 @@ export default function Impostazioni() {
 
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+      <Testata titolo="Impostazioni" />
       <ScrollView contentContainerStyle={s.contenuto}>
-        <Text style={[s.titolo, { color: c.testo }]}>Impostazioni</Text>
 
         <View style={scheda}>
           <Riga
@@ -143,7 +144,6 @@ export default function Impostazioni() {
 const s = StyleSheet.create({
   pagina: { flex: 1 },
   contenuto: { padding: spazio.xl, gap: spazio.l },
-  titolo: { fontSize: 30, fontWeight: '700' },
   scheda: { borderWidth: StyleSheet.hairlineWidth, borderRadius: raggio.l, overflow: 'hidden' },
   riga: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, padding: spazio.l, minHeight: 60 },
   rigaTitolo: { fontSize: 16, fontWeight: '600' },

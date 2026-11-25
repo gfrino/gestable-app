@@ -22,6 +22,26 @@ stessa sessione dell'app. I numeri cliccati in Odoo partono dal softphone se
 c'e', altrimenti dal telefono del sistema; i link verso altri siti si aprono
 nel browser.
 
+Il menu ☰ (in alto a sinistra in ogni scheda) prende il posto della barra in
+alto di Odoo:
+
+- **Presenze**: entrata e uscita (il pallino rosso/verde di Odoo), con le ore di oggi.
+- **Messaggi**: le chat e i canali di Discuss (bolle, invio, segnate lette
+  all'apertura) e le **Notifiche** (la posta in arrivo di Odoo); toccarne una
+  apre il record in Odoo.
+- **Attività**: in ritardo, oggi, prossime; un tocco apre il record, la spunta
+  la segna fatta.
+- **Impostazioni** del telefono, ed **Esci**.
+
+I numeri accanto a Messaggi e Attività si contano come in Odoo (notifiche più
+chat con qualcosa da leggere; attività di oggi e in ritardo).
+
+Nella scheda **Odoo** la barra in alto di Odoo è nascosta: il pulsante a destra
+apre il pannello di Odoo (sottomenu dell'app e utente), e il tasto Odoo in
+basso porta sempre alla **home**, la griglia delle app con ricerca, presa dal
+menu di Odoo (`src/ui/odooIniettato.ts`, Odoo 17 e 19). Il softphone web di VOIP
+AI dentro l'app non si collega a Twilio: il telefono è l'app.
+
 Con il telefono:
 
 - **Accesso** con l'indirizzo di Odoo, email e password. Il server viene
