@@ -231,7 +231,16 @@ export async function creaContatto(server: string, n: NuovoContatto): Promise<Id
       }
     }
   }
-  return callKw<Id>(server, 'res.partner', 'create', [valori])
+  const id = await callKw<Id>(server, 'res.partner', 'create', [valori])
+  if (n.eAzienda) {
+    // Odoo 20 calcola «azienda» da solo (entita' commerciale con partita IVA)
+    // e alla creazione ignora is_company: lo si conferma dopo.
+    const [letto] = await callKw<{ is_company: boolean }[]>(server, 'res.partner', 'read', [[id], ['is_company']])
+    if (letto && !letto.is_company) {
+      await callKw<boolean>(server, 'res.partner', 'write', [[id], { is_company: true }])
+    }
+  }
+  return id
 }
 
 /** Prima lettera per i gruppi della lista (A, B, ... e # per il resto). */
