@@ -36,7 +36,16 @@ alto di Odoo:
 I numeri accanto a Messaggi e Attività si contano come in Odoo (notifiche più
 chat con qualcosa da leggere; attività di oggi e in ritardo).
 
-La scheda **Calendario** (fra Recenti e Odoo) mostra i miei appuntamenti di
+La scheda **Contatti** (dopo Recenti) cerca nei contatti di Odoo per nome,
+azienda, email o numero, con i filtri Tutti / Aziende / Persone e la lista a
+pagine con le lettere; senza ricerca nasconde i nomi che iniziano con simboli
+(numeri «+41…» creati dalle chiamate, «"Nome" <email>» creati dalle email).
+La scheda del contatto ha Chiama (dal telefono dell'app), Messaggio, Email,
+Mappa, i recapiti, le etichette, le note e, per le aziende, le persone; **+**
+crea una persona o un'azienda. Odoo 19 non ha il campo cellulare: i campi si
+leggono dal server.
+
+La scheda **Calendario** (fra Contatti e Odoo) mostra i miei appuntamenti di
 Odoo una settimana alla volta: giorni da scorrere di lato con un pallino dove
 c'è qualcosa, l'agenda del giorno (in corso evidenziato), il dettaglio con
 luogo, videochiamata, partecipanti e risposta all'invito (Ci sono / Forse / No),

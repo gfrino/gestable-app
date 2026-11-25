@@ -19,14 +19,34 @@ export function iniziali(nome: string): string {
   return prime.map((p) => p[0].toUpperCase()).join('')
 }
 
-type Props = { url?: string; nome: string; lato?: number; icona?: keyof typeof Ionicons.glyphMap }
+type Props = {
+  url?: string
+  nome: string
+  lato?: number
+  icona?: keyof typeof Ionicons.glyphMap
+  /** Loghi di aziende: quadrato arrotondato su bianco, logo intero (il cerchio lo taglierebbe). */
+  logo?: boolean
+}
 
-export function Avatar({ url, nome, lato = 44, icona }: Props) {
+export function Avatar({ url, nome, lato = 44, icona, logo }: Props) {
   const c = useColori()
   const [rotta, setRotta] = useState('')
-  const forma = { width: lato, height: lato, borderRadius: lato / 2 }
+  const forma = { width: lato, height: lato, borderRadius: logo ? lato * 0.24 : lato / 2 }
   const lettere = iniziali(nome)
 
+  if (url && rotta !== url && logo) {
+    return (
+      <View style={[forma, s.logo, { padding: lato * 0.12 }]}>
+        <Image
+          source={{ uri: url }}
+          style={s.logoImmagine}
+          resizeMode="contain"
+          onError={() => setRotta(url)}
+          accessibilityIgnoresInvertColors
+        />
+      </View>
+    )
+  }
   if (url && rotta !== url) {
     return (
       <Image
@@ -50,4 +70,6 @@ export function Avatar({ url, nome, lato = 44, icona }: Props) {
 
 const s = StyleSheet.create({
   vuoto: { alignItems: 'center', justifyContent: 'center' },
+  logo: { backgroundColor: '#FFFFFF', overflow: 'hidden' },
+  logoImmagine: { width: '100%', height: '100%' },
 })

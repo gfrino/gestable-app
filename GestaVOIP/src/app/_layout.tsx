@@ -37,6 +37,8 @@ function Navigazione() {
         <Stack.Screen name="attivita" />
         <Stack.Screen name="calendario/[id]" />
         <Stack.Screen name="calendario/nuovo" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="contatti/[id]" />
+        <Stack.Screen name="contatti/nuovo" options={{ presentation: 'modal' }} />
       </Stack.Protected>
       {/* Odoo senza VOIP AI: niente telefono, solo Odoo. */}
       <Stack.Protected guard={fase === 'dentro' && !telefono}>

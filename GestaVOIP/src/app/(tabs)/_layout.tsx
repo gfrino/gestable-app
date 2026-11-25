@@ -51,6 +51,13 @@ export default function LayoutSchede() {
         }}
       />
       <Tabs.Screen
+        name="contatti"
+        options={{
+          title: 'Contatti',
+          tabBarIcon: ({ color, size }) => <Ionicons name="people" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="calendario"
         options={{
           title: 'Calendario',
