@@ -140,7 +140,7 @@ export default function Login() {
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]}>
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={s.contenuto} keyboardShouldPersistTaps="handled">
-          <Image source={require('../../assets/logo.png')} style={s.logo} resizeMode="contain" accessibilityIgnoresInvertColors />
+          <Image source={require('../../assets/logo-gestable.png')} style={s.logo} resizeMode="contain" accessibilityIgnoresInvertColors />
           <Text style={[s.titolo, { color: c.testo }]}>GestaVOIP</Text>
           <Text style={[s.sottotitolo, { color: c.testo2 }]}>{t('accesso.sottotitolo')}</Text>
 
