@@ -11,3 +11,9 @@ GoogleService-Info.plist
 *.keystore
 .env
 .env.*
+
+# Video delle chiamate (dati reali di clienti): mai nel repo pubblico
+GestaVOIP/store/*.mp4
+GestaVOIP/store/*.MP4
+GestaVOIP/store/*.mov
+GestaVOIP/store/*.MOV
