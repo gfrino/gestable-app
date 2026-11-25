@@ -36,6 +36,13 @@ alto di Odoo:
 I numeri accanto a Messaggi e Attività si contano come in Odoo (notifiche più
 chat con qualcosa da leggere; attività di oggi e in ritardo).
 
+La scheda **Calendario** (fra Recenti e Odoo) mostra i miei appuntamenti di
+Odoo una settimana alla volta: giorni da scorrere di lato con un pallino dove
+c'è qualcosa, l'agenda del giorno (in corso evidenziato), il dettaglio con
+luogo, videochiamata, partecipanti e risposta all'invito (Ci sono / Forse / No),
+e **+** per un appuntamento nuovo (titolo, giorno, ora, durata, luogo, note).
+Toccato di nuovo, il tasto Calendario torna a oggi.
+
 Nella scheda **Odoo** la barra in alto di Odoo è nascosta: il pulsante a destra
 apre il pannello di Odoo (sottomenu dell'app e utente), e il tasto Odoo in
 basso porta sempre alla **home**, la griglia delle app con ricerca, presa dal

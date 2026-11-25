@@ -51,6 +51,13 @@ export default function LayoutSchede() {
         }}
       />
       <Tabs.Screen
+        name="calendario"
+        options={{
+          title: 'Calendario',
+          tabBarIcon: ({ color, size }) => <Ionicons name="calendar" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
         name="odoo"
         // Il tasto Odoo porta sempre alla home di Odoo, anche se si e' gia' li'.
         listeners={{ tabPress: () => inviaOdoo({ tipo: 'home' }) }}
