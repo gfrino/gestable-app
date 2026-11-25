@@ -18,7 +18,7 @@ const IDENTIFICATIVO = 'com.ticinoweb.gestavoip'
 // (che e' pubblico). Senza, l'app si compila lo stesso: le chiamate in uscita
 // funzionano, mancano solo le push Android e i report dei crash.
 // google-services.json sta in questa cartella (fuori da git, copia in
-// ~/.config/gestavoip/) e arriva su EAS grazie a .easignore: stesso file in
+// ~/.config/gestavoip/) e arriva su EAS grazie a ../.easignore (radice del repository): stesso file in
 // locale e nella build, quindi la stessa impronta OTA.
 const esiste = (file) => fs.existsSync(path.join(__dirname, file))
 // Una build iOS su EAS lo ignora: su iOS Firebase non c'e' (vedi plugins/firebase-android.js).

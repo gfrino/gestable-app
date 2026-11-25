@@ -7,7 +7,7 @@
  * le build precedenti non arriverebbero piu'.
  *
  * Firebase per Android (google-services.json e plugins/firebase-android) c'e' solo dove c'e' il file
- * (in questa cartella, fuori da git; su EAS arriva con .easignore). Non tocca
+ * (in questa cartella, fuori da git; su EAS arriva con .easignore nella radice del repository). Non tocca
  * iOS, quindi resta fuori dall'impronta: altrimenti gli aggiornamenti iOS
  * pubblicati con il file presente non arriverebbero alle build iOS (fatte
  * senza). Le build Android si fanno sempre con Firebase.
@@ -35,7 +35,7 @@ function senzaFirebaseAndroid(testo) {
 module.exports = {
   sourceSkips: ['ExpoConfigVersions'],
   // .easignore decide solo cosa caricare su EAS (serve a portarci google-services.json).
-  ignorePaths: ['plugins/firebase-android.js', '.easignore'],
+  ignorePaths: ['plugins/firebase-android.js', '.easignore', '../.easignore'],
   fileHookTransform: (source, chunk) => {
     if (source.type === 'contents' && source.id === 'expoConfig' && typeof chunk === 'string') {
       return senzaFirebaseAndroid(chunk)

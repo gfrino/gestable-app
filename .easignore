@@ -1,4 +1,5 @@
-# Cosa NON va caricato su EAS per le build. Con questo file EAS ignora i
+# Cosa NON va caricato su EAS per le build di GestaVOIP. Sta nella radice del
+# repository: EAS lo cerca qui, non nella cartella dell'app. Con questo file EAS ignora i
 # .gitignore: e' la loro unione, tranne google-services.json, che deve
 # arrivare alla build Android (resta fuori da git, il repo e' pubblico).
 # Stesso file in locale e su EAS = stessa impronta OTA (runtime version).
@@ -37,11 +38,11 @@ yarn-error.*
 *.tsbuildinfo
 
 # generated native folders
-/ios
-/android
+GestaVOIP/ios/
+GestaVOIP/android/
 
 # Video delle chiamate (dati reali di clienti)
-store/*.mp4
-store/*.MP4
-store/*.mov
-store/*.MOV
+GestaVOIP/store/*.mp4
+GestaVOIP/store/*.MP4
+GestaVOIP/store/*.mov
+GestaVOIP/store/*.MOV
