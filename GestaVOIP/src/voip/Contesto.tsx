@@ -5,7 +5,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, useSyncExternalStore, type ReactNode } from 'react'
 import { Alert } from 'react-native'
 import { MESSAGGIO_NON_AUTORIZZATO, MESSAGGIO_NON_VERIFICABILE, verificaServer as autorizzato } from '../odoo/autorizzati'
-import { accedi, accediDallaPagina, confermaCodice, ErroreOdoo, esci, infoServer, infoSessione, sessioneAutomatica, type InfoServer, type Utente } from '../odoo/client'
+import { accedi, accediDallaPagina, confermaCodice, dimenticaContesto, ErroreOdoo, esci, infoServer, infoSessione, sessioneAutomatica, type InfoServer, type Utente } from '../odoo/client'
 import { dimenticaMenu } from '../odoo/capacita'
 import { conTelefono, dimenticaSessione, leggiSessione, salvaSessione, type Sessione } from '../odoo/sessione'
 import { segnalaErrore, utenteCrash } from '../ui/crash'
@@ -35,6 +35,7 @@ export function ProviderApp({ children }: { children: ReactNode }) {
   const chiudiLocale = useCallback(async () => {
     await dimenticaSessione()
     dimenticaMenu()
+    dimenticaContesto()
     setSessione(null)
     setFase('fuori')
   }, [])

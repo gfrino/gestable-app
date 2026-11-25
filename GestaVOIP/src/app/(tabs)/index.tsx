@@ -6,10 +6,12 @@
 
 import Ionicons from '@expo/vector-icons/Ionicons'
 import * as Haptics from 'expo-haptics'
+import { useRouter } from 'expo-router'
 import { useEffect, useRef, useState } from 'react'
 import { Alert, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { cercaContatti, type Contatto } from '../../voip/api'
+import { conTelefono } from '../../odoo/sessione'
 import { useApp } from '../../voip/Contesto'
 import { telefono } from '../../voip/telefono'
 import { PulsanteMenu } from '../../ui/MenuLaterale'
@@ -23,7 +25,24 @@ const TASTI: [string, string][] = [
   ['*', ''], ['0', '+'], ['#', ''],
 ]
 
-export default function Tastierino() {
+/**
+ * All'avvio l'app apre sempre questa scheda («/»): senza VOIP AI il tastierino
+ * non c'e' e si va su Odoo, come dopo l'accesso.
+ */
+export default function SchedaTastierino() {
+  const { sessione } = useApp()
+  const router = useRouter()
+  const senza = !!sessione && !conTelefono(sessione)
+  // <Redirect> qui non basta: alla prima navigazione dell'app viene ignorato.
+  useEffect(() => {
+    if (senza) {
+      router.replace('/odoo')
+    }
+  }, [senza, router])
+  return senza ? null : <Tastierino />
+}
+
+function Tastierino() {
   const c = useColori()
   const { sessione } = useApp()
   const [modo, setModo] = useState<'numero' | 'nome'>('numero')

@@ -324,6 +324,7 @@ export async function confermaCodice(base: string, codice: string): Promise<Uten
 }
 
 export async function esci(base: string): Promise<void> {
+  contestoDi.delete(base)
   try {
     await rpc(base, '/web/session/destroy')
   } catch {
@@ -332,12 +333,48 @@ export async function esci(base: string): Promise<void> {
   }
 }
 
-export function callKw<T>(
+/**
+ * Il contesto dell'utente di Odoo (lingua, fuso orario), come lo manda il
+ * client web: senza, Odoo risponde in inglese (nomi dei promemoria, scelte dei
+ * campi...) quando la sessione non ha la lingua (accesso automatico del server
+ * demo, sessione ripresa all'avvio). Letto una volta per server.
+ */
+const contestoDi = new Map<string, Promise<Record<string, unknown> | null>>()
+
+function contesto(base: string): Promise<Record<string, unknown> | null> {
+  let p = contestoDi.get(base)
+  if (!p) {
+    // Le preferenze dell'utente (lingua, fuso): la sessione dell'accesso
+    // automatico puo' avere una lingua diversa da quella dell'utente.
+    p = rpc<Record<string, unknown>>(base, '/web/dataset/call_kw/res.users/context_get', {
+      model: 'res.users',
+      method: 'context_get',
+      args: [],
+      kwargs: {},
+    })
+      .then((r) => (r && typeof r === 'object' ? r : null))
+      .catch(() => {
+        contestoDi.delete(base)
+        return null
+      })
+    contestoDi.set(base, p)
+  }
+  return p
+}
+
+/** Da chiamare cambiando utente o server. */
+export function dimenticaContesto(): void {
+  contestoDi.clear()
+}
+
+export async function callKw<T>(
   base: string,
   model: string,
   method: string,
   args: unknown[] = [],
   kwargs: Record<string, unknown> = {},
 ): Promise<T> {
-  return rpc<T>(base, `/web/dataset/call_kw/${model}/${method}`, { model, method, args, kwargs })
+  const ctx = await contesto(base)
+  const conContesto = ctx ? { ...kwargs, context: { ...ctx, ...((kwargs.context as Record<string, unknown>) || {}) } } : kwargs
+  return rpc<T>(base, `/web/dataset/call_kw/${model}/${method}`, { model, method, args, kwargs: conContesto })
 }

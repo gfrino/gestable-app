@@ -1,7 +1,12 @@
 /**
- * Il calendario di Odoo (calendar.event): i miei appuntamenti, il dettaglio con
- * i partecipanti, la risposta a un invito, un appuntamento nuovo. Campi e
- * metodi uguali in Odoo 17 e 19.
+ * Il calendario di Odoo (calendar.event): i miei appuntamenti, la scheda
+ * completa, la risposta a un invito, creare, modificare ed eliminare.
+ *
+ * Tutti i campi del modulo di Odoo sono nell'app: titolo, date, tutto il
+ * giorno, invitati, organizzatore, luogo, videochiamata, descrizione, note
+ * interne (Odoo 19+), etichette, promemoria, privacy, mostra come, calendario
+ * (Odoo 20) e ripetizione. I campi si leggono da fields_get una volta per
+ * server: si chiedono e si scrivono solo quelli che esistono (Odoo 17, 19, 20).
  *
  * Odoo salva start/stop in UTC («2026-11-25 08:00:00»); gli appuntamenti di
  * tutto il giorno hanno anche start_date/stop_date, date senza ora.
@@ -9,7 +14,7 @@
 
 import { callKw } from './client'
 import { mioPartner } from './lavoro'
-import { dataOdoo, htmlDaTesto } from './testo'
+import { dataOdoo, htmlDaTesto, testoDaHtml } from './testo'
 
 type Id = number
 type M2o = [number, string] | false
@@ -29,14 +34,46 @@ export type Evento = {
   partecipanti: number
 }
 
-export type Partecipante = { id: Id; partnerId: Id; nome: string; stato: 'accepted' | 'declined' | 'tentative' | 'needsAction'; io: boolean }
+export type Stato = 'accepted' | 'declined' | 'tentative' | 'needsAction'
+export type Partecipante = { id: Id; partnerId: Id; nome: string; email: string; stato: Stato; io: boolean }
+export type Voce = { id: Id; nome: string }
 
-export type DettaglioEvento = Evento & {
-  descrizione: string
-  persone: Partecipante[]
-  modello: string
-  recordId: Id
+export type TipoRipetizione = 'daily' | 'weekly' | 'monthly' | 'yearly'
+export type FineRipetizione = 'forever' | 'count' | 'end_date'
+export const GIORNI_SETTIMANA = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'] as const
+export type GiornoSettimana = (typeof GIORNI_SETTIMANA)[number]
+
+export type Ripetizione = {
+  tipo: TipoRipetizione
+  ogni: number
+  fine: FineRipetizione
+  volte: number
+  /** «AAAA-MM-GG» */
+  finoAl: string
+  giorni: GiornoSettimana[]
+  /** Mensile: «date» = lo stesso giorno del mese, «day» = es. il quarto mercoledi'. */
+  mesePer: 'date' | 'day'
 }
+
+export type Scheda = Evento & {
+  descrizione: string
+  note: string
+  persone: Partecipante[]
+  organizzatoreId: Id | null
+  etichette: Voce[]
+  promemoria: Voce[]
+  privacy: string
+  mostraCome: string
+  calendario: Voce | null
+  ripetizione: Ripetizione | null
+  /** L'evento fa parte di una serie (anche se questa occorrenza e' un'eccezione). */
+  inSerie: boolean
+  puoModificare: boolean
+  collegatoA: string
+}
+
+/** Compatibilita' con il nome di prima. */
+export type DettaglioEvento = Scheda
 
 /** Data locale «AAAA-MM-GG». */
 export function giornoChiave(d: Date): string {
@@ -53,6 +90,33 @@ export function giornoEsteso(d: Date): string {
 function utc(d: Date): string {
   return d.toISOString().replace('T', ' ').slice(0, 19)
 }
+
+// ---------------------------------------------------------------------------
+// Campi che esistono su questo server
+// ---------------------------------------------------------------------------
+
+type InfoCampo = { type: string; selection?: [string, string][]; string?: string; required?: boolean }
+const campiDi = new Map<string, Promise<Record<string, InfoCampo>>>()
+
+function campiEvento(server: string): Promise<Record<string, InfoCampo>> {
+  let p = campiDi.get(server)
+  if (!p) {
+    p = callKw<Record<string, InfoCampo>>(server, 'calendar.event', 'fields_get', [], {
+      attributes: ['type', 'selection', 'string', 'required'],
+    })
+    p.catch(() => campiDi.delete(server))
+    campiDi.set(server, p)
+  }
+  return p
+}
+
+function solo(campi: Record<string, InfoCampo>, voluti: string[]): string[] {
+  return voluti.filter((c) => c in campi)
+}
+
+// ---------------------------------------------------------------------------
+// Lista della settimana
+// ---------------------------------------------------------------------------
 
 const CAMPI = ['name', 'start', 'stop', 'allday', 'start_date', 'stop_date', 'location', 'videocall_location', 'user_id', 'partner_ids']
 
@@ -115,35 +179,99 @@ export function delGiorno(lista: Evento[], giorno: Date): Evento[] {
     .sort((x, y) => Number(y.tuttoIlGiorno) - Number(x.tuttoIlGiorno) || x.inizio.getTime() - y.inizio.getTime())
 }
 
-export async function dettaglioEvento(server: string, uid: number, id: Id): Promise<DettaglioEvento | null> {
-  const io = await mioPartner(server, uid)
-  const [r] = await callKw<(Riga & { description: string | false; attendee_ids: Id[]; res_model: string | false; res_id: Id })[]>(
-    server,
-    'calendar.event',
-    'read',
-    [[id], [...CAMPI, 'description', 'attendee_ids', 'res_model', 'res_id']],
-  )
+// ---------------------------------------------------------------------------
+// Scheda completa
+// ---------------------------------------------------------------------------
+
+const CAMPI_SCHEDA = [
+  ...CAMPI,
+  'description', 'notes', 'attendee_ids', 'categ_ids', 'alarm_ids', 'privacy', 'show_as', 'calendar_id',
+  'recurrency', 'recurrence_id', 'rrule_type', 'interval', 'end_type', 'count', 'until',
+  ...GIORNI_SETTIMANA, 'month_by', 'user_can_edit', 'res_model_name', 'res_model', 'res_id',
+]
+
+type RigaScheda = Riga & {
+  description?: string | false
+  notes?: string | false
+  attendee_ids: Id[]
+  categ_ids?: Id[]
+  alarm_ids?: Id[]
+  privacy?: string | false
+  show_as?: string | false
+  calendar_id?: M2o
+  recurrency?: boolean
+  recurrence_id?: M2o
+  rrule_type?: TipoRipetizione | false
+  interval?: number
+  end_type?: FineRipetizione | false
+  count?: number
+  until?: string | false
+  month_by?: 'date' | 'day' | false
+  user_can_edit?: boolean
+  res_model_name?: string | false
+  res_model?: string | false
+  res_id?: Id
+} & Partial<Record<GiornoSettimana, boolean>>
+
+async function nomi(server: string, modello: string, ids: Id[] | undefined): Promise<Voce[]> {
+  if (!ids?.length) {
+    return []
+  }
+  const r = await callKw<{ id: Id; display_name: string }[]>(server, modello, 'read', [ids, ['display_name']]).catch(() => [])
+  return r.map((x) => ({ id: x.id, nome: x.display_name }))
+}
+
+export async function dettaglioEvento(server: string, uid: number, id: Id): Promise<Scheda | null> {
+  const [io, campi] = await Promise.all([mioPartner(server, uid), campiEvento(server)])
+  const [r] = await callKw<RigaScheda[]>(server, 'calendar.event', 'read', [[id], solo(campi, CAMPI_SCHEDA)])
   if (!r) {
     return null
   }
-  const persone = r.attendee_ids.length
-    ? await callKw<{ id: Id; partner_id: M2o; common_name: string | false; state: Partecipante['stato'] }[]>(
-        server,
-        'calendar.attendee',
-        'read',
-        [r.attendee_ids, ['partner_id', 'common_name', 'state']],
-      )
-    : []
+  const [persone, etichette, promemoria, collegato] = await Promise.all([
+    r.attendee_ids.length
+      ? callKw<{ id: Id; partner_id: M2o; common_name: string | false; email?: string | false; state: Stato }[]>(
+          server,
+          'calendar.attendee',
+          'read',
+          [r.attendee_ids, ['partner_id', 'common_name', 'email', 'state']],
+        )
+      : Promise.resolve([]),
+    nomi(server, 'calendar.event.type', r.categ_ids),
+    nomi(server, 'calendar.alarm', r.alarm_ids),
+    r.res_model && r.res_id ? nomi(server, r.res_model, [r.res_id]) : Promise.resolve([]),
+  ])
+  const ripetizione: Ripetizione | null = r.recurrency
+    ? {
+        tipo: r.rrule_type || 'weekly',
+        ogni: r.interval || 1,
+        fine: r.end_type || 'forever',
+        volte: r.count || 1,
+        finoAl: r.until || '',
+        giorni: GIORNI_SETTIMANA.filter((g) => r[g]),
+        mesePer: r.month_by || 'date',
+      }
+    : null
   return {
     ...daRiga(r),
-    descrizione: r.description || '',
-    modello: r.res_model || '',
-    recordId: r.res_id || 0,
+    descrizione: testoDaHtml(r.description),
+    note: testoDaHtml(r.notes),
+    organizzatoreId: r.user_id ? r.user_id[0] : null,
+    etichette,
+    promemoria,
+    privacy: r.privacy || '',
+    mostraCome: r.show_as || '',
+    calendario: r.calendar_id ? { id: r.calendar_id[0], nome: r.calendar_id[1] } : null,
+    ripetizione,
+    inSerie: !!r.recurrence_id,
+    // Odoo 17 senza il campo: chi vede l'evento puo' provare, Odoo decide.
+    puoModificare: r.user_can_edit ?? true,
+    collegatoA: collegato[0] ? `${r.res_model_name ? `${r.res_model_name}: ` : ''}${collegato[0].nome}` : '',
     persone: persone
       .map((p) => ({
         id: p.id,
         partnerId: p.partner_id ? p.partner_id[0] : 0,
         nome: p.common_name || (p.partner_id ? p.partner_id[1] : ''),
+        email: p.email || '',
         stato: p.state,
         io: !!p.partner_id && p.partner_id[0] === io,
       }))
@@ -156,45 +284,316 @@ export async function rispondi(server: string, partecipante: Id, risposta: 'acce
   await callKw(server, 'calendar.attendee', metodo, [[partecipante]])
 }
 
-export type NuovoEvento = {
-  titolo: string
-  inizio: Date
-  minuti: number
-  tuttoIlGiorno: boolean
-  luogo: string
-  nota: string
+// ---------------------------------------------------------------------------
+// Scelte del modulo: etichette, promemoria, calendari, privacy, persone
+// ---------------------------------------------------------------------------
+
+export type Scelta = { valore: string; nome: string }
+
+export type Opzioni = {
+  etichette: Voce[]
+  promemoria: Voce[]
+  /** Solo Odoo 20 (calendar.calendar): vuoto altrove. */
+  calendari: Voce[]
+  privacy: Scelta[]
+  /** Odoo 19+: la privacy puo' restare vuota (= quella del calendario/utente). */
+  privacyFacoltativa: boolean
+  mostraCome: Scelta[]
+  haNote: boolean
+  haVideo: boolean
+  haRipetizione: boolean
 }
 
-export async function creaEvento(server: string, uid: number, e: NuovoEvento): Promise<Id> {
-  const io = await mioPartner(server, uid)
-  const giorno = giornoChiave(e.inizio)
-  const valori: Record<string, unknown> = {
-    name: e.titolo.trim(),
-    partner_ids: [[6, 0, [io]]],
-    location: e.luogo.trim() || false,
-    description: e.nota.trim() ? htmlDaTesto(e.nota) : false,
+export async function opzioniEvento(server: string): Promise<Opzioni> {
+  const campi = await campiEvento(server)
+  const lista = async (modello: string, campo: string, ordine: string): Promise<Voce[]> => {
+    if (!(campo in campi)) {
+      return []
+    }
+    const r = await callKw<{ id: Id; display_name: string }[]>(server, modello, 'search_read', [], {
+      fields: ['display_name'],
+      order: ordine,
+      limit: 200,
+    }).catch(() => [])
+    return r.map((x) => ({ id: x.id, nome: x.display_name }))
   }
-  if (e.tuttoIlGiorno) {
-    Object.assign(valori, {
-      allday: true,
-      start_date: giorno,
-      stop_date: giorno,
-      start: `${giorno} 08:00:00`,
-      stop: `${giorno} 18:00:00`,
-    })
+  const [etichette, promemoria, calendari] = await Promise.all([
+    lista('calendar.event.type', 'categ_ids', 'name asc'),
+    lista('calendar.alarm', 'alarm_ids', 'duration_minutes asc, id asc'),
+    lista('calendar.calendar', 'calendar_id', 'id asc'),
+  ])
+  const scelte = (c: string): Scelta[] => (campi[c]?.selection || []).map(([valore, nome]) => ({ valore, nome }))
+  return {
+    etichette,
+    promemoria,
+    calendari,
+    privacy: scelte('privacy'),
+    privacyFacoltativa: !campi.privacy?.required,
+    mostraCome: scelte('show_as'),
+    haNote: 'notes' in campi,
+    haVideo: 'videocall_location' in campi,
+    haRipetizione: 'recurrency' in campi,
+  }
+}
+
+export type Persona = { id: Id; nome: string; email: string; azienda: string }
+
+/** Contatti da invitare: nome, email o azienda. */
+export async function cercaInvitati(server: string, testo: string): Promise<Persona[]> {
+  const t = testo.trim()
+  const dominio: unknown[] = [['name', '!=', false]]
+  if (t) {
+    dominio.push('|', '|', ['name', 'ilike', t], ['email', 'ilike', t], ['commercial_company_name', 'ilike', t])
   } else {
-    Object.assign(valori, {
-      allday: false,
-      start: utc(e.inizio),
-      stop: utc(new Date(e.inizio.getTime() + e.minuti * 60_000)),
-    })
+    dominio.push(['email', '!=', false])
   }
-  return callKw<Id>(server, 'calendar.event', 'create', [valori])
+  const r = await callKw<{ id: Id; name: string; email: string | false; parent_id: M2o }[]>(
+    server,
+    'res.partner',
+    'search_read',
+    [],
+    { domain: dominio, fields: ['name', 'email', 'parent_id'], order: 'name asc', limit: 40 },
+  )
+  return r.map((p) => ({ id: p.id, nome: p.name, email: p.email || '', azienda: p.parent_id ? p.parent_id[1] : '' }))
 }
 
-export const ETICHETTE_STATO: Record<Partecipante['stato'], string> = {
+/** Un invitato nuovo da un indirizzo email (come fa Odoo scrivendo l'email). */
+export async function creaInvitato(server: string, email: string): Promise<Persona> {
+  const e = email.trim()
+  const [esiste] = await callKw<{ id: Id; display_name: string }[]>(server, 'res.partner', 'search_read', [], {
+    domain: [['email', '=ilike', e]],
+    fields: ['display_name'],
+    limit: 1,
+  })
+  if (esiste) {
+    return { id: esiste.id, nome: esiste.display_name, email: e, azienda: '' }
+  }
+  const id = await callKw<Id>(server, 'res.partner', 'create', [{ name: e, email: e }])
+  return { id, nome: e, email: e, azienda: '' }
+}
+
+/** Utenti interni di Odoo: possono organizzare un appuntamento. */
+export async function cercaUtenti(server: string, testo: string): Promise<Persona[]> {
+  const t = testo.trim()
+  const dominio: unknown[] = [['share', '=', false]]
+  if (t) {
+    dominio.push('|', ['name', 'ilike', t], ['login', 'ilike', t])
+  }
+  const r = await callKw<{ id: Id; name: string; login: string }[]>(server, 'res.users', 'search_read', [], {
+    domain: dominio,
+    fields: ['name', 'login'],
+    order: 'name asc',
+    limit: 60,
+  })
+  return r.map((u) => ({ id: u.id, nome: u.name, email: u.login, azienda: '' }))
+}
+
+/** Un link di videochiamata di Odoo (Discuss), nuovo. */
+export async function linkVideoOdoo(server: string): Promise<string> {
+  return callKw<string>(server, 'calendar.event', 'get_discuss_videocall_location', [])
+}
+
+// ---------------------------------------------------------------------------
+// Salvare ed eliminare
+// ---------------------------------------------------------------------------
+
+export type Modulo = {
+  titolo: string
+  tuttoIlGiorno: boolean
+  inizio: Date
+  fine: Date
+  invitati: Persona[]
+  organizzatoreId: Id | null
+  luogo: string
+  video: string
+  descrizione: string
+  note: string
+  etichette: Id[]
+  promemoria: Id[]
+  privacy: string
+  mostraCome: string
+  calendarioId: Id | null
+  ripetizione: Ripetizione | null
+}
+
+/** Per un evento di una serie: a quali occorrenze si applica la modifica. */
+export type Ambito = 'self_only' | 'future_events' | 'all_events'
+
+const CODICE_GIORNO: Record<GiornoSettimana, string> = { mon: 'MON', tue: 'TUE', wed: 'WED', thu: 'THU', fri: 'FRI', sat: 'SAT', sun: 'SUN' }
+
+/** Il giorno della settimana di una data, come in GIORNI_SETTIMANA. */
+export function giornoDi(d: Date): GiornoSettimana {
+  return GIORNI_SETTIMANA[(d.getDay() + 6) % 7]
+}
+
+/** Quale settimana del mese («1»..«4», «-1» = l'ultima), come la calcola Odoo. */
+export function settimanaDelMese(d: Date): string {
+  const n = Math.ceil(d.getDate() / 7)
+  const ultima = new Date(d.getFullYear(), d.getMonth(), d.getDate() + 7).getMonth() !== d.getMonth()
+  return n >= 5 || (n === 4 && ultima) ? '-1' : String(n)
+}
+
+function valoriRipetizione(r: Ripetizione | null, inizio: Date): Record<string, unknown> {
+  if (!r) {
+    return { recurrency: false }
+  }
+  const v: Record<string, unknown> = {
+    recurrency: true,
+    // «custom» fa usare a Odoo rrule_type e interval cosi' come sono.
+    rrule_type_ui: 'custom',
+    rrule_type: r.tipo,
+    interval: Math.max(1, r.ogni),
+    end_type: r.fine,
+    count: r.fine === 'count' ? Math.max(1, r.volte) : 1,
+    until: r.fine === 'end_date' && r.finoAl ? r.finoAl : false,
+  }
+  const giorni = r.tipo === 'weekly' ? (r.giorni.length ? r.giorni : [giornoDi(inizio)]) : []
+  for (const g of GIORNI_SETTIMANA) {
+    v[g] = giorni.includes(g)
+  }
+  if (r.tipo === 'monthly') {
+    v.month_by = r.mesePer
+    if (r.mesePer === 'date') {
+      v.day = inizio.getDate()
+    } else {
+      v.byday = settimanaDelMese(inizio)
+      v.weekday = CODICE_GIORNO[giornoDi(inizio)]
+    }
+  }
+  return v
+}
+
+/**
+ * Crea (id null) o modifica un appuntamento. `prima` e' la scheda letta prima
+ * della modifica: si scrivono solo i campi cambiati (descrizione e note sono
+ * HTML in Odoo: riscritte solo se toccate, per non perdere la formattazione).
+ */
+export async function salvaEvento(
+  server: string,
+  uid: number,
+  id: Id | null,
+  m: Modulo,
+  prima: Scheda | null,
+  ambito?: Ambito,
+): Promise<Id> {
+  const campi = await campiEvento(server)
+  const v: Record<string, unknown> = {
+    name: m.titolo.trim(),
+    allday: m.tuttoIlGiorno,
+    partner_ids: [[6, 0, m.invitati.map((p) => p.id)]],
+    location: m.luogo.trim() || false,
+  }
+  if (m.tuttoIlGiorno) {
+    const dal = giornoChiave(m.inizio)
+    const al = giornoChiave(m.fine < m.inizio ? m.inizio : m.fine)
+    Object.assign(v, { start_date: dal, stop_date: al, start: `${dal} 08:00:00`, stop: `${al} 18:00:00` })
+  } else {
+    Object.assign(v, { start: utc(m.inizio), stop: utc(m.fine > m.inizio ? m.fine : new Date(m.inizio.getTime() + 3_600_000)) })
+  }
+  if (m.organizzatoreId) {
+    v.user_id = m.organizzatoreId
+  }
+  if ('videocall_location' in campi) {
+    v.videocall_location = m.video.trim() || false
+  }
+  if (!prima || m.descrizione.trim() !== prima.descrizione.trim()) {
+    v.description = m.descrizione.trim() ? htmlDaTesto(m.descrizione) : false
+  }
+  if ('notes' in campi && (!prima || m.note.trim() !== prima.note.trim())) {
+    v.notes = m.note.trim() ? htmlDaTesto(m.note) : false
+  }
+  if ('categ_ids' in campi) {
+    v.categ_ids = [[6, 0, m.etichette]]
+  }
+  if ('alarm_ids' in campi) {
+    v.alarm_ids = [[6, 0, m.promemoria]]
+  }
+  if ('privacy' in campi && (m.privacy || !campi.privacy.required)) {
+    v.privacy = m.privacy || false
+  }
+  if ('show_as' in campi && m.mostraCome) {
+    v.show_as = m.mostraCome
+  }
+  if ('calendar_id' in campi && m.calendarioId) {
+    v.calendar_id = m.calendarioId
+  }
+  if ('recurrency' in campi) {
+    // Una serie che resta serie: si riscrive la regola solo se cambiata.
+    const cambiata = JSON.stringify(m.ripetizione) !== JSON.stringify(prima?.ripetizione ?? null)
+    if (!prima || cambiata) {
+      Object.assign(v, valoriRipetizione(m.ripetizione, m.inizio))
+    }
+  }
+  if (id === null) {
+    // Nuovo: l'organizzatore e' anche invitato (come in Odoo).
+    const io = await mioPartner(server, uid)
+    if (!m.invitati.some((p) => p.id === io)) {
+      v.partner_ids = [[6, 0, [io, ...m.invitati.map((p) => p.id)]]]
+    }
+    return callKw<Id>(server, 'calendar.event', 'create', [v])
+  }
+  if (prima?.inSerie && ambito) {
+    v.recurrence_update = ambito
+  }
+  await callKw<boolean>(server, 'calendar.event', 'write', [[id], v])
+  return id
+}
+
+export async function eliminaEvento(server: string, id: Id, ambito?: Ambito): Promise<void> {
+  if (ambito && ambito !== 'self_only') {
+    await callKw(server, 'calendar.event', 'action_mass_deletion', [[id], ambito])
+    return
+  }
+  await callKw<boolean>(server, 'calendar.event', 'unlink', [[id]])
+}
+
+export const ETICHETTE_STATO: Record<Stato, string> = {
   accepted: 'Accettato',
   declined: 'Rifiutato',
   tentative: 'Forse',
   needsAction: 'In attesa',
 }
+
+const NOMI_TIPO: Record<TipoRipetizione, [string, string]> = {
+  daily: ['giorno', 'giorni'],
+  weekly: ['settimana', 'settimane'],
+  monthly: ['mese', 'mesi'],
+  yearly: ['anno', 'anni'],
+}
+
+/** «Ogni settimana il lunedì e mercoledì, 10 volte» */
+export function descriviRipetizione(r: Ripetizione, inizio: Date): string {
+  const [uno, piu] = NOMI_TIPO[r.tipo]
+  const femminile = r.tipo === 'weekly'
+  let t = r.ogni === 1 ? `Ogni ${uno}` : `Ogni ${r.ogni} ${piu}`
+  if (femminile && r.ogni === 1) {
+    t = 'Ogni settimana'
+  }
+  if (r.tipo === 'weekly') {
+    const giorni = (r.giorni.length ? r.giorni : [giornoDi(inizio)]).map((g) => NOME_GIORNO[g])
+    t += ` il ${giorni.length > 1 ? `${giorni.slice(0, -1).join(', ')} e ${giorni[giorni.length - 1]}` : giorni[0]}`
+  } else if (r.tipo === 'monthly') {
+    t +=
+      r.mesePer === 'date'
+        ? ` il giorno ${inizio.getDate()}`
+        : ` ${settimanaDelMese(inizio) === '-1' ? "l'ultimo" : `il ${ORDINALE[settimanaDelMese(inizio)]}`} ${NOME_GIORNO[giornoDi(inizio)]}`
+  }
+  if (r.fine === 'count') {
+    t += `, ${r.volte} ${r.volte === 1 ? 'volta' : 'volte'}`
+  } else if (r.fine === 'end_date' && r.finoAl) {
+    t += `, fino al ${new Date(`${r.finoAl}T12:00:00`).toLocaleDateString('it-CH', { day: 'numeric', month: 'long', year: 'numeric' })}`
+  }
+  return t
+}
+
+export const NOME_GIORNO: Record<GiornoSettimana, string> = {
+  mon: 'lunedì',
+  tue: 'martedì',
+  wed: 'mercoledì',
+  thu: 'giovedì',
+  fri: 'venerdì',
+  sat: 'sabato',
+  sun: 'domenica',
+}
+
+const ORDINALE: Record<string, string> = { '1': 'primo', '2': 'secondo', '3': 'terzo', '4': 'quarto' }

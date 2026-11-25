@@ -1,15 +1,29 @@
-/** Un appuntamento: quando, dove, videochiamata, partecipanti, la mia risposta. */
+/**
+ * Un appuntamento con tutti i campi di Odoo: quando, ripetizione, luogo,
+ * videochiamata, la mia risposta, organizzatore e invitati, promemoria,
+ * etichette, visibilita', documento collegato, descrizione, note interne.
+ * «Modifica» in alto apre il modulo; in fondo «Elimina».
+ */
 
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
-import { useCallback, useState } from 'react'
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { useCallback, useState, type ReactNode } from 'react'
+import { ActivityIndicator, Alert, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
-import { dettaglioEvento, ETICHETTE_STATO, rispondi, type DettaglioEvento, type Partecipante } from '../../odoo/calendario'
-import { percorsoRecord, urlAvatar } from '../../odoo/lavoro'
-import { testoDaHtml } from '../../odoo/testo'
+import {
+  descriviRipetizione,
+  dettaglioEvento,
+  eliminaEvento,
+  ETICHETTE_STATO,
+  opzioniEvento,
+  rispondi,
+  type Ambito,
+  type Opzioni,
+  type Partecipante,
+  type Scheda,
+} from '../../odoo/calendario'
+import { urlAvatar } from '../../odoo/lavoro'
 import { Avatar } from '../../ui/Avatar'
-import { inviaOdoo, rottaOdoo } from '../../ui/comandiOdoo'
 import { Pulsante } from '../../ui/Pulsante'
 import { Testata } from '../../ui/Testata'
 import { raggio, spazio, useColori, type Colori } from '../../ui/tema'
@@ -19,7 +33,7 @@ function coloreStato(stato: Partecipante['stato'], c: Colori): string {
   return stato === 'accepted' ? c.verde : stato === 'declined' ? c.rosso : stato === 'tentative' ? c.ambra : c.testo3
 }
 
-function quando(e: DettaglioEvento): string {
+function quando(e: Scheda): string {
   const giorno = (d: Date) => d.toLocaleDateString('it-CH', { weekday: 'long', day: 'numeric', month: 'long' })
   const ora = (d: Date) => d.toLocaleTimeString('it-CH', { hour: '2-digit', minute: '2-digit' })
   if (e.tuttoIlGiorno) {
@@ -31,22 +45,42 @@ function quando(e: DettaglioEvento): string {
   return `${giorno(e.inizio)} ${ora(e.inizio)} – ${giorno(e.fine)} ${ora(e.fine)}`
 }
 
+function Riga({ icona, children, onPress }: { icona: keyof typeof Ionicons.glyphMap; children: ReactNode; onPress?: () => void }) {
+  const c = useColori()
+  const dentro = (
+    <>
+      <Ionicons name={icona} size={20} color={c.primario} />
+      <View style={{ flex: 1 }}>{children}</View>
+    </>
+  )
+  return onPress ? (
+    <Pressable style={s.riga} onPress={onPress} accessibilityRole="link">
+      {dentro}
+    </Pressable>
+  ) : (
+    <View style={s.riga}>{dentro}</View>
+  )
+}
+
 export default function Appuntamento() {
   const c = useColori()
   const router = useRouter()
   const { id } = useLocalSearchParams<{ id: string }>()
   const { sessione } = useApp()
-  const [e, setE] = useState<DettaglioEvento | null>(null)
+  const [e, setE] = useState<Scheda | null>(null)
+  const [opzioni, setOpzioni] = useState<Opzioni | null>(null)
   const [errore, setErrore] = useState('')
   const [invio, setInvio] = useState('')
+  const [elimino, setElimino] = useState(false)
   const server = sessione?.server || ''
   const uid = sessione?.utente.uid || 0
 
   const carica = useCallback(async () => {
     try {
-      const d = await dettaglioEvento(server, uid, Number(id))
+      const [d, o] = await Promise.all([dettaglioEvento(server, uid, Number(id)), opzioniEvento(server).catch(() => null)])
       if (d) {
         setE(d)
+        setOpzioni(o)
       } else {
         setErrore('Appuntamento non trovato.')
       }
@@ -55,6 +89,7 @@ export default function Appuntamento() {
     }
   }, [server, uid, id])
 
+  // Anche al ritorno dalla modifica.
   useFocusEffect(
     useCallback(() => {
       void carica()
@@ -80,23 +115,64 @@ export default function Appuntamento() {
   }
 
   function apriMappa(luogo: string) {
-    Linking.openURL(`http://maps.apple.com/?q=${encodeURIComponent(luogo)}`).catch(() => undefined)
+    const q = encodeURIComponent(luogo)
+    Linking.openURL(Platform.OS === 'ios' ? `http://maps.apple.com/?q=${q}` : `geo:0,0?q=${q}`).catch(() => undefined)
   }
 
-  function apriInOdoo() {
+  async function elimina(ambito?: Ambito) {
+    setElimino(true)
+    try {
+      await eliminaEvento(server, Number(id), ambito)
+      router.back()
+    } catch (err) {
+      Alert.alert('Appuntamento non eliminato', err instanceof Error ? err.message : String(err))
+      setElimino(false)
+    }
+  }
+
+  function chiediElimina() {
     if (!e) {
       return
     }
-    inviaOdoo({ tipo: 'apri', percorso: percorsoRecord('calendar.event', e.id) })
-    router.dismissTo(rottaOdoo())
+    if (e.inSerie) {
+      Alert.alert('Elimina appuntamento', 'Si ripete: quali vuoi eliminare? Non si può annullare.', [
+        { text: 'Solo questo', style: 'destructive', onPress: () => void elimina('self_only') },
+        { text: 'Questo e i successivi', style: 'destructive', onPress: () => void elimina('future_events') },
+        { text: 'Tutti', style: 'destructive', onPress: () => void elimina('all_events') },
+        { text: 'Annulla', style: 'cancel' },
+      ])
+      return
+    }
+    Alert.alert('Elimina appuntamento', `«${e.titolo}» sparisce dal calendario di Odoo di tutti gli invitati. Non si può annullare.`, [
+      { text: 'Annulla', style: 'cancel' },
+      { text: 'Elimina', style: 'destructive', onPress: () => void elimina() },
+    ])
   }
 
   const io = e?.persone.find((p) => p.io)
-  const nota = e ? testoDaHtml(e.descrizione) : ''
+  const nomeScelta = (lista: { valore: string; nome: string }[] | undefined, valore: string) => lista?.find((x) => x.valore === valore)?.nome || ''
+  const privacy = e && opzioni ? nomeScelta(opzioni.privacy, e.privacy) : ''
+  const mostraCome = e && opzioni ? nomeScelta(opzioni.mostraCome, e.mostraCome) : ''
 
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom']}>
-      <Testata titolo="Appuntamento" />
+      <Testata
+        titolo="Appuntamento"
+        destra={
+          e?.puoModificare ? (
+            <Pressable
+              onPress={() => router.push({ pathname: '/calendario/modifica', params: { id: String(e.id) } })}
+              hitSlop={10}
+              style={s.modifica}
+              accessibilityRole="button"
+            >
+              <Text style={[s.modificaTesto, { color: c.primario }]} numberOfLines={1}>
+                Modifica
+              </Text>
+            </Pressable>
+          ) : undefined
+        }
+      />
       {errore && !e ? (
         <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>
       ) : !e ? (
@@ -104,15 +180,39 @@ export default function Appuntamento() {
       ) : (
         <ScrollView contentContainerStyle={s.contenuto}>
           <Text style={[s.titolo, { color: c.testo }]}>{e.titolo}</Text>
-          <View style={s.riga}>
-            <Ionicons name="time-outline" size={20} color={c.primario} />
+          {e.etichette.length ? (
+            <View style={s.etichette}>
+              {e.etichette.map((t) => (
+                <View key={t.id} style={[s.pillola, { backgroundColor: c.primarioTenue }]}>
+                  <Text style={[s.pillolaTesto, { color: c.primario }]} numberOfLines={1}>
+                    {t.nome}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+          <Riga icona="time-outline">
             <Text style={[s.rigaTesto, { color: c.testo }]}>{quando(e)}</Text>
-          </View>
+          </Riga>
+          {e.ripetizione ? (
+            <Riga icona="repeat-outline">
+              <Text style={[s.rigaTesto, { color: c.testo }]}>{descriviRipetizione(e.ripetizione, e.inizio)}</Text>
+            </Riga>
+          ) : null}
           {e.luogo ? (
-            <Pressable style={s.riga} onPress={() => apriMappa(e.luogo)} accessibilityRole="link">
-              <Ionicons name="location-outline" size={20} color={c.primario} />
+            <Riga icona="location-outline" onPress={() => apriMappa(e.luogo)}>
               <Text style={[s.rigaTesto, { color: c.primario }]}>{e.luogo}</Text>
-            </Pressable>
+            </Riga>
+          ) : null}
+          {e.promemoria.length ? (
+            <Riga icona="notifications-outline">
+              <Text style={[s.rigaTesto, { color: c.testo }]}>{e.promemoria.map((p) => p.nome).join(', ')}</Text>
+            </Riga>
+          ) : null}
+          {e.collegatoA ? (
+            <Riga icona="link-outline">
+              <Text style={[s.rigaTesto, { color: c.testo }]}>{e.collegatoA}</Text>
+            </Riga>
           ) : null}
           {e.video ? (
             <Pressable
@@ -158,9 +258,15 @@ export default function Appuntamento() {
           ) : null}
 
           <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
-            <Text style={[s.etichetta, { color: c.testo2 }]}>
-              Partecipanti{e.organizzatore ? ` · organizza ${e.organizzatore}` : ''}
-            </Text>
+            <Text style={[s.etichetta, { color: c.testo2 }]}>Organizzatore</Text>
+            <View style={s.persona}>
+              <Avatar url={e.organizzatoreId ? urlAvatar(server, 'res.users', e.organizzatoreId) : undefined} nome={e.organizzatore || '?'} lato={36} />
+              <Text style={[s.personaNome, { color: c.testo }]} numberOfLines={1}>
+                {e.organizzatore || 'Nessuno'}
+              </Text>
+            </View>
+            <View style={[s.linea, { backgroundColor: c.bordo }]} />
+            <Text style={[s.etichetta, { color: c.testo2 }]}>Invitati · {e.persone.length}</Text>
             {e.persone.map((p) => (
               <View key={p.id} style={s.persona}>
                 <Avatar url={p.partnerId ? urlAvatar(server, 'res.partner', p.partnerId) : undefined} nome={p.nome} lato={36} />
@@ -170,22 +276,41 @@ export default function Appuntamento() {
                 </Text>
                 <View style={[s.stato, { backgroundColor: c.sfondo }]}>
                   <View style={[s.statoPunto, { backgroundColor: coloreStato(p.stato, c) }]} />
-                  <Text style={[s.statoTesto, { color: c.testo2 }]}>{ETICHETTE_STATO[p.stato]}</Text>
+                  <Text style={[s.statoTesto, { color: c.testo2 }]} numberOfLines={1}>
+                    {ETICHETTE_STATO[p.stato]}
+                  </Text>
                 </View>
               </View>
             ))}
           </View>
 
-          {nota ? (
+          {e.descrizione ? (
             <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
-              <Text style={[s.etichetta, { color: c.testo2 }]}>Note</Text>
+              <Text style={[s.etichetta, { color: c.testo2 }]}>Descrizione</Text>
               <Text style={[s.nota, { color: c.testo }]} selectable>
-                {nota}
+                {e.descrizione}
+              </Text>
+            </View>
+          ) : null}
+          {e.note ? (
+            <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
+              <Text style={[s.etichetta, { color: c.testo2 }]}>Note interne</Text>
+              <Text style={[s.nota, { color: c.testo }]} selectable>
+                {e.note}
               </Text>
             </View>
           ) : null}
 
-          <Pulsante testo="Apri in Odoo" variante="tenue" onPress={apriInOdoo} />
+          {e.calendario || privacy || mostraCome ? (
+            <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
+              <Text style={[s.etichetta, { color: c.testo2 }]}>Visibilità</Text>
+              {e.calendario ? <Text style={[s.nota, { color: c.testo }]}>Calendario: {e.calendario.nome}</Text> : null}
+              {privacy ? <Text style={[s.nota, { color: c.testo }]}>Privacy: {privacy}</Text> : null}
+              {mostraCome ? <Text style={[s.nota, { color: c.testo }]}>Mostra come: {mostraCome}</Text> : null}
+            </View>
+          ) : null}
+
+          {e.puoModificare ? <Pulsante testo="Elimina" variante="pericolo" onPress={chiediElimina} occupato={elimino} /> : null}
         </ScrollView>
       )}
     </SafeAreaView>
@@ -196,18 +321,24 @@ const s = StyleSheet.create({
   pagina: { flex: 1 },
   contenuto: { padding: spazio.l, gap: spazio.m, paddingBottom: spazio.xxl },
   vuoto: { fontSize: 15, textAlign: 'center', marginTop: spazio.xl, paddingHorizontal: spazio.xl },
+  modifica: { minHeight: 40, justifyContent: 'center', paddingHorizontal: spazio.xs },
+  modificaTesto: { fontSize: 17, fontWeight: '700' },
   titolo: { fontSize: 26, fontWeight: '800', letterSpacing: -0.3 },
+  etichette: { flexDirection: 'row', flexWrap: 'wrap', gap: spazio.s },
+  pillola: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 },
+  pillolaTesto: { fontSize: 13, fontWeight: '700' },
   riga: { flexDirection: 'row', alignItems: 'flex-start', gap: spazio.s },
-  rigaTesto: { flex: 1, fontSize: 16, lineHeight: 21, textTransform: 'none' },
-  video: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spazio.s, height: 48, borderRadius: raggio.m },
+  rigaTesto: { fontSize: 16, lineHeight: 21 },
+  video: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spazio.s, minHeight: 48, borderRadius: raggio.m },
   videoTesto: { fontSize: 16, fontWeight: '700' },
   scheda: { borderWidth: 1, borderRadius: raggio.l, padding: spazio.m, gap: spazio.s },
   etichetta: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4 },
   risposte: { flexDirection: 'row', gap: spazio.s },
-  risposta: { flex: 1, height: 40, borderRadius: 20, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
+  risposta: { flex: 1, minHeight: 40, borderRadius: 20, borderWidth: 1.5, alignItems: 'center', justifyContent: 'center' },
   rispostaTesto: { fontSize: 15, fontWeight: '700' },
   persona: { flexDirection: 'row', alignItems: 'center', gap: spazio.m },
   personaNome: { flex: 1, fontSize: 15, fontWeight: '600' },
+  linea: { height: StyleSheet.hairlineWidth, marginVertical: spazio.xs },
   stato: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 8, paddingVertical: 3, borderRadius: 10 },
   statoPunto: { width: 7, height: 7, borderRadius: 4 },
   statoTesto: { fontSize: 12, fontWeight: '600' },
