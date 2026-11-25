@@ -9,6 +9,7 @@
 import { Platform } from 'react-native'
 import { t } from '../i18n'
 import { callKw, ErroreOdoo, rpc } from '../odoo/client'
+import type { Qualita } from './telefono'
 
 export const PIATTAFORMA = Platform.OS === 'ios' ? 'ios' : 'android'
 
@@ -64,7 +65,7 @@ export async function risposto(server: string, logId: string): Promise<void> {
 
 export async function chiamataFinita(
   server: string,
-  dati: { call_sid?: string; log_id?: string | null; duration: number },
+  dati: { call_sid?: string; log_id?: string | null; duration: number; quality?: Qualita | null },
 ): Promise<void> {
   await rpc<Esito>(server, '/ai_telemarketing/voice/call_ended', { ...dati, recorded: false })
 }

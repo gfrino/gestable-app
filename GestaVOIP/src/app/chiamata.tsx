@@ -148,6 +148,23 @@ function Ritratto({ foto, nome, squilla, c }: { foto: string; nome: string; squi
   )
 }
 
+const AVVISI_RETE = ['high-packet-loss', 'high-jitter', 'high-rtt', 'low-mos']
+
+/** Cosa dire a chi parla quando l'SDK segnala un problema (microfono prima della rete). */
+function avvisoQualita(avvisi: string[], muto: boolean, connessa: boolean): { icona: 'mic-off-outline' | 'cellular-outline'; testo: string } | null {
+  if (!connessa || !avvisi.length) {
+    return null
+  }
+  // Con il muto dell'app il microfono e' fermo apposta.
+  if (!muto && avvisi.includes('constant-audio-input-level')) {
+    return { icona: 'mic-off-outline', testo: t('telefono.avvisoMicrofono') }
+  }
+  if (avvisi.some((a) => AVVISI_RETE.includes(a))) {
+    return { icona: 'cellular-outline', testo: t('telefono.avvisoRete') }
+  }
+  return null
+}
+
 export default function SchermataChiamata() {
   const c = coloriChiamata
   const margini = useSafeAreaInsets()
@@ -189,6 +206,7 @@ export default function SchermataChiamata() {
   const squilla = ['composizione', 'squillo', 'in-arrivo'].includes(chiamata.fase)
   const stato = connessa ? cronometro(chiamata.inizio) : FASI[chiamata.fase] ? t(FASI[chiamata.fase]) : ''
   const nome = scheda?.nome || chiamata.nome || ''
+  const avviso = avvisoQualita(chiamata.avvisi, chiamata.muto, connessa)
   const colorePunto = chiamata.fase === 'riconnessione' ? c.ambra : connessa ? c.verde : c.testo3
 
   async function apriTrasferimento() {
@@ -272,6 +290,12 @@ export default function SchermataChiamata() {
             {chiamata.attesa ? t('telefono.inAttesa') : ''}
           </Text>
         </View>
+        {avviso ? (
+          <View style={[s.avviso, { backgroundColor: 'rgba(245,166,35,0.16)' }]} accessibilityLiveRegion="polite">
+            <Ionicons name={avviso.icona} size={16} color={c.ambra} />
+            <Text style={[s.avvisoTesto, { color: c.testo }]}>{avviso.testo}</Text>
+          </View>
+        ) : null}
       </View>
 
       {tastierino ? (
@@ -424,4 +448,16 @@ const s = StyleSheet.create({
   foglioVoce: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, paddingHorizontal: spazio.xl, paddingVertical: spazio.l },
   foglioTesto: { fontSize: 17 },
   punto: { width: 8, height: 8, borderRadius: 4 },
+  avviso: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: spazio.s,
+    marginTop: spazio.m,
+    marginHorizontal: spazio.xl,
+    paddingHorizontal: spazio.m,
+    paddingVertical: spazio.s,
+    borderRadius: raggio.m,
+    maxWidth: 420,
+  },
+  avvisoTesto: { flex: 1, fontSize: 14, lineHeight: 19 },
 })

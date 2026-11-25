@@ -1,6 +1,7 @@
 /**
  * Solo nelle build di sviluppo: simula una chiamata per vedere la schermata
- * senza telefonare a nessuno (gestavoip://prova-chiamata?fase=squillo&numero=...).
+ * senza telefonare a nessuno (gestavoip://prova-chiamata?fase=squillo&numero=...;
+ * avvisi=high-packet-loss oppure constant-audio-input-level per l'avviso di qualita').
  * Nelle build per TestFlight e App Store rimanda alla home.
  */
 
@@ -9,7 +10,8 @@ import { useEffect } from 'react'
 import { telefono, type Chiamata, type Fase } from '../voip/telefono'
 
 export default function ProvaChiamata() {
-  const { fase = 'squillo', numero = '+41765714982', nome = '', direzione = 'uscita' } = useLocalSearchParams<{
+  const { fase = 'squillo', numero = '+41765714982', nome = '', direzione = 'uscita', avvisi = '' } = useLocalSearchParams<{
+    avvisi?: string
     fase?: string
     numero?: string
     nome?: string
@@ -32,6 +34,7 @@ export default function ProvaChiamata() {
             inizio: fase === 'connessa' ? Date.now() - 83_000 : null,
             muto: false,
             attesa: false,
+            avvisi: avvisi ? avvisi.split(',') : [],
           }
     // Stato finto: nessuna chiamata parte davvero. Dopo il ritorno alla home,
     // altrimenti il Redirect chiude la schermata della chiamata appena aperta.
@@ -42,7 +45,7 @@ export default function ProvaChiamata() {
         router.push('/chiamata')
       }
     }, 500)
-  }, [fase, numero, nome, direzione])
+  }, [fase, numero, nome, direzione, avvisi])
 
   return <Redirect href="/" />
 }

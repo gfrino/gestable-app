@@ -11,6 +11,9 @@ export const it = {
   'telefono.inUscita': 'In uscita',
   'telefono.sconosciuto': 'Sconosciuto',
   'telefono.inAttesa': ' · in attesa',
+  // Avvisi durante la chiamata, dall'SDK
+  'telefono.avvisoRete': 'Connessione debole: potrebbero sentirti a tratti. Prova il Wi‑Fi.',
+  'telefono.avvisoMicrofono': 'Il microfono non prende la tua voce: controlla che non sia coperto.',
 
   // Tasti della chiamata (una riga sola)
   'telefono.muto': 'Muto',
@@ -61,6 +64,8 @@ export const en: Record<keyof typeof it, string> = {
   'telefono.inUscita': 'Outgoing',
   'telefono.sconosciuto': 'Unknown',
   'telefono.inAttesa': ' · on hold',
+  'telefono.avvisoRete': 'Weak connection: you may be breaking up. Try Wi‑Fi.',
+  'telefono.avvisoMicrofono': 'Your microphone isn’t picking up your voice: check it isn’t covered.',
 
   'telefono.muto': 'Mute',
   'telefono.tastierino': 'Keypad',

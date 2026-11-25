@@ -43,7 +43,30 @@ export type Chiamata = {
   inizio: number | null
   muto: boolean
   attesa: boolean
+  /** Avvisi di qualita' dell'SDK in questo momento (rete debole, microfono muto). */
+  avvisi: string[]
 }
+
+/**
+ * Com'e' andato l'audio, misurato dall'SDK durante la chiamata: va a Odoo con
+ * la fine della chiamata, cosi' «non ti sentivo bene» si puo' verificare.
+ * La perdita in uscita e' quella che dice il lato remoto (RTCP): e' il dato
+ * di «non mi sentono».
+ */
+export type Qualita = {
+  platform: string
+  codec: string
+  samples: number
+  warnings: string[]
+  mos_min: number | null
+  mos_avg: number | null
+  uplink_loss_pct: number | null
+  downlink_loss_pct: number | null
+  jitter_max_ms: number | null
+  rtt_max_ms: number | null
+}
+
+const MISURA_MS = 5_000
 
 export type StatoTelefono = {
   registrazione: Registrazione
@@ -180,6 +203,7 @@ export class Telefono {
             inizio: viva.getInitialConnectedTimestamp()?.getTime() || Date.now(),
             muto: !!viva.isMuted(),
             attesa: !!viva.isOnHold(),
+            avvisi: [],
           },
         })
         this.agganciaCall(viva)
@@ -307,6 +331,7 @@ export class Telefono {
         inizio: null,
         muto: false,
         attesa: false,
+        avvisi: [],
       },
     })
     invito.on(CallInvite.Event.Accepted, (call: Call) => {
@@ -355,6 +380,7 @@ export class Telefono {
         inizio: null,
         muto: false,
         attesa: false,
+        avvisi: [],
       },
     })
     try {
@@ -377,6 +403,13 @@ export class Telefono {
   // ------------------------------------------------------------------
   private agganciaCall(call: Call) {
     this.call = call
+    this.iniziaMisura(call)
+    call.on(Call.Event.QualityWarningsChanged, (attuali: Call.QualityWarning[]) => {
+      for (const a of attuali) {
+        this.misura.avvisi.add(a)
+      }
+      this.aggiornaChiamata({ avvisi: [...attuali] })
+    })
     call.on(Call.Event.Ringing, () => this.aggiornaChiamata({ fase: 'squillo', sid: call.getSid() }))
     call.on(Call.Event.Connected, () =>
       this.aggiornaChiamata({ fase: 'connessa', inizio: this.stato.chiamata?.inizio || Date.now(), sid: call.getSid() }),
@@ -393,8 +426,9 @@ export class Telefono {
       return
     }
     this.call = null
+    const qualita = this.fineMisura()
     const chiamata = this.stato.chiamata
-    this.aggiornaChiamata({ fase: 'finita' })
+    this.aggiornaChiamata({ fase: 'finita', avvisi: [] })
     if (this.sessione && chiamata) {
       const durata = chiamata.inizio ? Math.round((Date.now() - chiamata.inizio) / 1000) : 0
       // Solo Odoo puo' scrivere la nota sul contatto e chiudere il log: il
@@ -404,6 +438,7 @@ export class Telefono {
           call_sid: chiamata.sid || call.getSid(),
           log_id: chiamata.logId,
           duration: durata,
+          quality: qualita,
         })
         .catch((e) => segnalaErrore(e, 'fine chiamata'))
     }
@@ -412,6 +447,78 @@ export class Telefono {
       // Durante la chiamata la registrazione non si tocca: si rifa' adesso.
       void this.registra('fine chiamata')
     }, 1500)
+  }
+
+  // ------------------------------------------------------------------
+  // Qualita' dell'audio
+  // ------------------------------------------------------------------
+  private misura = {
+    timer: null as ReturnType<typeof setInterval> | null,
+    avvisi: new Set<string>(),
+    mos: [] as number[],
+    codec: '',
+    perditaUscita: null as number | null,
+    perditaEntrata: null as number | null,
+    jitter: null as number | null,
+    rtt: null as number | null,
+  }
+
+  private iniziaMisura(call: Call) {
+    this.fineMisura()
+    this.misura = { timer: null, avvisi: new Set(), mos: [], codec: '', perditaUscita: null, perditaEntrata: null, jitter: null, rtt: null }
+    const m = this.misura
+    const max = (a: number | null, b: number | undefined) => (typeof b === 'number' && isFinite(b) ? Math.max(a ?? b, b) : a)
+    const percento = (persi: number, arrivati: number) => (persi + arrivati > 0 ? Math.round((persi / (persi + arrivati)) * 1000) / 10 : null)
+    m.timer = setInterval(() => {
+      if (this.call !== call || this.stato.chiamata?.fase !== 'connessa') {
+        return
+      }
+      call
+        .getStats()
+        .then((r) => {
+          const loc = r.localAudioTrackStats?.[0]
+          const rem = r.remoteAudioTrackStats?.[0]
+          if (loc) {
+            m.codec = loc.codec || m.codec
+            // I contatori sono cumulativi: l'ultimo campione vale per tutta la chiamata.
+            m.perditaUscita = percento(loc.packetsLost || 0, loc.packetsSent || 0)
+            m.jitter = max(m.jitter, loc.jitter)
+            m.rtt = max(m.rtt, loc.roundTripTime)
+          }
+          if (rem) {
+            m.perditaEntrata = percento(rem.packetsLost || 0, rem.packetsReceived || 0)
+            m.jitter = max(m.jitter, rem.jitter)
+            if (typeof rem.mos === 'number' && rem.mos > 0) {
+              m.mos.push(rem.mos)
+            }
+          }
+        })
+        .catch(() => undefined)
+    }, MISURA_MS)
+  }
+
+  private fineMisura(): Qualita | null {
+    const m = this.misura
+    if (m.timer) {
+      clearInterval(m.timer)
+      m.timer = null
+    }
+    if (!m.mos.length && !m.codec && !m.avvisi.size) {
+      return null
+    }
+    const arrotonda = (n: number) => Math.round(n * 100) / 100
+    return {
+      platform: Platform.OS,
+      codec: m.codec,
+      samples: m.mos.length,
+      warnings: [...m.avvisi],
+      mos_min: m.mos.length ? arrotonda(Math.min(...m.mos)) : null,
+      mos_avg: m.mos.length ? arrotonda(m.mos.reduce((a, b) => a + b, 0) / m.mos.length) : null,
+      uplink_loss_pct: m.perditaUscita,
+      downlink_loss_pct: m.perditaEntrata,
+      jitter_max_ms: m.jitter,
+      rtt_max_ms: m.rtt,
+    }
   }
 
   async riaggancia() {

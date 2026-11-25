@@ -11,6 +11,7 @@ import { registroChiamate, type VoceRegistro } from '../../voip/api'
 import { useApp } from '../../voip/Contesto'
 import { telefono } from '../../voip/telefono'
 import { spazio, useColori } from '../../ui/tema'
+import { leggi, scrivi } from '../../odoo/archivio'
 
 function quando(data: string): string {
   // Odoo manda le date in UTC senza fuso: lo si aggiunge prima di convertirle.
@@ -34,17 +35,21 @@ function durata(secondi: number): string {
 export default function Recenti() {
   const c = useColori()
   const { sessione } = useApp()
-  const [voci, setVoci] = useState<VoceRegistro[]>([])
+  const [voci, setVoci] = useState<VoceRegistro[]>(() => leggi<VoceRegistro[]>(sessione?.server, sessione?.utente.uid, 'recenti') || [])
   const [carica, setCarica] = useState(false)
   const [errore, setErrore] = useState('')
 
-  const aggiorna = useCallback(async () => {
+  // La rotella solo quando si tira giu': tornando sulla scheda si vede
+  // subito l'elenco di prima e si aggiorna senza farlo notare.
+  const aggiorna = useCallback(async (aMano = false) => {
     if (!sessione) {
       return
     }
-    setCarica(true)
+    setCarica(aMano)
     try {
-      setVoci(await registroChiamate(sessione.server, sessione.utente.uid))
+      const r = await registroChiamate(sessione.server, sessione.utente.uid)
+      setVoci(r)
+      scrivi(sessione.server, sessione.utente.uid, 'recenti', r)
       setErrore('')
     } catch (e) {
       setErrore(e instanceof Error ? e.message : String(e))
@@ -80,7 +85,7 @@ export default function Recenti() {
       <FlatList
         data={voci}
         keyExtractor={(v) => String(v.id)}
-        refreshControl={<RefreshControl refreshing={carica} onRefresh={aggiorna} tintColor={c.primario} />}
+        refreshControl={<RefreshControl refreshing={carica} onRefresh={() => void aggiorna(true)} tintColor={c.primario} />}
         ListEmptyComponent={
           carica ? null : <Text style={[s.vuoto, { color: c.testo3 }]}>{t('schede.nessunaChiamata')}</Text>
         }

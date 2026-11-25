@@ -26,6 +26,7 @@ import { useMenu } from '../../ui/MenuLaterale'
 import { Testata } from '../../ui/Testata'
 import { raggio, spazio, useColori } from '../../ui/tema'
 import { useApp } from '../../voip/Contesto'
+import { leggi, scrivi } from '../../odoo/archivio'
 
 type Vista = 'chat' | 'notifiche'
 
@@ -35,9 +36,12 @@ export default function Messaggi() {
   const { sessione } = useApp()
   const { aggiorna } = useMenu()
   const [vista, setVista] = useState<Vista>('chat')
-  const [chat, setChat] = useState<Conversazione[] | null>(null)
-  const [notifiche, setNotifiche] = useState<Notifica[] | null>(null)
-  const [totaleNotifiche, setTotaleNotifiche] = useState(0)
+  const [copia] = useState(() =>
+    leggi<{ chat: Conversazione[]; notifiche: Notifica[]; totale: number }>(sessione?.server, sessione?.utente.uid, 'messaggi'),
+  )
+  const [chat, setChat] = useState<Conversazione[] | null>(copia?.chat || null)
+  const [notifiche, setNotifiche] = useState<Notifica[] | null>(copia?.notifiche || null)
+  const [totaleNotifiche, setTotaleNotifiche] = useState(copia?.totale || 0)
   const [errore, setErrore] = useState('')
   const [ricarica, setRicarica] = useState(false)
   const server = sessione?.server || ''
@@ -52,6 +56,7 @@ export default function Messaggi() {
       setChat(a)
       setNotifiche(b)
       setTotaleNotifiche(n)
+      scrivi(server, uid, 'messaggi', { chat: a, notifiche: b, totale: n })
       setErrore('')
     } catch (e) {
       setErrore(e instanceof Error ? e.message : String(e))

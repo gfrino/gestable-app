@@ -18,6 +18,7 @@ import { raggio, spazio, useColori } from '../../ui/tema'
 import { useApp } from '../../voip/Contesto'
 import { APP } from '../../odoo/capacita'
 import { RichiedeApp } from '../../ui/RichiedeApp'
+import { leggi, scrivi } from '../../odoo/archivio'
 
 const PAGINA = 60
 // Chiavi dei testi: t() si chiama mostrando la lista (la lingua puo' cambiare).
@@ -32,9 +33,10 @@ function ElencoContatti() {
   const router = useRouter()
   const { sessione } = useApp()
   const server = sessione?.server || ''
+  const uid = sessione?.utente.uid || 0
   const [testo, setTesto] = useState('')
   const [filtro, setFiltro] = useState<Filtro>('tutti')
-  const [lista, setLista] = useState<Contatto[] | null>(null)
+  const [lista, setLista] = useState<Contatto[] | null>(() => leggi<Contatto[]>(server, uid, 'contatti'))
   const [finita, setFinita] = useState(false)
   const [altri, setAltri] = useState(false)
   const [errore, setErrore] = useState('')
@@ -58,6 +60,9 @@ function ElencoContatti() {
         const r = await cercaContatti(server, testo, filtro, 0, PAGINA)
         if (mio === giro.current) {
           setLista(r)
+          if (!testo && filtro === 'tutti') {
+            scrivi(server, uid, 'contatti', r)
+          }
           setFinita(r.length < PAGINA)
           setErrore('')
         }
@@ -67,7 +72,7 @@ function ElencoContatti() {
         }
       }
     },
-    [server, testo, filtro],
+    [server, uid, testo, filtro],
   )
 
   // Si ricarica quando cambia la ricerca (con una pausa mentre si scrive) e

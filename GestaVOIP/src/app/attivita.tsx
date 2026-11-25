@@ -16,6 +16,7 @@ import { useMenu } from '../ui/MenuLaterale'
 import { Testata } from '../ui/Testata'
 import { raggio, spazio, useColori, type Colori } from '../ui/tema'
 import { useApp } from '../voip/Contesto'
+import { leggi, scrivi } from '../odoo/archivio'
 
 // Il titolo e' la chiave del testo: si traduce quando si disegna (la lingua puo' cambiare).
 const SEZIONI: { stato: Attivita['stato']; titolo: string }[] = [
@@ -58,7 +59,7 @@ export default function SchermataAttivita() {
   const router = useRouter()
   const { sessione } = useApp()
   const { aggiorna } = useMenu()
-  const [lista, setLista] = useState<Attivita[] | null>(null)
+  const [lista, setLista] = useState<Attivita[] | null>(() => leggi<Attivita[]>(sessione?.server, sessione?.utente.uid, 'attivita'))
   const [errore, setErrore] = useState('')
   const [ricarica, setRicarica] = useState(false)
   const [fatte, setFatte] = useState<Set<number>>(new Set())
@@ -70,7 +71,9 @@ export default function SchermataAttivita() {
       return
     }
     try {
-      setLista(await caricaAttivita(server, uid))
+      const r = await caricaAttivita(server, uid)
+      setLista(r)
+      scrivi(server, uid, 'attivita', r)
       setErrore('')
     } catch (e) {
       setErrore(e instanceof Error ? e.message : String(e))

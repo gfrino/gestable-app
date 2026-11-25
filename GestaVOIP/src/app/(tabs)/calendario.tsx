@@ -30,6 +30,7 @@ import { raggio, spazio, useColori } from '../../ui/tema'
 import { useApp } from '../../voip/Contesto'
 import { APP } from '../../odoo/capacita'
 import { RichiedeApp } from '../../ui/RichiedeApp'
+import { leggi, scrivi } from '../../odoo/archivio'
 
 const SETTIMANE = 52 // avanti e indietro da oggi
 
@@ -63,7 +64,21 @@ function VistaCalendario() {
   const lunediOggi = useMemo(() => lunedi(oggi), [oggi])
   const [scelto, setScelto] = useState(() => new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate()))
   const [pagina, setPagina] = useState(SETTIMANE)
-  const [perSettimana, setPerSettimana] = useState<Record<string, Evento[]>>({})
+  // Le tre settimane attorno a oggi: si salvano sul telefono e all'apertura si
+  // vedono subito, mentre arrivano quelle aggiornate da Odoo.
+  const vicine = useMemo(
+    () => [-1, 0, 1].map((x) => giornoChiave(piuGiorni(lunediOggi, x * 7))),
+    [lunediOggi],
+  )
+  const [perSettimana, setPerSettimana] = useState<Record<string, Evento[]>>(() => {
+    const copia = leggi<Record<string, Evento[]>>(server, uid, 'calendario') || {}
+    return Object.fromEntries(vicine.filter((k) => copia[k]).map((k) => [k, copia[k]]))
+  })
+  useEffect(() => {
+    if (vicine.every((k) => perSettimana[k])) {
+      scrivi(server, uid, 'calendario', Object.fromEntries(vicine.map((k) => [k, perSettimana[k]])))
+    }
+  }, [perSettimana, vicine, server, uid])
   const [errore, setErrore] = useState('')
   const [ricarica, setRicarica] = useState(false)
   const striscia = useRef<FlatList<number>>(null)

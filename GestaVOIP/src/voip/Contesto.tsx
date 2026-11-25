@@ -11,6 +11,7 @@ import { dimenticaMenu } from '../odoo/capacita'
 import { conTelefono, dimenticaSessione, leggiSessione, salvaSessione, type Sessione } from '../odoo/sessione'
 import { segnalaErrore, utenteCrash } from '../ui/crash'
 import { telefono, type StatoTelefono } from './telefono'
+import { svuota as svuotaArchivio } from '../odoo/archivio'
 
 type Fase = 'caricamento' | 'fuori' | 'dentro'
 
@@ -37,6 +38,7 @@ export function ProviderApp({ children }: { children: ReactNode }) {
     await dimenticaSessione()
     dimenticaMenu()
     dimenticaContesto()
+    svuotaArchivio()
     setSessione(null)
     setFase('fuori')
   }, [])
