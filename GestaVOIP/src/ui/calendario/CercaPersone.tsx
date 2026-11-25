@@ -12,6 +12,7 @@ import { urlAvatar } from '../../odoo/lavoro'
 import { Avatar } from '../Avatar'
 import { Foglio } from '../Foglio'
 import { raggio, spazio, useColori } from '../tema'
+import { Caricamento } from '../Caricamento'
 
 const EMAIL = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
@@ -105,7 +106,7 @@ export function CercaPersone({ aperto, server, tipo, scelti, chiudi, tocca }: Pr
       {errore ? (
         <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>
       ) : !lista ? (
-        <ActivityIndicator style={{ marginTop: spazio.xl }} color={c.primario} />
+        <Caricamento dimensione={36} style={{ marginTop: spazio.xl }} />
       ) : (
         <FlatList
           data={lista}

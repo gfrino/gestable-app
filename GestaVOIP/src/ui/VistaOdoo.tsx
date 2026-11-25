@@ -20,7 +20,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { ActivityIndicator, Alert, BackHandler, Linking, Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native'
+import { Alert, BackHandler, Linking, Platform, Pressable, StyleSheet, Text, useColorScheme, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { WebView, type WebViewNavigation } from 'react-native-webview'
 import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes'
@@ -30,6 +30,7 @@ import { PulsanteMenu } from './MenuLaterale'
 import { APRI_PANNELLO, AURORA, dopoIlCaricamento, MOSTRA_HOME, PRIMA_DEL_CARICAMENTO, vaiA } from './odooIniettato'
 import { Pulsante } from './Pulsante'
 import { spazio, useColori } from './tema'
+import { Caricamento } from './Caricamento'
 
 // Siti di accesso che devono restare dentro l'app, altrimenti il login con
 // Google o Microsoft finirebbe nel browser e Odoo non lo saprebbe mai.
@@ -241,7 +242,7 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
           startInLoadingState
           renderLoading={() => (
             <View style={[StyleSheet.absoluteFill, s.carica, { backgroundColor: c.sfondo }]}>
-              <ActivityIndicator color={c.primario} />
+              <Caricamento />
             </View>
           )}
           onError={() => setErrore(true)}

@@ -1,6 +1,6 @@
 import { Stack } from 'expo-router'
 import { StatusBar } from 'expo-status-bar'
-import { ActivityIndicator, View } from 'react-native'
+import { View } from 'react-native'
 import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { ProviderLingua, useLingua } from '../i18n/Lingua'
 import { conTelefono } from '../odoo/sessione'
@@ -8,6 +8,7 @@ import { ProviderApp, useApp } from '../voip/Contesto'
 import { ProviderAspetto } from '../ui/Aspetto'
 import { ProviderMenu } from '../ui/MenuLaterale'
 import { useColori } from '../ui/tema'
+import { Caricamento } from '../ui/Caricamento'
 
 function Navigazione() {
   const { fase, sessione } = useApp()
@@ -17,7 +18,7 @@ function Navigazione() {
   if (fase === 'caricamento') {
     return (
       <View style={{ flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: c.sfondo }}>
-        <ActivityIndicator color={c.primario} />
+        <Caricamento />
       </View>
     )
   }

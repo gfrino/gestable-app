@@ -23,6 +23,7 @@ import { useMenu } from '../../ui/MenuLaterale'
 import { Testata } from '../../ui/Testata'
 import { spazio, useColori } from '../../ui/tema'
 import { useApp } from '../../voip/Contesto'
+import { Caricamento } from '../../ui/Caricamento'
 
 function giorno(d: Date | null): string {
   if (!d) {
@@ -110,7 +111,7 @@ export default function Conversazione() {
       <Testata titolo={tipo === 'chat' ? nome || t('lavoro.chat.chat') : `# ${nome || t('lavoro.chat.canale')}`} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         {!messaggi ? (
-          <ActivityIndicator style={{ marginTop: spazio.xxl }} color={c.primario} />
+          <Caricamento style={{ marginTop: spazio.xxl }} />
         ) : (
           <FlatList
             ref={lista}

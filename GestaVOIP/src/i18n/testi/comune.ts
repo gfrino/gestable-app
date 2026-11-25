@@ -11,6 +11,7 @@ export const it = {
   'comune.riprova': 'Riprova',
   'comune.esci': 'Esci',
   'comune.nessuno': 'Nessuno',
+  'comune.caricamento': 'Caricamento',
 
   'impostazioni.titolo': 'Impostazioni',
   'impostazioni.lingua': 'Lingua',
@@ -58,6 +59,7 @@ export const en: Record<keyof typeof it, string> = {
   'comune.riprova': 'Try again',
   'comune.esci': 'Sign out',
   'comune.nessuno': 'None',
+  'comune.caricamento': 'Loading',
 
   'impostazioni.titolo': 'Settings',
   'impostazioni.lingua': 'Language',

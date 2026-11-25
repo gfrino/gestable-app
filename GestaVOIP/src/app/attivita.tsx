@@ -6,7 +6,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, Alert, Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native'
+import { Alert, Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { loc, t, tn } from '../i18n'
 import { attivita as caricaAttivita, completaAttivita, percorsoRecord, type Attivita } from '../odoo/lavoro'
@@ -17,6 +17,7 @@ import { Testata } from '../ui/Testata'
 import { raggio, spazio, useColori, type Colori } from '../ui/tema'
 import { useApp } from '../voip/Contesto'
 import { leggi, scrivi } from '../odoo/archivio'
+import { Caricamento } from '../ui/Caricamento'
 
 // Il titolo e' la chiave del testo: si traduce quando si disegna (la lingua puo' cambiare).
 const SEZIONI: { stato: Attivita['stato']; titolo: string }[] = [
@@ -129,7 +130,7 @@ export default function SchermataAttivita() {
       {errore && !lista ? (
         <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>
       ) : !lista ? (
-        <ActivityIndicator style={{ marginTop: spazio.xxl }} color={c.primario} />
+        <Caricamento style={{ marginTop: spazio.xxl }} />
       ) : (
         <SectionList
           sections={sezioni}

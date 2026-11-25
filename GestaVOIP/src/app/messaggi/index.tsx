@@ -6,7 +6,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
+import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { t } from '../../i18n'
 import {
@@ -27,6 +27,7 @@ import { Testata } from '../../ui/Testata'
 import { raggio, spazio, useColori } from '../../ui/tema'
 import { useApp } from '../../voip/Contesto'
 import { leggi, scrivi } from '../../odoo/archivio'
+import { Caricamento } from '../../ui/Caricamento'
 
 type Vista = 'chat' | 'notifiche'
 
@@ -144,7 +145,7 @@ export default function Messaggi() {
       {errore && !chat ? (
         <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>
       ) : !chat || !notifiche ? (
-        <ActivityIndicator style={{ marginTop: spazio.xxl }} color={c.primario} />
+        <Caricamento style={{ marginTop: spazio.xxl }} />
       ) : vista === 'chat' ? (
         <FlatList
           data={chat}

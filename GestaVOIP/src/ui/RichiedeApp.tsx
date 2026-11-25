@@ -10,15 +10,16 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useRef, useState, type ReactNode } from 'react'
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native'
+import { StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { t } from '../i18n'
-import { menuOdoo } from '../odoo/capacita'
+import { menuOdoo, menuSalvato } from '../odoo/capacita'
 import { ErroreOdoo } from '../odoo/client'
 import { useApp } from '../voip/Contesto'
 import { PulsanteMenu } from './MenuLaterale'
 import { Pulsante } from './Pulsante'
 import { raggio, spazio, useColori } from './tema'
+import { Caricamento } from './Caricamento'
 
 type Props = {
   /** xmlid del menu dell'app in Odoo; senza, basta l'accesso con email e password. */
@@ -36,7 +37,19 @@ export function RichiedeApp({ xmlid, app, titolo, icona, children }: Props) {
   const { sessione, esci } = useApp()
   const server = sessione?.server || ''
   const nativo = !!sessione?.utente.uid
-  const [stato, setStato] = useState<Stato>(nativo && xmlid ? 'controllo' : nativo ? 'ok' : 'accesso')
+  const uid = sessione?.utente.uid || 0
+  // Con la risposta salvata all'ultimo avvio la schermata si apre subito; il
+  // controllo con Odoo continua dietro e corregge solo se qualcosa e' cambiato.
+  const [stato, setStato] = useState<Stato>(() => {
+    if (!nativo) {
+      return 'accesso'
+    }
+    if (!xmlid) {
+      return 'ok'
+    }
+    const salvato = menuSalvato(server, uid)
+    return salvato ? (salvato.has(xmlid) ? 'ok' : 'manca') : 'controllo'
+  })
   // Mancava: tornando sulla scheda si richiede a Odoo, senza la copia in memoria.
   const mancava = useRef(false)
 
@@ -52,7 +65,7 @@ export function RichiedeApp({ xmlid, app, titolo, icona, children }: Props) {
         return
       }
       let vivo = true
-      menuOdoo(server, mancava.current)
+      menuOdoo(server, mancava.current, uid)
         .then((m) => {
           mancava.current = !!m && !m.has(xmlid)
           if (vivo) {
@@ -63,7 +76,7 @@ export function RichiedeApp({ xmlid, app, titolo, icona, children }: Props) {
       return () => {
         vivo = false
       }
-    }, [server, nativo, xmlid]),
+    }, [server, nativo, xmlid, uid]),
   )
 
   if (stato === 'ok') {
@@ -108,7 +121,7 @@ function Avviso({
         </Text>
       </View>
       {stato === 'controllo' ? (
-        <ActivityIndicator style={{ marginTop: spazio.xxl }} color={c.primario} />
+        <Caricamento style={{ marginTop: spazio.xxl }} />
       ) : (
         <View style={s.centro}>
           <View style={[s.cerchio, { backgroundColor: c.primarioTenue }]}>

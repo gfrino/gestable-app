@@ -30,6 +30,7 @@ import { Pulsante } from '../../ui/Pulsante'
 import { Testata } from '../../ui/Testata'
 import { raggio, spazio, useColori, type Colori } from '../../ui/tema'
 import { useApp } from '../../voip/Contesto'
+import { Caricamento } from '../../ui/Caricamento'
 
 function coloreStato(stato: Partecipante['stato'], c: Colori): string {
   return stato === 'accepted' ? c.verde : stato === 'declined' ? c.rosso : stato === 'tentative' ? c.ambra : c.testo3
@@ -180,7 +181,7 @@ export default function Appuntamento() {
       {errore && !e ? (
         <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>
       ) : !e ? (
-        <ActivityIndicator style={{ marginTop: spazio.xxl }} color={c.primario} />
+        <Caricamento style={{ marginTop: spazio.xxl }} />
       ) : (
         <ScrollView contentContainerStyle={s.contenuto}>
           <Text style={[s.titolo, { color: c.testo }]}>{e.titolo}</Text>

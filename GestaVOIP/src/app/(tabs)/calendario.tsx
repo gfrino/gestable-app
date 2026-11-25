@@ -10,7 +10,6 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
-  ActivityIndicator,
   FlatList,
   Pressable,
   RefreshControl,
@@ -31,6 +30,7 @@ import { useApp } from '../../voip/Contesto'
 import { APP } from '../../odoo/capacita'
 import { RichiedeApp } from '../../ui/RichiedeApp'
 import { leggi, scrivi } from '../../odoo/archivio'
+import { Caricamento } from '../../ui/Caricamento'
 
 const SETTIMANE = 52 // avanti e indietro da oggi
 
@@ -254,7 +254,7 @@ function VistaCalendario() {
         {errore && !delScelto ? (
           <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>
         ) : !delScelto ? (
-          <ActivityIndicator style={{ marginTop: spazio.xl }} color={c.primario} />
+          <Caricamento style={{ marginTop: spazio.xl }} />
         ) : !delScelto.length ? (
           <View style={s.vuotoBlocco}>
             <Ionicons name="calendar-clear-outline" size={48} color={c.testo3} />

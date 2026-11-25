@@ -10,7 +10,6 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { useRouter } from 'expo-router'
 import { useEffect, useState, type ReactNode } from 'react'
 import {
-  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -53,6 +52,7 @@ import { Testata } from '../Testata'
 import { raggio, spazio, useColori } from '../tema'
 import { CercaPersone } from './CercaPersone'
 import { SceltaGiorno, SceltaOra } from './Selettori'
+import { Caricamento } from '../Caricamento'
 
 /** Durate proposte: il testo e' una chiave (calendario.durata<minuti>). */
 const DURATE = [30, 60, 90, 120, 180]
@@ -251,7 +251,7 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
         {errore ? (
           <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>
         ) : (
-          <ActivityIndicator style={{ marginTop: spazio.xxl }} color={c.primario} />
+          <Caricamento style={{ marginTop: spazio.xxl }} />
         )}
       </SafeAreaView>
     )

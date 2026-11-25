@@ -9,6 +9,7 @@
  */
 
 import { t } from '../i18n'
+import { leggi, scrivi } from './archivio'
 import { ErroreOdoo } from './client'
 
 /** Gli identificativi dei menu che l'app sa usare. */
@@ -68,12 +69,26 @@ async function leggiMenu(server: string): Promise<Set<string> | null> {
   return xmlid.size ? xmlid : null
 }
 
-export function menuOdoo(server: string, forza = false): Promise<Set<string> | null> {
+/**
+ * Le app native trovate l'ultima volta su questo server per questo utente,
+ * salvate sul telefono: all'avvio Calendario e Contatti si aprono subito, e
+ * intanto si ricontrolla con Odoo (il menu completo pesa centinaia di KB).
+ */
+export function menuSalvato(server: string, uid: number): Set<string> | null {
+  const lista = leggi<string[]>(server, uid, 'app-native')
+  return lista ? new Set(lista) : null
+}
+
+export function menuOdoo(server: string, forza = false, uid?: number): Promise<Set<string> | null> {
   const v = memoria.get(server)
   if (v && !forza && Date.now() - v.at < DURATA_MS) {
     return v.menu
   }
-  const menu = leggiMenu(server).catch((e: unknown) => {
+  const letto = leggiMenu(server)
+  if (uid) {
+    void letto.then((m) => m && scrivi(server, uid, 'app-native', APP_NATIVE.filter((x) => m.has(x)))).catch(() => {})
+  }
+  const menu = letto.catch((e: unknown) => {
     memoria.delete(server)
     if (e instanceof ErroreOdoo) {
       throw e

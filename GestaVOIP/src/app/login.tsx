@@ -8,7 +8,6 @@
 
 import { useState } from 'react'
 import {
-  ActivityIndicator,
   Image,
   KeyboardAvoidingView,
   Platform,
@@ -25,6 +24,7 @@ import { ErroreOdoo, normalizzaIndirizzo, type InfoServer } from '../odoo/client
 import { useApp } from '../voip/Contesto'
 import { raggio, spazio, useColori } from '../ui/tema'
 import { Pulsante } from '../ui/Pulsante'
+import { Caricamento } from '../ui/Caricamento'
 
 export default function Login() {
   const c = useColori()
@@ -241,7 +241,7 @@ export default function Login() {
               <Text style={{ color: c.rosso }}>{errore}</Text>
             </View>
           ) : null}
-          {occupato && !info ? <ActivityIndicator style={{ marginTop: spazio.l }} color={c.primario} /> : null}
+          {occupato && !info ? <Caricamento dimensione={36} style={{ marginTop: spazio.l }} /> : null}
         </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>

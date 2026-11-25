@@ -3,7 +3,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { ActivityIndicator, Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { t } from '../../i18n'
 import { schedaContatto, type SchedaContatto } from '../../odoo/contatti'
@@ -16,6 +16,7 @@ import { Pulsante } from '../../ui/Pulsante'
 import { Testata } from '../../ui/Testata'
 import { raggio, spazio, useColori } from '../../ui/tema'
 import { useApp } from '../../voip/Contesto'
+import { Caricamento } from '../../ui/Caricamento'
 
 export default function SchedaContattoSchermata() {
   const c = useColori()
@@ -96,7 +97,7 @@ export default function SchedaContattoSchermata() {
       {errore && !k ? (
         <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>
       ) : !k ? (
-        <ActivityIndicator style={{ marginTop: spazio.xxl }} color={c.primario} />
+        <Caricamento style={{ marginTop: spazio.xxl }} />
       ) : (
         <ScrollView contentContainerStyle={s.contenuto}>
           <View style={s.eroe}>

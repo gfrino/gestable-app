@@ -56,6 +56,8 @@ export default function LayoutSchede() {
           listeners={nome === 'odoo' ? { tabPress: () => inviaOdoo({ tipo: 'home' }) } : undefined}
           options={{
             href: telefono || !SCHEDE_TELEFONO.includes(nome) ? undefined : null,
+            // Odoo si prepara dietro dall'avvio (vedi odoo.tsx): toccandolo e' gia' pronto.
+            lazy: nome === 'odoo' ? false : undefined,
             title: titoloScheda(nome),
             tabBarIcon: ({ color, size }) => <Ionicons name={ICONE_SCHEDE[nome]} color={color} size={size} />,
           }}

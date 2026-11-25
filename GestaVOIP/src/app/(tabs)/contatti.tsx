@@ -19,6 +19,7 @@ import { useApp } from '../../voip/Contesto'
 import { APP } from '../../odoo/capacita'
 import { RichiedeApp } from '../../ui/RichiedeApp'
 import { leggi, scrivi } from '../../odoo/archivio'
+import { Caricamento } from '../../ui/Caricamento'
 
 const PAGINA = 60
 // Chiavi dei testi: t() si chiama mostrando la lista (la lingua puo' cambiare).
@@ -175,7 +176,7 @@ function ElencoContatti() {
       {errore && !lista ? (
         <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>
       ) : !lista ? (
-        <ActivityIndicator style={{ marginTop: spazio.xxl }} color={c.primario} />
+        <Caricamento style={{ marginTop: spazio.xxl }} />
       ) : (
         <SectionList
           sections={sezioni}
