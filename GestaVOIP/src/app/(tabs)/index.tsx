@@ -15,6 +15,7 @@ import { cercaContatti, type Contatto } from '../../voip/api'
 import { conTelefono } from '../../odoo/sessione'
 import { useApp } from '../../voip/Contesto'
 import { telefono } from '../../voip/telefono'
+import { schedaAvvio, useAspetto, type Scheda } from '../../ui/Aspetto'
 import { PulsanteMenu } from '../../ui/MenuLaterale'
 import { StatoLinea } from '../../ui/StatoLinea'
 import { raggio, spazio, useColori } from '../../ui/tema'
@@ -26,21 +27,38 @@ const TASTI: [string, string][] = [
   ['*', ''], ['0', '+'], ['#', ''],
 ]
 
+// La scheda scelta come prima in Impostazioni si apre una volta sola, all'avvio:
+// dopo, toccando Tastierino, si resta qui.
+let avvioFatto = false
+
 /**
- * All'avvio l'app apre sempre questa scheda («/»): senza VOIP AI il tastierino
- * non c'e' e si va su Odoo, come dopo l'accesso.
+ * All'avvio l'app apre sempre questa scheda («/»): da qui si passa alla prima
+ * scheda scelta in Impostazioni; senza VOIP AI il tastierino non c'e' e si va
+ * sulla prima scheda disponibile (Odoo, se non si e' scelto altro).
  */
 export default function SchedaTastierino() {
   const { sessione } = useApp()
   const router = useRouter()
+  const { aspetto } = useAspetto()
   const senza = !!sessione && !conTelefono(sessione)
+  const prima = schedaAvvio(aspetto, !senza)
+  const vai = prima !== 'index' && (senza || !avvioFatto)
+  // Si decide una volta, quando la scheda si monta: se poi l'ordine cambia
+  // (da Impostazioni) non si deve saltare via dalla schermata aperta.
+  const salto = useRef<Exclude<Scheda, 'index'> | ''>(vai ? (prima as Exclude<Scheda, 'index'>) : '')
+  // Il tastierino resta pronto per quando lo si tocca dopo l'avvio.
+  const [pronto, setPronto] = useState(!vai)
   // <Redirect> qui non basta: alla prima navigazione dell'app viene ignorato.
   useEffect(() => {
-    if (senza) {
-      router.replace('/odoo')
+    avvioFatto = true
+    if (salto.current) {
+      router.replace(`/${salto.current}`)
     }
-  }, [senza, router])
-  return senza ? null : <Tastierino />
+    // Una volta sola, al montaggio: dopo il salto il tastierino si mostra quando lo si tocca.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setPronto(true)
+  }, [router])
+  return senza || !pronto ? null : <Tastierino />
 }
 
 function Tastierino() {

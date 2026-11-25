@@ -8,7 +8,7 @@ import { useFocusEffect } from 'expo-router'
 import * as Updates from 'expo-updates'
 import { useCallback, useState } from 'react'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, View } from 'react-native'
+import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, useColorScheme, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LINGUE, linguaTelefono, loc, t, type SceltaLingua } from '../i18n'
 import { useLingua } from '../i18n/Lingua'
@@ -16,6 +16,7 @@ import { conTelefono } from '../odoo/sessione'
 import { preferenze, type Preferenze } from '../voip/api'
 import { useApp, useTelefono } from '../voip/Contesto'
 import { telefono } from '../voip/telefono'
+import { COLORI_TEMA, ICONE_SCHEDE, schedaAvvio, schedeVisibili, titoloScheda, useAspetto, type ColoreTema, type Modo } from '../ui/Aspetto'
 import { Pulsante } from '../ui/Pulsante'
 import { Testata } from '../ui/Testata'
 import { raggio, spazio, useColori, type Colori } from '../ui/tema'
@@ -47,6 +48,8 @@ export default function Impostazioni() {
   const { sessione, esci } = useApp()
   const { disponibile } = useTelefono()
   const { scelta, cambia } = useLingua()
+  const { aspetto, cambia: cambiaAspetto } = useAspetto()
+  const scuro = useColorScheme() === 'dark'
   const telefonoAttivo = conTelefono(sessione)
   const [pref, setPref] = useState<Preferenze | null>(null)
   const [uscita, setUscita] = useState(false)
@@ -92,6 +95,26 @@ export default function Impostazioni() {
         },
       },
     ])
+  }
+
+  const modi: { valore: Modo; nome: string; testo?: string }[] = [
+    { valore: 'auto', nome: t('impostazioni.modoAuto'), testo: t('impostazioni.modoAutoTesto') },
+    { valore: 'chiaro', nome: t('impostazioni.modoChiaro') },
+    { valore: 'scuro', nome: t('impostazioni.modoScuro') },
+  ]
+  // Ordine delle schede: si spostano solo quelle che questo utente vede (senza
+  // telefono niente Tastierino e Recenti), le altre restano al loro posto.
+  const visibili = schedeVisibili(aspetto.schede, telefonoAttivo)
+  const avvio = schedaAvvio(aspetto, telefonoAttivo)
+  function sposta(i: number, verso: -1 | 1) {
+    const j = i + verso
+    if (j < 0 || j >= visibili.length) {
+      return
+    }
+    const nuove = [...visibili]
+    ;[nuove[i], nuove[j]] = [nuove[j], nuove[i]]
+    let k = 0
+    cambiaAspetto({ schede: aspetto.schede.map((x) => (visibili.includes(x) ? nuove[k++] : x)), personalizzato: true })
   }
 
   const scheda = [s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]
@@ -154,6 +177,95 @@ export default function Impostazioni() {
           ))}
         </View>
 
+        <Text style={[s.sezione, { color: c.testo2 }]}>{t('impostazioni.aspetto')}</Text>
+        <View style={scheda}>
+          {modi.map((m, i) => (
+            <View key={m.valore}>
+              {i > 0 ? <View style={[s.sep, { backgroundColor: c.bordo }]} /> : null}
+              <Pressable
+                onPress={() => cambiaAspetto({ modo: m.valore })}
+                style={({ pressed }) => pressed && { backgroundColor: c.superficie2 }}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: aspetto.modo === m.valore }}
+              >
+                <Riga c={c} titolo={m.nome} testo={m.testo}>
+                  {aspetto.modo === m.valore ? <Ionicons name="checkmark" size={22} color={c.primario} /> : null}
+                </Riga>
+              </Pressable>
+            </View>
+          ))}
+        </View>
+
+        <Text style={[s.sezione, { color: c.testo2 }]}>{t('impostazioni.colore')}</Text>
+        <View style={[scheda, s.colori]}>
+          {(Object.keys(COLORI_TEMA) as ColoreTema[]).map((nome) => {
+            const scelto = aspetto.colore === nome
+            const tinta = COLORI_TEMA[nome][scuro ? 'scuro' : 'chiaro'][0]
+            const etichetta = t(`impostazioni.colore${nome.charAt(0).toUpperCase()}${nome.slice(1)}`)
+            return (
+              <Pressable
+                key={nome}
+                onPress={() => cambiaAspetto({ colore: nome })}
+                style={s.colore}
+                accessibilityRole="radio"
+                accessibilityLabel={etichetta}
+                accessibilityState={{ selected: scelto }}
+              >
+                <View style={[s.cerchio, { backgroundColor: tinta, borderColor: scelto ? c.testo : 'transparent' }]}>
+                  {scelto ? <Ionicons name="checkmark" size={22} color={scuro ? '#0E1018' : '#FFFFFF'} /> : null}
+                </View>
+                <Text style={[s.coloreNome, { color: scelto ? c.testo : c.testo2 }]} numberOfLines={1}>
+                  {etichetta}
+                </Text>
+              </Pressable>
+            )
+          })}
+        </View>
+
+        <Text style={[s.sezione, { color: c.testo2 }]}>{t('impostazioni.schede')}</Text>
+        <View style={scheda}>
+          {visibili.map((nome, i) => (
+            <View key={nome}>
+              {i > 0 ? <View style={[s.sep, { backgroundColor: c.bordo }]} /> : null}
+              <View style={s.rigaScheda}>
+                <Ionicons name={ICONE_SCHEDE[nome]} size={22} color={nome === avvio ? c.primario : c.testo2} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[s.rigaTitolo, { color: c.testo }]} numberOfLines={1}>
+                    {titoloScheda(nome)}
+                  </Text>
+                  {nome === avvio ? (
+                    <Text style={[s.rigaTesto, { color: c.primario }]}>{t('impostazioni.schedeAvvio')}</Text>
+                  ) : null}
+                </View>
+                <Pressable
+                  onPress={() => sposta(i, -1)}
+                  disabled={i === 0}
+                  hitSlop={6}
+                  style={({ pressed }) => [s.freccia, { backgroundColor: pressed ? c.superficie2 : 'transparent', opacity: i === 0 ? 0.25 : 1 }]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('impostazioni.schedeSu', { nome: titoloScheda(nome) })}
+                >
+                  <Ionicons name="chevron-up" size={22} color={c.testo} />
+                </Pressable>
+                <Pressable
+                  onPress={() => sposta(i, 1)}
+                  disabled={i === visibili.length - 1}
+                  hitSlop={6}
+                  style={({ pressed }) => [
+                    s.freccia,
+                    { backgroundColor: pressed ? c.superficie2 : 'transparent', opacity: i === visibili.length - 1 ? 0.25 : 1 },
+                  ]}
+                  accessibilityRole="button"
+                  accessibilityLabel={t('impostazioni.schedeGiu', { nome: titoloScheda(nome) })}
+                >
+                  <Ionicons name="chevron-down" size={22} color={c.testo} />
+                </Pressable>
+              </View>
+            </View>
+          ))}
+        </View>
+        <Text style={[s.nota, { color: c.testo3 }]}>{t('impostazioni.schedeTesto')}</Text>
+
         <View style={scheda}>
           <Riga c={c} titolo={sessione?.utente.name || ''} testo={sessione?.utente.login} />
           <View style={[s.sep, { backgroundColor: c.bordo }]} />
@@ -184,4 +296,11 @@ const s = StyleSheet.create({
   sep: { height: StyleSheet.hairlineWidth, marginLeft: spazio.l },
   sezione: { fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: -spazio.s, marginLeft: spazio.xs },
   versione: { textAlign: 'center', fontSize: 12, marginTop: spazio.s },
+  nota: { fontSize: 13, marginTop: -spazio.s, marginHorizontal: spazio.xs },
+  colori: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: spazio.l, paddingHorizontal: spazio.m },
+  colore: { alignItems: 'center', gap: 6, flex: 1 },
+  cerchio: { width: 44, height: 44, borderRadius: 22, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
+  coloreNome: { fontSize: 12, fontWeight: '600' },
+  rigaScheda: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, paddingVertical: spazio.s, paddingLeft: spazio.l, paddingRight: spazio.s, minHeight: 56 },
+  freccia: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
 })

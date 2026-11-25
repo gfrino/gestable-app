@@ -1,8 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { Tabs, useRouter } from 'expo-router'
 import { useEffect, useRef } from 'react'
-import { t } from '../../i18n'
 import { conTelefono } from '../../odoo/sessione'
+import { ICONE_SCHEDE, SCHEDE_TELEFONO, schedaAvvio, titoloScheda, useAspetto } from '../../ui/Aspetto'
 import { useApp, useTelefono } from '../../voip/Contesto'
 import { inviaOdoo } from '../../ui/comandiOdoo'
 import { useColori } from '../../ui/tema'
@@ -33,9 +33,14 @@ export default function LayoutSchede() {
     }
   }, [chiamata, router])
 
+  // Ordine scelto in Impostazioni; la prima scheda visibile si apre all'avvio.
+  const { aspetto } = useAspetto()
+  const { schede } = aspetto
+  const prima = schedaAvvio(aspetto, telefono)
+
   return (
     <Tabs
-      initialRouteName={telefono ? 'index' : 'odoo'}
+      initialRouteName={prima}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: c.primario,
@@ -43,45 +48,19 @@ export default function LayoutSchede() {
         tabBarStyle: { backgroundColor: c.superficie, borderTopColor: c.bordo },
       }}
     >
-      <Tabs.Screen
-        name="index"
-        options={{
-          href: telefono ? undefined : null,
-          title: t('schede.tastierino'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="keypad" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="recenti"
-        options={{
-          href: telefono ? undefined : null,
-          title: t('schede.recenti'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="time" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="contatti"
-        options={{
-          title: t('schede.contatti'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="people" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="calendario"
-        options={{
-          title: t('schede.calendario'),
-          tabBarIcon: ({ color, size }) => <Ionicons name="calendar" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="odoo"
-        // Il tasto Odoo porta sempre alla home di Odoo, anche se si e' gia' li'.
-        listeners={{ tabPress: () => inviaOdoo({ tipo: 'home' }) }}
-        options={{
-          title: 'Odoo',
-          tabBarIcon: ({ color, size }) => <Ionicons name="apps" color={color} size={size} />,
-        }}
-      />
+      {schede.map((nome) => (
+        <Tabs.Screen
+          key={nome}
+          name={nome}
+          // Il tasto Odoo porta sempre alla home di Odoo, anche se si e' gia' li'.
+          listeners={nome === 'odoo' ? { tabPress: () => inviaOdoo({ tipo: 'home' }) } : undefined}
+          options={{
+            href: telefono || !SCHEDE_TELEFONO.includes(nome) ? undefined : null,
+            title: titoloScheda(nome),
+            tabBarIcon: ({ color, size }) => <Ionicons name={ICONE_SCHEDE[nome]} color={color} size={size} />,
+          }}
+        />
+      ))}
     </Tabs>
   )
 }

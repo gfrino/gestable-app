@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context'
 import { ProviderLingua, useLingua } from '../i18n/Lingua'
 import { conTelefono } from '../odoo/sessione'
 import { ProviderApp, useApp } from '../voip/Contesto'
+import { ProviderAspetto } from '../ui/Aspetto'
 import { ProviderMenu } from '../ui/MenuLaterale'
 import { useColori } from '../ui/tema'
 
@@ -65,10 +66,12 @@ export default function Radice() {
   return (
     <SafeAreaProvider>
       <ProviderLingua>
-        <ProviderApp>
-          <StatusBar style="auto" />
-          <ConLingua />
-        </ProviderApp>
+        <ProviderAspetto>
+          <ProviderApp>
+            <StatusBar style="auto" />
+            <ConLingua />
+          </ProviderApp>
+        </ProviderAspetto>
       </ProviderLingua>
     </SafeAreaProvider>
   )

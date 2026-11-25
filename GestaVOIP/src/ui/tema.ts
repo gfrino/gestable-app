@@ -1,4 +1,5 @@
 import { useColorScheme } from 'react-native'
+import { COLORI_TEMA, useAspetto } from './Aspetto'
 
 // Colori presi dal logo GestABLE (GestABLE/Grafiche): viola per le azioni,
 // verde per chiamare. Le tonalita' sono scurite o schiarite quanto basta per
@@ -47,8 +48,20 @@ export type Colori = typeof chiaro
 /** La schermata di chiamata e' sempre scura, come quella del telefono. */
 export const coloriChiamata: Colori = scuro
 
+const conColore = new Map<string, Colori>()
+
+/** I colori dello schema attivo (telefono o scelta in Impostazioni) con il colore del tema scelto. */
 export function useColori(): Colori {
-  return useColorScheme() === 'dark' ? scuro : chiaro
+  const schema = useColorScheme() === 'dark' ? 'scuro' : 'chiaro'
+  const { colore } = useAspetto().aspetto
+  const chiave = `${schema}-${colore}`
+  let colori = conColore.get(chiave)
+  if (!colori) {
+    const [primario, primarioTenue] = COLORI_TEMA[colore][schema]
+    colori = { ...(schema === 'scuro' ? scuro : chiaro), primario, primarioTenue }
+    conColore.set(chiave, colori)
+  }
+  return colori
 }
 
 export const spazio = { xs: 4, s: 8, m: 12, l: 16, xl: 24, xxl: 32 }
