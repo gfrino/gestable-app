@@ -65,23 +65,21 @@ const CSS = `
   display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; }
 #gv-home .gv-vuoto { text-align: center; color: #8A90A3; margin-top: 40px; font-size: 15px; }
 @media (prefers-color-scheme: dark) {
-  /* Sfondo scuro con texture: grana fine, puntini leggeri e due aloni dei colori
-     dell'app (viola in alto, verde in basso). Sta in ::before, fermo mentre la
-     griglia scorre; niente immagini da scaricare. */
-  #gv-home { background: #0A0C13; color: #F2F3F8; }
+  /* Sfondo «Aurora»: blu notte non troppo scuro con un alone viola in alto e uno
+     verde in basso (i colori dell'app). Sta in ::before, fermo mentre la griglia
+     scorre; niente immagini da scaricare. */
+  #gv-home { background: #232846; color: #F2F3F8; }
   #gv-home::before { content: ''; position: fixed; inset: 0; z-index: -1; pointer-events: none;
     background:
-      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)' opacity='.11'/%3E%3C/svg%3E"),
-      radial-gradient(rgba(255,255,255,.06) 1px, transparent 1.4px),
-      radial-gradient(110% 65% at 0% 0%, rgba(138,63,209,.42), transparent 62%),
-      radial-gradient(70% 45% at 100% 8%, rgba(90,110,255,.14), transparent 60%),
-      radial-gradient(95% 60% at 100% 100%, rgba(31,187,103,.20), transparent 65%),
-      linear-gradient(180deg, #10131F 0%, #0A0C13 55%, #08090F 100%);
-    background-size: 180px 180px, 22px 22px, auto, auto, auto, auto; }
-  #gv-home .gv-cerca { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.10);
-    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 8px 24px rgba(0,0,0,.25); }
-  #gv-home .gv-icona { background: #FFFFFF; box-shadow: 0 6px 18px rgba(0,0,0,.45), 0 0 0 1px rgba(255,255,255,.08); }
-  #gv-home .gv-nome { color: #E7E9F2; }
+      radial-gradient(80% 55% at 15% 10%, #6A4BB0 0%, transparent 70%),
+      radial-gradient(75% 55% at 90% 95%, #1F7A5C 0%, transparent 70%),
+      linear-gradient(180deg, #2C3159 0%, #232846 100%); }
+  #gv-home .gv-cerca { background: rgba(255,255,255,.12); border-color: rgba(255,255,255,.18);
+    -webkit-backdrop-filter: blur(14px); backdrop-filter: blur(14px); box-shadow: 0 8px 24px rgba(0,0,0,.18); }
+  #gv-home .gv-cerca input::placeholder { color: rgba(255,255,255,.6); }
+  #gv-home .gv-icona { background: #FFFFFF; box-shadow: 0 6px 16px rgba(0,0,0,.30), 0 0 0 1px rgba(255,255,255,.10); }
+  #gv-home .gv-nome { color: #F2F3F8; }
+  #gv-home .gv-vuoto { color: rgba(255,255,255,.7); }
 }
 `
 
