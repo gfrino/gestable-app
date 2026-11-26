@@ -3,7 +3,6 @@
  * di Odoo: menzioni e messaggi sui record che segui).
  */
 
-import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
 import { FlatList, Pressable, RefreshControl, StyleSheet, Text, View } from 'react-native'
@@ -23,6 +22,7 @@ import { quandoBreve, testoDaHtml } from '../../odoo/testo'
 import { Avatar } from '../../ui/Avatar'
 import { inviaOdoo, rottaOdoo } from '../../ui/comandiOdoo'
 import { useMenu } from '../../ui/MenuLaterale'
+import { StatoVuoto } from '../../ui/StatoVuoto'
 import { Testata } from '../../ui/Testata'
 import { raggio, spazio, useColori } from '../../ui/tema'
 import { useApp } from '../../voip/Contesto'
@@ -103,8 +103,8 @@ export default function Messaggi() {
     void carica()
   }
 
-  // Come in Odoo: quante chat hanno qualcosa da leggere, non quanti messaggi.
-  const nonLettiChat = (chat || []).filter((x) => x.nonLetti > 0).length
+  // Come in Odoo 20: quante chat (a due o di gruppo, non silenziate) hanno qualcosa da leggere.
+  const nonLettiChat = (chat || []).filter((x) => x.nonLetti > 0 && x.conta !== false).length
 
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
@@ -151,7 +151,9 @@ export default function Messaggi() {
           data={chat}
           keyExtractor={(x) => String(x.id)}
           refreshControl={<RefreshControl refreshing={ricarica} onRefresh={tiraGiu} tintColor={c.primario} />}
-          ListEmptyComponent={<Text style={[s.vuoto, { color: c.testo3 }]}>{t('lavoro.messaggi.nessunaChat')}</Text>}
+          ListEmptyComponent={
+            <StatoVuoto icona="chatbubbles-outline" titolo={t('lavoro.messaggi.nessunaChat')} testo={t('lavoro.messaggi.nessunaChatTesto')} />
+          }
           renderItem={({ item }) => {
             const anteprima = item.ultimo ? testoDaHtml(item.ultimo.testo).replace(/\s+/g, ' ') : ''
             return (
@@ -200,10 +202,7 @@ export default function Messaggi() {
           keyExtractor={(x) => String(x.id)}
           refreshControl={<RefreshControl refreshing={ricarica} onRefresh={tiraGiu} tintColor={c.primario} />}
           ListEmptyComponent={
-            <View style={s.vuotoBlocco}>
-              <Ionicons name="checkmark-done-circle" size={56} color={c.verde} />
-              <Text style={[s.vuoto, { color: c.testo2, marginTop: spazio.s }]}>{t('lavoro.messaggi.nessunaNotifica')}</Text>
-            </View>
+            <StatoVuoto icona="mail-open-outline" titolo={t('lavoro.messaggi.tuttoLetto')} testo={t('lavoro.messaggi.nessunaNotifica')} />
           }
           renderItem={({ item }) => (
             <Pressable
@@ -247,5 +246,4 @@ const s = StyleSheet.create({
   badge: { minWidth: 22, height: 22, borderRadius: 11, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' },
   badgeTesto: { fontSize: 12, fontWeight: '800' },
   vuoto: { fontSize: 15, textAlign: 'center', marginTop: spazio.xl, paddingHorizontal: spazio.xl },
-  vuotoBlocco: { alignItems: 'center', marginTop: spazio.xxl * 2 },
 })

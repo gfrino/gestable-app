@@ -12,6 +12,9 @@ export const it = {
   'lavoro.messaggi.chat': 'Chat',
   'lavoro.messaggi.notifiche': 'Notifiche',
   'lavoro.messaggi.nessunaChat': 'Nessuna chat.',
+  'lavoro.messaggi.tuttoLetto': 'Tutto letto',
+  'lavoro.messaggi.nessunaChatTesto': 'Le conversazioni con i colleghi in Odoo compaiono qui.',
+  'lavoro.attivita.tuttoFatto': 'Tutto fatto',
   'lavoro.messaggi.tu': 'Tu',
   'lavoro.messaggi.nessunaNotifica': 'Nessuna notifica da leggere.',
 
@@ -40,7 +43,7 @@ export const it = {
   'lavoro.attivita.giorniFa_piu': '{n} giorni fa',
   'lavoro.attivita.traGiorni_uno': 'tra {n} giorno',
   'lavoro.attivita.traGiorni_piu': 'tra {n} giorni',
-  'lavoro.attivita.vuoto': 'Nessuna attività: tutto fatto.',
+  'lavoro.attivita.vuoto': 'Nessuna attività da fare.',
   'lavoro.attivita.apreRecord': 'Apre il record in Odoo',
   'lavoro.attivita.segnaFatta': 'Segna fatta',
 }
@@ -55,6 +58,9 @@ export const en: Record<keyof typeof it, string> = {
   'lavoro.messaggi.chat': 'Chats',
   'lavoro.messaggi.notifiche': 'Inbox',
   'lavoro.messaggi.nessunaChat': 'No chats.',
+  'lavoro.messaggi.tuttoLetto': 'All caught up',
+  'lavoro.messaggi.nessunaChatTesto': 'Conversations with your colleagues in Odoo show up here.',
+  'lavoro.attivita.tuttoFatto': 'All done',
   'lavoro.messaggi.tu': 'You',
   'lavoro.messaggi.nessunaNotifica': 'No unread notifications.',
 
@@ -81,7 +87,7 @@ export const en: Record<keyof typeof it, string> = {
   'lavoro.attivita.giorniFa_piu': '{n} days ago',
   'lavoro.attivita.traGiorni_uno': 'in {n} day',
   'lavoro.attivita.traGiorni_piu': 'in {n} days',
-  'lavoro.attivita.vuoto': 'No activities: all done.',
+  'lavoro.attivita.vuoto': 'No activities to do.',
   'lavoro.attivita.apreRecord': 'Opens the record in Odoo',
   'lavoro.attivita.segnaFatta': 'Mark as done',
 }

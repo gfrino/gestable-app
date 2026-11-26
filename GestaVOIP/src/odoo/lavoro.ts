@@ -85,10 +85,34 @@ export type Conversazione = {
   /** Per le chat a due: il partner dall'altra parte (per la foto). */
   partnerId: Id | null
   nonLetti: number
+  /** Conta nel pallino e nel numero «Chat»: chat a due o di gruppo, non silenziata. */
+  conta: boolean
   ultimo: { testo: string; autore: string; data: Date | null; mio: boolean } | null
 }
 
-type Membro = { channel_id: M2o; partner_id: M2o; message_unread_counter?: number }
+type Membro = {
+  channel_id: M2o
+  partner_id: M2o
+  message_unread_counter?: number
+  mute_until_dt?: string | false
+  custom_notifications?: string | false
+}
+
+/**
+ * Come il contatore di Odoo 20: contano solo le chat a due e di gruppo, non
+ * silenziate. I canali pubblici, WhatsApp, la chat del sito e simili si leggono
+ * nella lista ma non accendono il pallino: non li legge quasi mai nessuno in Odoo.
+ */
+function contaPerPallino(tipo: string, m: Membro | undefined): boolean {
+  if (tipo !== 'chat' && tipo !== 'group') {
+    return false
+  }
+  if (m?.custom_notifications === 'no_notif') {
+    return false
+  }
+  const muto = m?.mute_until_dt ? dataOdoo(m.mute_until_dt) : null
+  return !muto || muto.getTime() < Date.now()
+}
 type Canale = { id: Id; name: string; channel_type: string }
 type Messaggio = {
   id: Id
@@ -102,7 +126,7 @@ type Messaggio = {
 
 /** I miei canali e chat: quelli fissati in Discuss, come li mostra Odoo. */
 async function mieiCanali(server: string, io: Id): Promise<Membro[]> {
-  const campi = ['channel_id', 'message_unread_counter']
+  const campi = ['channel_id', 'message_unread_counter', 'mute_until_dt', 'custom_notifications']
   try {
     return await callKw<Membro[]>(server, 'discuss.channel.member', 'search_read', [], {
       domain: [['partner_id', '=', io], ['is_pinned', '=', true]],
@@ -145,7 +169,7 @@ export async function conversazioni(server: string, uid: number): Promise<Conver
     ? await callKw<{ id: Id; name: string }[]>(server, 'res.partner', 'read', [idPartner, ['name']]).catch(() => [])
     : []
   const nomeDi = new Map(nomi.map((n) => [n.id, n.name]))
-  const nonLetti = new Map(miei.map((m) => [m.channel_id ? m.channel_id[0] : 0, m.message_unread_counter || 0]))
+  const membro = new Map(miei.map((m) => [m.channel_id ? m.channel_id[0] : 0, m]))
   const ultimo = new Map<Id, Messaggio>()
   for (const m of ultimi) {
     if (!ultimo.has(m.res_id)) {
@@ -162,7 +186,8 @@ export async function conversazioni(server: string, uid: number): Promise<Conver
         tipo: c.channel_type,
         nome: altro?.partner_id ? nomeDi.get(altro.partner_id[0]) || altro.partner_id[1] : c.name,
         partnerId: altro?.partner_id ? altro.partner_id[0] : null,
-        nonLetti: nonLetti.get(c.id) || 0,
+        nonLetti: membro.get(c.id)?.message_unread_counter || 0,
+        conta: contaPerPallino(c.channel_type, membro.get(c.id)),
         ultimo: u
           ? {
               testo: u.body,
@@ -357,7 +382,7 @@ export async function contatori(server: string, uid: number): Promise<Contatori>
   const io = await mioPartner(server, uid)
   const oggi = new Date()
   const fineOggi = `${oggi.getFullYear()}-${String(oggi.getMonth() + 1).padStart(2, '0')}-${String(oggi.getDate()).padStart(2, '0')}`
-  const [notifiche, chat, scadute] = await Promise.all([
+  const [notifiche, miei, scadute] = await Promise.all([
     callKw<number>(server, 'mail.message', 'search_count', [[['needaction', '=', true]]]).catch(() => 0),
     // message_unread_counter e' calcolato, non si puo' filtrare: si somma qui.
     mieiCanali(server, io).catch(() => [] as Membro[]),
@@ -365,9 +390,16 @@ export async function contatori(server: string, uid: number): Promise<Contatori>
       () => 0,
     ),
   ])
+  // Come Odoo 20: le notifiche, piu' una per ogni chat (a due o di gruppo) con qualcosa da leggere.
+  const daLeggere = miei.filter((m) => (m.message_unread_counter || 0) > 0 && m.channel_id)
+  const ids = daLeggere.map((m) => (m.channel_id ? m.channel_id[0] : 0))
+  const tipi = ids.length
+    ? await callKw<{ id: Id; channel_type: string }[]>(server, 'discuss.channel', 'read', [ids, ['channel_type']]).catch(() => [])
+    : []
+  const tipoDi = new Map(tipi.map((c) => [c.id, c.channel_type]))
+  const chat = daLeggere.filter((m) => m.channel_id && contaPerPallino(tipoDi.get(m.channel_id[0]) || '', m)).length
   return {
-    // Come Odoo: le notifiche, piu' le chat con qualcosa da leggere (una per chat).
-    messaggi: notifiche + chat.filter((m) => (m.message_unread_counter || 0) > 0).length,
+    messaggi: notifiche + chat,
     attivita: scadute,
   }
 }

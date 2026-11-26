@@ -13,6 +13,7 @@ import { attivita as caricaAttivita, completaAttivita, percorsoRecord, type Atti
 import { testoDaHtml } from '../odoo/testo'
 import { inviaOdoo, rottaOdoo } from '../ui/comandiOdoo'
 import { useMenu } from '../ui/MenuLaterale'
+import { StatoVuoto } from '../ui/StatoVuoto'
 import { Testata } from '../ui/Testata'
 import { raggio, spazio, useColori, type Colori } from '../ui/tema'
 import { useApp } from '../voip/Contesto'
@@ -138,12 +139,7 @@ export default function SchermataAttivita() {
           stickySectionHeadersEnabled={false}
           contentContainerStyle={{ paddingBottom: spazio.xxl }}
           refreshControl={<RefreshControl refreshing={ricarica} onRefresh={tiraGiu} tintColor={c.primario} />}
-          ListEmptyComponent={
-            <View style={s.vuotoBlocco}>
-              <Ionicons name="sunny" size={56} color={c.ambra} />
-              <Text style={[s.vuoto, { color: c.testo2, marginTop: spazio.s }]}>{t('lavoro.attivita.vuoto')}</Text>
-            </View>
-          }
+          ListEmptyComponent={<StatoVuoto icona="checkmark-done" titolo={t('lavoro.attivita.tuttoFatto')} testo={t('lavoro.attivita.vuoto')} />}
           renderSectionHeader={({ section }) => (
             <View style={s.sezione}>
               <View style={[s.sezionePunto, { backgroundColor: colore(section.stato, c) }]} />
@@ -227,5 +223,4 @@ const s = StyleSheet.create({
   nota: { fontSize: 13, lineHeight: 18 },
   spunta: { width: 36, height: 36, borderRadius: 18, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },
   vuoto: { fontSize: 15, textAlign: 'center', marginTop: spazio.xl, paddingHorizontal: spazio.xl },
-  vuotoBlocco: { alignItems: 'center', marginTop: spazio.xxl * 2 },
 })

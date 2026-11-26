@@ -111,7 +111,8 @@ export function useMenu(): ValoreMenu {
 export function PulsanteMenu({ chiaro }: { chiaro?: boolean }) {
   const c = useColori()
   const { apri, contatori: n } = useMenu()
-  const totale = n.messaggi + n.attivita
+  // Il pallino e' per i messaggi; le attivita' hanno il loro numero nel menu.
+  const totale = n.messaggi
   return (
     <Pressable
       onPress={apri}
