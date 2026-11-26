@@ -16,6 +16,7 @@ import { loc, t, tn } from '../i18n'
 import { APP, menuOdoo, menuSalvato } from '../odoo/capacita'
 import { cambiaPresenza, contatori, presenza, urlAvatar, type Contatori, type Presenza } from '../odoo/lavoro'
 import { conTelefono } from '../odoo/sessione'
+import { controllaLogo, logoSalvato, type LogoCliente } from '../odoo/logoCliente'
 import { iconaSpese } from '../odoo/spese'
 import { useApp } from '../voip/Contesto'
 import { Avatar } from './Avatar'
@@ -329,12 +330,45 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
         </View>
 
         <View style={{ flex: 1 }} />
+        <LogoAzienda server={server} />
         <Voce c={c} icona="log-out-outline" testo={t('comune.esci')} onPress={chiediUscita} pericolo />
         <Text style={[s.versione, { color: c.testo3 }]}>
           GestABLE {Application.nativeApplicationVersion || ''}
         </Text>
       </Animated.View>
     </Modal>
+  )
+}
+
+/**
+ * Il logo dell'azienda (da GestaClient), largo quanto il menu e con le sue
+ * proporzioni. Su un riquadro bianco: i loghi scuri su trasparente si leggono
+ * anche in tema scuro. Senza logo (404) non occupa spazio.
+ */
+function LogoAzienda({ server }: { server: string }) {
+  const c = useColori()
+  const [logo, setLogo] = useState<LogoCliente | undefined>(() => (server ? logoSalvato(server) : undefined))
+
+  useEffect(() => {
+    let vivo = true
+    if (server) {
+      void controllaLogo(server).then((l) => vivo && l !== undefined && setLogo(l))
+    }
+    return () => {
+      vivo = false
+    }
+  }, [server])
+
+  if (!logo) {
+    return null
+  }
+  const largo = LARGHEZZA - spazio.l * 2 - spazio.m * 2
+  // Loghi quadrati o alti: non piu' di 72 punti, centrati.
+  const alto = Math.min(72, largo / logo.rapporto)
+  return (
+    <View style={[s.logo, { borderColor: c.bordo }]} accessibilityRole="image" accessibilityLabel="Logo">
+      <Image source={{ uri: logo.url, cache: 'force-cache' }} style={{ width: alto * logo.rapporto, height: alto }} resizeMode="contain" />
+    </View>
   )
 }
 
@@ -381,4 +415,13 @@ const s = StyleSheet.create({
   numero: { minWidth: 26, height: 22, borderRadius: 11, paddingHorizontal: 7, alignItems: 'center', justifyContent: 'center' },
   numeroTesto: { fontSize: 12, fontWeight: '800' },
   versione: { fontSize: 12, textAlign: 'center', marginTop: spazio.s },
+  logo: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: spazio.m,
+    marginBottom: spazio.m,
+    borderRadius: raggio.l,
+    borderWidth: StyleSheet.hairlineWidth,
+    backgroundColor: '#FFFFFF',
+  },
 })
