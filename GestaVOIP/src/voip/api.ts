@@ -134,14 +134,20 @@ export type VoceRegistro = {
   duration: number
   status: string
   handled_by: 'ai' | 'human'
+  /** Il collega che ha fatto o ricevuto la chiamata (vuoto se l'ha gestita l'assistente AI). */
+  agent_user_id?: [number, string] | false
 }
 
-/** Le chiamate di questo operatore, le piu' recenti prima. */
-export async function registroChiamate(server: string, uid: number): Promise<VoceRegistro[]> {
+/**
+ * Le chiamate, le piu' recenti prima: quelle di questo operatore o, con
+ * `tutte`, quelle che l'utente puo' vedere in Odoo (le regole di accesso del
+ * server decidono; senza regole sono tutte quelle dell'azienda).
+ */
+export async function registroChiamate(server: string, uid: number, tutte = false): Promise<VoceRegistro[]> {
   return callKw<VoceRegistro[]>(server, 'ai.telemarketing.call.log', 'search_read', [
-    [['agent_user_id', '=', uid]],
+    tutte ? [] : [['agent_user_id', '=', uid]],
   ], {
-    fields: ['create_date', 'direction', 'caller_number', 'partner_id', 'duration', 'status', 'handled_by'],
+    fields: ['create_date', 'direction', 'caller_number', 'partner_id', 'duration', 'status', 'handled_by', 'agent_user_id'],
     order: 'id desc',
     limit: 80,
   })

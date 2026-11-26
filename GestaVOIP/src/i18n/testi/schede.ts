@@ -27,6 +27,10 @@ export const it = {
 
   // Recenti
   'schede.nessunaChiamata': 'Nessuna chiamata, per ora.',
+  'schede.mie': 'Mie',
+  'schede.tutte': 'Tutte',
+  'schede.assistenteAI': 'Assistente AI',
+  'schede.tu': 'Tu',
   'schede.sconosciuto': 'Sconosciuto',
   'schede.richiama': 'Richiama {nome}',
   'schede.inEntrata': 'In entrata',
@@ -98,6 +102,10 @@ export const en: Record<keyof typeof it, string> = {
   'schede.cancella': 'Delete',
 
   'schede.nessunaChiamata': 'No calls yet.',
+  'schede.mie': 'Mine',
+  'schede.tutte': 'All',
+  'schede.assistenteAI': 'AI assistant',
+  'schede.tu': 'You',
   'schede.sconosciuto': 'Unknown',
   'schede.richiama': 'Call back {nome}',
   'schede.inEntrata': 'Incoming',
