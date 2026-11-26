@@ -57,6 +57,19 @@ public class GestableNativoModule: Module {
         DatiAuto(accesso: d.accesso, recenti: voci(d.recenti), frequenti: voci(d.frequenti), testi: d.testi))
     }.runOnQueue(.main)
 
+    /// Spese: scanner degli scontrini (o una foto dalla galleria dove non c'e' la fotocamera).
+    Function("scannerScontrini") { () -> Bool in
+      return ScontrinoScanner.scannerDisponibile
+    }
+
+    AsyncFunction("scansionaScontrino") { (promise: Promise) in
+      ScontrinoScanner.shared.scansiona(promise, da: self.appContext?.utilities?.currentViewController())
+    }.runOnQueue(.main)
+
+    AsyncFunction("scegliFotoScontrino") { (promise: Promise) in
+      ScontrinoScanner.shared.scegliFoto(promise, da: self.appContext?.utilities?.currentViewController())
+    }.runOnQueue(.main)
+
     /// Permesso per Siri («Chiama Mario con GestABLE»): lo chiede una volta.
     AsyncFunction("chiediSiri") { (promise: Promise) in
       if INPreferences.siriAuthorizationStatus() != .notDetermined {

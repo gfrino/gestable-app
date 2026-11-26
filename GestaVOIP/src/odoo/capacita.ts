@@ -8,6 +8,7 @@
  * in tutti e due i casi deve intervenire l'amministratore del suo Odoo.
  */
 
+import { spesePossibili } from '../../modules/gestable-nativo'
 import { t } from '../i18n'
 import { leggi, scrivi } from './archivio'
 import { ErroreOdoo } from './client'
@@ -17,13 +18,20 @@ export const APP = {
   calendario: 'calendar.mail_menu_calendar',
   contatti: 'contacts.menu_contacts',
   messaggi: 'mail.menu_root_discuss',
+  spese: 'hr_expense.menu_hr_expense_root',
 } as const
 
 /**
  * Le app di Odoo che l'app mostra con schermate sue: nella griglia della
  * scheda Odoo non compaiono (si trovano lo stesso cercandole per nome).
  */
-export const APP_NATIVE: readonly string[] = [APP.calendario, APP.contatti, APP.messaggi]
+export const APP_NATIVE: readonly string[] = [
+  APP.calendario,
+  APP.contatti,
+  APP.messaggi,
+  // Le Spese sono native solo dove c'e' lo scanner (build 1.2+ su iPhone).
+  ...(spesePossibili ? [APP.spese] : []),
+]
 
 const DURATA_MS = 10 * 60_000
 const TIMEOUT_MS = 15_000

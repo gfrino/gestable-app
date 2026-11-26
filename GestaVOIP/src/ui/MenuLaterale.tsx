@@ -1,5 +1,5 @@
 /**
- * Il menu laterale (hamburger): presenze, messaggi, attivita', impostazioni.
+ * Il menu laterale (hamburger): presenze, messaggi, attivita', spese, impostazioni.
  *
  * Prende il posto della barra in alto di Odoo: il pallino delle presenze, la
  * chat e l'orologio delle attivita' qui sono schermate dell'app.
@@ -9,11 +9,14 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import * as Application from 'expo-application'
 import { useRouter, type Href } from 'expo-router'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
-import { ActivityIndicator, Alert, Animated, AppState, Easing, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
+import { ActivityIndicator, Alert, Animated, AppState, Easing, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
+import { spesePossibili } from '../../modules/gestable-nativo'
 import { loc, t, tn } from '../i18n'
+import { APP, menuOdoo, menuSalvato } from '../odoo/capacita'
 import { cambiaPresenza, contatori, presenza, urlAvatar, type Contatori, type Presenza } from '../odoo/lavoro'
 import { conTelefono } from '../odoo/sessione'
+import { iconaSpese } from '../odoo/spese'
 import { useApp } from '../voip/Contesto'
 import { Avatar } from './Avatar'
 import { raggio, spazio, useColori, type Colori } from './tema'
@@ -125,6 +128,7 @@ export function PulsanteMenu({ chiaro }: { chiaro?: boolean }) {
 
 function Voce({
   icona,
+  immagine,
   testo,
   numero,
   onPress,
@@ -132,6 +136,8 @@ function Voce({
   pericolo,
 }: {
   icona: keyof typeof Ionicons.glyphMap
+  /** Icona dell'app di Odoo (es. Spese) al posto del simbolo. */
+  immagine?: string
   testo: string
   numero?: number
   onPress: () => void
@@ -145,9 +151,15 @@ function Voce({
       accessibilityRole="button"
       accessibilityLabel={numero ? `${testo}, ${numero}` : testo}
     >
-      <View style={[s.voceIcona, { backgroundColor: pericolo ? c.rossoTenue : c.primarioTenue }]}>
-        <Ionicons name={icona} size={20} color={pericolo ? c.rosso : c.primario} />
-      </View>
+      {immagine ? (
+        <View style={[s.voceIcona, { backgroundColor: c.superficie, borderColor: c.bordo, borderWidth: StyleSheet.hairlineWidth }]}>
+          <Image source={{ uri: immagine }} style={s.voceImmagine} accessibilityIgnoresInvertColors />
+        </View>
+      ) : (
+        <View style={[s.voceIcona, { backgroundColor: pericolo ? c.rossoTenue : c.primarioTenue }]}>
+          <Ionicons name={icona} size={20} color={pericolo ? c.rosso : c.primario} />
+        </View>
+      )}
       <Text style={[s.voceTesto, { color: pericolo ? c.rosso : c.testo }]} numberOfLines={1}>
         {testo}
       </Text>
@@ -168,6 +180,21 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
   const [pres, setPres] = useState<Presenza | null>(null)
   const [cambia, setCambia] = useState(false)
   const server = sessione?.server || ''
+  const uid = sessione?.utente.uid || 0
+  // Spese: solo se l'app Spese c'e' in Odoo per questo utente (e la build ha lo scanner).
+  const [spese, setSpese] = useState(() => spesePossibili && !!menuSalvato(server, uid)?.has(APP.spese))
+
+  useEffect(() => {
+    let vivo = true
+    if (spesePossibili && server && uid) {
+      menuOdoo(server, false, uid)
+        .then((m) => vivo && m && setSpese(m.has(APP.spese)))
+        .catch(() => undefined)
+    }
+    return () => {
+      vivo = false
+    }
+  }, [server, uid])
 
   // Le presenze si leggono a ogni apertura del menu.
   useEffect(() => {
@@ -286,6 +313,15 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
             <>
               <Voce c={c} icona="chatbubbles" testo={t('accesso.messaggi')} numero={n.messaggi} onPress={() => vai('/messaggi')} />
               <Voce c={c} icona="checkmark-done-circle" testo={t('accesso.attivita')} numero={n.attivita} onPress={() => vai('/attivita')} />
+              {spese ? (
+                <Voce
+                  c={c}
+                  icona="receipt"
+                  immagine={iconaSpese(server)}
+                  testo={t('spese.titolo')}
+                  onPress={() => vai({ pathname: '/spese', params: { scansiona: '1' } })}
+                />
+              ) : null}
             </>
           ) : null}
           <Voce c={c} icona="settings" testo={t('impostazioni.titolo')} onPress={() => vai('/impostazioni')} />
@@ -339,6 +375,7 @@ const s = StyleSheet.create({
   voci: { gap: 2 },
   voce: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, paddingHorizontal: spazio.s, paddingVertical: 10, borderRadius: raggio.m },
   voceIcona: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  voceImmagine: { width: 28, height: 28 },
   voceTesto: { flex: 1, fontSize: 17, fontWeight: '600' },
   numero: { minWidth: 26, height: 22, borderRadius: 11, paddingHorizontal: 7, alignItems: 'center', justifyContent: 'center' },
   numeroTesto: { fontSize: 12, fontWeight: '800' },

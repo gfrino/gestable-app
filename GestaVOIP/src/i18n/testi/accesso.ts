@@ -2,7 +2,7 @@
 
 export const it = {
   // Schermata di accesso
-  'accesso.sottotitolo': "Il telefono dell'ufficio, collegato al tuo Odoo.",
+  'accesso.sottotitolo': 'Il tuo Odoo in tasca.',
   'accesso.indirizzoOdoo': 'Indirizzo di Odoo',
   'accesso.indirizzoEsempio': 'es. odoo.miaazienda.ch',
   'accesso.scriviIndirizzo': "Scrivi l'indirizzo del tuo Odoo.",
@@ -93,7 +93,7 @@ export const it = {
 
 export const en: Record<keyof typeof it, string> = {
   // Schermata di accesso
-  'accesso.sottotitolo': 'Your office phone, connected to your Odoo.',
+  'accesso.sottotitolo': 'Your Odoo in your pocket.',
   'accesso.indirizzoOdoo': 'Odoo address',
   'accesso.indirizzoEsempio': 'e.g. odoo.mycompany.com',
   'accesso.scriviIndirizzo': 'Enter your Odoo address.',

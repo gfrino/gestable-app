@@ -44,7 +44,7 @@ module.exports = {
     slug: 'gestavoip',
     owner: 'ticinoweb',
     scheme: 'gestavoip',
-    version: '1.1.0',
+    version: '1.2.0',
     orientation: 'portrait',
 
     // Aggiornamenti OTA (EAS Update): il JavaScript nuovo arriva senza una
@@ -64,7 +64,7 @@ module.exports = {
 
     ios: {
       bundleIdentifier: IDENTIFICATIVO,
-      buildNumber: '8',
+      buildNumber: '9',
       // La «G» di GestABLE: chiara, scura (sfondo del sistema) e tinta.
       icon: {
         light: './assets/icona-gestable.png',
@@ -75,6 +75,7 @@ module.exports = {
       ...(firebaseIos ? { googleServicesFile: './GoogleService-Info.plist' } : {}),
       infoPlist: {
         NSMicrophoneUsageDescription: MICROFONO,
+        NSCameraUsageDescription: 'GestABLE usa la fotocamera per scansionare gli scontrini delle spese.',
         // Senza queste modalita' la chiamata si interrompe appena l'app va in
         // secondo piano o lo schermo si spegne.
         UIBackgroundModes: ['audio', 'voip', 'remote-notification'],

@@ -1,6 +1,6 @@
 /**
  * GestABLE nativo (solo iOS): chiamate chieste da Siri e dai Recenti del Telefono,
- * schermata CarPlay. Opzionale: nelle build senza il modulo (o su Android) tutte
+ * schermata CarPlay, scanner degli scontrini per le Spese. Opzionale: nelle build senza il modulo (o su Android) tutte
  * le funzioni non fanno nulla, cosi' lo stesso JavaScript va su ogni build.
  */
 
@@ -20,6 +20,9 @@ type Modulo = {
   autoCollegata(): boolean
   aggiornaAuto(d: DatiAuto): Promise<void>
   chiediSiri(): Promise<boolean>
+  scannerScontrini?(): boolean
+  scansionaScontrino?(): Promise<string[]>
+  scegliFotoScontrino?(): Promise<string[]>
   addListener<K extends keyof Eventi>(nome: K, fn: Eventi[K]): EventSubscription
 }
 
@@ -41,6 +44,22 @@ export async function aggiornaAuto(d: DatiAuto): Promise<void> {
 
 export async function chiediSiri(): Promise<boolean> {
   return modulo ? modulo.chiediSiri() : false
+}
+
+/**
+ * C'e' lo scanner degli scontrini in questa build? Le build precedenti alla 1.2
+ * (e Android, per ora) non l'hanno: li' le Spese restano quelle di Odoo.
+ */
+export const spesePossibili = typeof modulo?.scansionaScontrino === 'function'
+
+/** Scontrino fotografato con lo scanner di iOS: indirizzi file:// delle pagine, [] se annullato. */
+export async function scansionaScontrino(): Promise<string[]> {
+  return modulo?.scansionaScontrino ? modulo.scansionaScontrino() : []
+}
+
+/** Una foto dalla galleria: [indirizzo file://] o [] se annullato. */
+export async function scegliFotoScontrino(): Promise<string[]> {
+  return modulo?.scegliFotoScontrino ? modulo.scegliFotoScontrino() : []
 }
 
 export function ascolta<K extends keyof Eventi>(nome: K, fn: Eventi[K]): () => void {
