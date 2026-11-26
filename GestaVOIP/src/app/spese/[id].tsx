@@ -44,7 +44,7 @@ function numero(testo: string): number {
 export default function SchedaSpesa() {
   const c = useColori()
   const router = useRouter()
-  const { id: idTesto, nuova } = useLocalSearchParams<{ id: string; nuova?: string }>()
+  const { id: idTesto, nuova, letto } = useLocalSearchParams<{ id: string; nuova?: string; letto?: string }>()
   const id = Number(idTesto)
   const { sessione } = useApp()
   const server = sessione?.server || ''
@@ -77,7 +77,7 @@ export default function SchedaSpesa() {
       setNome(nuova === '1' && /^Scontrino \d{4}-\d{2}-\d{2}/.test(sp.nome) ? '' : sp.nome)
       const conCosto = (cat.find((x) => x.id === sp.categoriaId)?.costo || 0) > 0
       const v = conCosto ? sp.quantita : sp.importo
-      setValore(v ? String(v).replace('.', ',') : '')
+      setValore(v ? (conCosto ? String(v) : v.toFixed(2)).replace('.', ',') : '')
       setData(sp.data ? new Date(`${sp.data}T12:00:00`) : new Date())
       setCategoriaId(sp.categoriaId)
       setPagataDa(sp.pagataDa)
@@ -187,6 +187,13 @@ export default function SchedaSpesa() {
             <View style={[s.punto, { backgroundColor: colore }]} />
             <Text style={[s.chipTesto, { color: colore }]}>{t(`spese.chip.${spesa.stato}`)}</Text>
           </View>
+
+          {letto && spesa.modificabile ? (
+            <View style={[s.letto, { backgroundColor: c.primarioTenue }]}>
+              <Ionicons name="sparkles" size={18} color={c.primario} />
+              <Text style={[s.lettoTesto, { color: c.testo }]}>{letto === 'ai' ? t('spese.lettoAI') : t('spese.lettoRegole')}</Text>
+            </View>
+          ) : null}
 
           {!spesa.modificabile ? (
             <View style={[s.riepilogo, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
@@ -348,6 +355,8 @@ const s = StyleSheet.create({
   segmento: { flex: 1, paddingVertical: 10, borderRadius: raggio.s, alignItems: 'center' },
   segmentoTesto: { fontSize: 15, fontWeight: '700' },
   nota: { fontSize: 13 },
+  letto: { flexDirection: 'row', alignItems: 'center', gap: spazio.s, padding: spazio.m, borderRadius: raggio.m },
+  lettoTesto: { flex: 1, fontSize: 14, lineHeight: 19 },
   areaNote: { minHeight: 80, textAlignVertical: 'top' },
   voce: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, paddingHorizontal: spazio.l, paddingVertical: 14 },
   voceTesto: { flex: 1, fontSize: 17 },

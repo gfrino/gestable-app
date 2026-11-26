@@ -11,7 +11,8 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { scansionaScontrino, scegliFotoScontrino } from '../../../modules/gestable-nativo'
 import { t, tn } from '../../i18n'
 import { leggi, scrivi } from '../../odoo/archivio'
-import { mieSpese, spesaDaScontrino, urlRicevuta, type Spesa, type StatoSpesa } from '../../odoo/spese'
+import { leggiScontrino } from '../../odoo/scontrino'
+import { categorie as caricaCategorie, mieSpese, precompilaSpesa, spesaDaScontrino, urlRicevuta, type Categoria, type Spesa, type StatoSpesa } from '../../odoo/spese'
 import { Caricamento } from '../../ui/Caricamento'
 import { Pulsante } from '../../ui/Pulsante'
 import { Testata } from '../../ui/Testata'
@@ -69,9 +70,18 @@ export default function SchermataSpese() {
       }
       setCarica(true)
       try {
+        // Il testo si legge prima di caricare: dopo il caricamento i file non ci sono piu'.
+        const elenco = await caricaCategorie(server).catch(() => [] as Categoria[])
+        const letto = await leggiScontrino(pagine, elenco).catch(() => null)
         const id = await spesaDaScontrino(server, pagine)
+        if (letto) {
+          await precompilaSpesa(server, id, letto).catch(() => undefined)
+        }
         setCarica(false)
-        router.push({ pathname: '/spese/[id]', params: { id: String(id), nuova: '1' } })
+        router.push({
+          pathname: '/spese/[id]',
+          params: { id: String(id), nuova: '1', ...(letto ? { letto: letto.daAI ? 'ai' : 'regole' } : {}) },
+        })
       } catch (e) {
         setCarica(false)
         Alert.alert(t('spese.nonSalvata'), e instanceof Error ? e.message : String(e))

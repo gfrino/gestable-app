@@ -10,8 +10,10 @@ Pod::Spec.new do |s|
   s.static_framework = true
 
   s.dependency 'ExpoModulesCore'
-  s.frameworks = 'CarPlay', 'Intents', 'VisionKit', 'PhotosUI'
+  s.frameworks = 'CarPlay', 'Intents', 'VisionKit', 'PhotosUI', 'Vision'
+  # FoundationModels c'e' solo da iOS 26: collegata «weak», l'app parte anche su iOS 16-25.
+  s.weak_frameworks = 'FoundationModels'
 
-  s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES' }
+  s.pod_target_xcconfig = { 'DEFINES_MODULE' => 'YES', 'OTHER_LDFLAGS' => '$(inherited) -weak_framework FoundationModels' }
   s.source_files = "**/*.{h,m,mm,swift}"
 end

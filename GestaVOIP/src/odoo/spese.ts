@@ -230,6 +230,48 @@ export async function salvaSpesa(server: string, id: number, m: Modifiche): Prom
   await callKw(server, 'hr.expense', 'write', [[id], valori])
 }
 
+/**
+ * Scrive nella spesa appena creata i dati letti dallo scontrino (solo quelli
+ * trovati). Con una valuta diversa da quella della spesa la si cambia, se in
+ * Odoo e' attiva; altrimenti l'importo non si scrive (sarebbe nella valuta sbagliata).
+ */
+export async function precompilaSpesa(
+  server: string,
+  id: number,
+  d: { nome?: string; totale?: number; data?: string; valuta?: string; categoriaId?: number },
+): Promise<void> {
+  const valori: Record<string, unknown> = {}
+  if (d.nome) {
+    valori.name = d.nome
+  }
+  if (d.data) {
+    valori.date = d.data
+  }
+  if (d.categoriaId) {
+    valori.product_id = d.categoriaId
+  }
+  if (d.totale) {
+    const [r] = await callKw<{ currency_id: M2o }[]>(server, 'hr.expense', 'read', [[id], ['currency_id']])
+    const attuale = r?.currency_id ? r.currency_id[1] : ''
+    if (!d.valuta || d.valuta === attuale) {
+      valori.total_amount_currency = d.totale
+    } else {
+      const [valuta] = await callKw<number[]>(server, 'res.currency', 'search', [[['name', '=', d.valuta]]], { limit: 1 })
+      if (valuta) {
+        valori.currency_id = valuta
+        valori.total_amount_currency = d.totale
+      }
+    }
+  }
+  if (Object.keys(valori).length) {
+    // La categoria prima: cambiandola Odoo ricalcola l'importo, che poi si scrive.
+    if (valori.product_id) {
+      await callKw(server, 'hr.expense', 'write', [[id], { product_id: valori.product_id }])
+    }
+    await callKw(server, 'hr.expense', 'write', [[id], valori])
+  }
+}
+
 /** Invia la spesa per l'approvazione (Odoo 17: crea e invia la nota spese). */
 export async function inviaSpesa(server: string, id: number): Promise<void> {
   const f = await campi(server)

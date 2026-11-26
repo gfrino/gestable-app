@@ -6,6 +6,8 @@
 
 import { requireOptionalNativeModule, type EventSubscription } from 'expo-modules-core'
 
+export type DatiScontrinoAI = { negozio: string; descrizione: string; totale: number; data: string; valuta: string; categoria: string }
+
 export type VoceAuto = { titolo: string; sottotitolo: string; numero: string; entrata: boolean }
 export type DatiAuto = { accesso: boolean; recenti: VoceAuto[]; frequenti: VoceAuto[]; testi: Record<string, string> }
 
@@ -23,6 +25,9 @@ type Modulo = {
   scannerScontrini?(): boolean
   scansionaScontrino?(): Promise<string[]>
   scegliFotoScontrino?(): Promise<string[]>
+  leggiTestoScontrino?(pagine: string[]): Promise<string[]>
+  aiScontriniDisponibile?(): boolean
+  analizzaScontrino?(testo: string, categorie: string[]): Promise<DatiScontrinoAI | null>
   addListener<K extends keyof Eventi>(nome: K, fn: Eventi[K]): EventSubscription
 }
 
@@ -60,6 +65,30 @@ export async function scansionaScontrino(): Promise<string[]> {
 /** Una foto dalla galleria: [indirizzo file://] o [] se annullato. */
 export async function scegliFotoScontrino(): Promise<string[]> {
   return modulo?.scegliFotoScontrino ? modulo.scegliFotoScontrino() : []
+}
+
+/** Righe di testo delle pagine (file://) lette sul telefono; [] se non si puo'. */
+export async function leggiTestoScontrino(pagine: string[]): Promise<string[]> {
+  if (!modulo?.leggiTestoScontrino) {
+    return []
+  }
+  try {
+    return await modulo.leggiTestoScontrino(pagine)
+  } catch {
+    return []
+  }
+}
+
+/** Dati estratti da Apple Intelligence sul telefono; null se non c'e' o non risponde. */
+export async function analizzaScontrinoAI(testo: string, categorie: string[]): Promise<DatiScontrinoAI | null> {
+  if (!modulo?.analizzaScontrino || !modulo.aiScontriniDisponibile?.()) {
+    return null
+  }
+  try {
+    return await modulo.analizzaScontrino(testo, categorie)
+  } catch {
+    return null
+  }
 }
 
 export function ascolta<K extends keyof Eventi>(nome: K, fn: Eventi[K]): () => void {

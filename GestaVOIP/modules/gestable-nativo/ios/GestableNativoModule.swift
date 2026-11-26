@@ -8,6 +8,16 @@ struct VoceAutoRecord: Record {
   @Field var entrata: Bool = false
 }
 
+/// Dati letti da uno scontrino dal modello sul telefono (vedi ScontrinoLettore).
+struct DatiScontrinoRecord: Record {
+  @Field var negozio: String = ""
+  @Field var descrizione: String = ""
+  @Field var totale: Double = 0
+  @Field var data: String = ""
+  @Field var valuta: String = ""
+  @Field var categoria: String = ""
+}
+
 struct DatiAutoRecord: Record {
   @Field var accesso: Bool = false
   @Field var recenti: [VoceAutoRecord] = []
@@ -69,6 +79,20 @@ public class GestableNativoModule: Module {
     AsyncFunction("scegliFotoScontrino") { (promise: Promise) in
       ScontrinoScanner.shared.scegliFoto(promise, da: self.appContext?.utilities?.currentViewController())
     }.runOnQueue(.main)
+
+    /// Testo degli scontrini (riconoscimento del testo di Apple, sul telefono).
+    AsyncFunction("leggiTestoScontrino") { (pagine: [String]) throws -> [String] in
+      return try ScontrinoLettore.righe(pagine)
+    }
+
+    /// Apple Intelligence sul telefono (iOS 26+, dispositivi compatibili).
+    Function("aiScontriniDisponibile") { () -> Bool in
+      return ScontrinoLettore.aiDisponibile
+    }
+
+    AsyncFunction("analizzaScontrino") { (testo: String, categorie: [String]) async -> DatiScontrinoRecord? in
+      return await ScontrinoLettore.analizza(testo: testo, categorie: categorie)
+    }
 
     /// Permesso per Siri («Chiama Mario con GestABLE»): lo chiede una volta.
     AsyncFunction("chiediSiri") { (promise: Promise) in

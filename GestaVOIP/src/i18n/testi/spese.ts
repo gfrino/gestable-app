@@ -8,7 +8,9 @@ export const it = {
   'spese.galleria': 'Dalla galleria',
   'spese.nuovaSpesa': 'Nuova spesa',
   'spese.vuoto': 'Nessuna spesa. Scansiona uno scontrino: diventa una spesa in Odoo.',
-  'spese.caricaScontrino': 'Carico lo scontrino in Odoo…',
+  'spese.caricaScontrino': 'Leggo lo scontrino e lo carico in Odoo…',
+  'spese.lettoAI': 'Compilata da Apple Intelligence leggendo lo scontrino: controlla i dati prima di inviare.',
+  'spese.lettoRegole': 'Dati letti dallo scontrino: controllali prima di inviare.',
   'spese.scannerErrore': 'Scanner non disponibile',
 
   // Stati, come li vede chi ha fatto la spesa
@@ -63,7 +65,9 @@ export const en: Record<keyof typeof it, string> = {
   'spese.galleria': 'From photos',
   'spese.nuovaSpesa': 'New expense',
   'spese.vuoto': 'No expenses yet. Scan a receipt: it becomes an expense in Odoo.',
-  'spese.caricaScontrino': 'Uploading the receipt to Odoo…',
+  'spese.caricaScontrino': 'Reading the receipt and uploading it to Odoo…',
+  'spese.lettoAI': 'Filled in by Apple Intelligence from the receipt: check the details before submitting.',
+  'spese.lettoRegole': 'Details read from the receipt: check them before submitting.',
   'spese.scannerErrore': 'Scanner not available',
 
   'spese.stato.bozza': 'To submit',
