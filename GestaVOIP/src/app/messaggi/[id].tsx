@@ -10,6 +10,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import {
   ActivityIndicator,
   Alert,
+  AppState,
   FlatList,
   KeyboardAvoidingView,
   Platform,
@@ -27,6 +28,8 @@ import { conTelefono } from '../../odoo/sessione'
 import { chiamaNumero } from '../../ui/chiama'
 import { AURORA, AURORA_CHIARA } from '../../ui/odooIniettato'
 import { colleghi } from '../../voip/api'
+import { segnalaErrore } from '../../ui/crash'
+import { ErroreOdoo } from '../../odoo/client'
 import { htmlDaTesto, oraBreve, testoDaHtml } from '../../odoo/testo'
 import { useMenu } from '../../ui/MenuLaterale'
 import { Testata } from '../../ui/Testata'
@@ -60,6 +63,11 @@ export default function Conversazione() {
   const [testo, setTesto] = useState('')
   const [invio, setInvio] = useState(false)
   const ultimoLetto = useRef(0)
+  // Dopo il primo caricamento un aggiornamento fallito non apre avvisi: si
+  // riprova da soli e, se manca la rete per piu' giri, lo dice una riga sopra il campo.
+  const caricato = useRef(false)
+  const guasti = useRef(0)
+  const [senzaRete, setSenzaRete] = useState(false)
   const scuro = useColorScheme() === 'dark'
   const conSpunte = tipo === 'chat' || tipo === 'group'
   const [letto, setLetto] = useState<Letture>({ visto: 0, ricevuto: 0 })
@@ -79,6 +87,9 @@ export default function Conversazione() {
         conSpunte ? letture(server, uid, canale).catch(() => null) : Promise.resolve(null),
       ])
       setMessaggi(m)
+      caricato.current = true
+      guasti.current = 0
+      setSenzaRete(false)
       if (l) {
         setLetto(l)
       }
@@ -90,12 +101,13 @@ export default function Conversazione() {
           .catch(() => undefined)
       }
     } catch (e) {
-      if (!messaggi) {
+      segnalaErrore(new Error(dettaglio(e)), 'chat: aggiornamento')
+      if (!caricato.current) {
         Alert.alert(t('lavoro.messaggi.titolo'), e instanceof Error ? e.message : String(e))
+      } else if (++guasti.current >= 2) {
+        setSenzaRete(true)
       }
     }
-    // messaggi resta fuori: serve solo a non ripetere l'avviso a ogni giro.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [server, uid, canale, aggiorna, conSpunte])
 
   useEffect(() => {
@@ -124,11 +136,26 @@ export default function Conversazione() {
   }, [tipo, server, uid, canale, sessione, nome])
 
   // Aperta: si aggiorna ogni 5 secondi (i nuovi messaggi arrivano cosi').
+  // Con l'app in secondo piano non si interroga Odoo (iOS chiude le connessioni
+  // e le richieste fallirebbero): al ritorno si aggiorna subito.
   useFocusEffect(
     useCallback(() => {
       void carica()
-      const timer = setInterval(() => void carica(), 5_000)
-      return () => clearInterval(timer)
+      const timer = setInterval(() => {
+        if (AppState.currentState === 'active') {
+          void carica()
+        }
+      }, 5_000)
+      const stato = AppState.addEventListener('change', (adesso) => {
+        if (adesso === 'active') {
+          guasti.current = 0
+          void carica()
+        }
+      })
+      return () => {
+        clearInterval(timer)
+        stato.remove()
+      }
     }, [carica]),
   )
 
@@ -143,6 +170,7 @@ export default function Conversazione() {
       setTesto('')
       await carica()
     } catch (e) {
+      segnalaErrore(new Error(dettaglio(e)), 'chat: invio')
       Alert.alert(t('lavoro.chat.nonInviato'), e instanceof Error ? e.message : String(e))
     } finally {
       setInvio(false)
@@ -230,6 +258,14 @@ export default function Conversazione() {
           />
         )}
 
+        {senzaRete ? (
+          <View style={[s.senzaRete, { backgroundColor: c.superficie, borderColor: c.bordo }]} accessibilityLiveRegion="polite">
+            <Ionicons name="cloud-offline-outline" size={16} color={c.testo2} />
+            <Text style={[s.senzaReteTesto, { color: c.testo2 }]} numberOfLines={1}>
+              {t('lavoro.chat.senzaRete')}
+            </Text>
+          </View>
+        ) : null}
         <View style={[s.scrivi, { borderTopColor: c.bordo }]}>
           <TextInput
             style={[s.campo, { backgroundColor: c.superficie, borderColor: c.bordo, color: c.testo }]}
@@ -260,6 +296,14 @@ export default function Conversazione() {
       </KeyboardAvoidingView>
     </SafeAreaView>
   )
+}
+
+/** Il motivo vero di un errore, per il registro: il messaggio all'utente resta semplice. */
+function dettaglio(e: unknown): string {
+  if (e instanceof ErroreOdoo) {
+    return `${e.tipo}: ${e.causa || e.message}`
+  }
+  return e instanceof Error ? e.message : String(e)
 }
 
 /** Una spunta grigia: inviato; due grigie: arrivato; due verdi: letto (come WhatsApp). */
@@ -310,6 +354,8 @@ const s = StyleSheet.create({
   ora: { fontSize: 12, opacity: 0.8 },
   spunte: { marginRight: -3, marginVertical: -2 },
   chiama: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  senzaRete: { flexDirection: 'row', alignItems: 'center', alignSelf: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, marginBottom: spazio.s },
+  senzaReteTesto: { fontSize: 13, fontWeight: '600' },
   scrivi: { flexDirection: 'row', alignItems: 'flex-end', gap: spazio.s, padding: spazio.s, borderTopWidth: StyleSheet.hairlineWidth },
   campo: { flex: 1, minHeight: 42, maxHeight: 130, borderWidth: 1, borderRadius: 21, paddingHorizontal: 16, paddingTop: 11, paddingBottom: 10, fontSize: 16 },
   invia: { width: 42, height: 42, borderRadius: 21, alignItems: 'center', justifyContent: 'center' },

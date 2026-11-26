@@ -14,10 +14,13 @@ export type TipoErrore = 'sessione' | 'rete' | 'server' | 'occupato' | 'accesso'
 
 export class ErroreOdoo extends Error {
   tipo: TipoErrore
+  /** Il motivo tecnico (es. «Network request failed»), per il registro degli errori. */
+  causa: string
 
-  constructor(tipo: TipoErrore, messaggio: string) {
+  constructor(tipo: TipoErrore, messaggio: string, causa = '') {
     super(messaggio)
     this.tipo = tipo
+    this.causa = causa
   }
 }
 
@@ -60,7 +63,7 @@ export async function rpc<T>(
       (e as Error)?.name === 'AbortError'
         ? t('accesso.erroreNonRisponde')
         : t('accesso.erroreNonRaggiungibile')
-    throw new ErroreOdoo('rete', motivo)
+    throw new ErroreOdoo('rete', motivo, `${percorso}: ${(e as Error)?.message || String(e)}`)
   } finally {
     clearTimeout(timer)
   }

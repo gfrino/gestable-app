@@ -31,6 +31,7 @@ export const it = {
   'lavoro.chat.inviato': 'Inviato',
   'lavoro.chat.ricevuto': 'Ricevuto',
   'lavoro.chat.letto': 'Letto',
+  'lavoro.chat.senzaRete': 'Connessione assente, riprovo da solo…',
 
   // Attivita'
   'lavoro.attivita.titolo': 'Attività',
@@ -79,6 +80,7 @@ export const en: Record<keyof typeof it, string> = {
   'lavoro.chat.inviato': 'Sent',
   'lavoro.chat.ricevuto': 'Delivered',
   'lavoro.chat.letto': 'Read',
+  'lavoro.chat.senzaRete': 'No connection, retrying…',
 
   'lavoro.attivita.titolo': 'Activities',
   'lavoro.attivita.tipo': 'Activity',
