@@ -64,7 +64,7 @@ module.exports = {
 
     ios: {
       bundleIdentifier: IDENTIFICATIVO,
-      buildNumber: '10',
+      buildNumber: '11',
       // La «G» di GestABLE: chiara, scura (sfondo del sistema) e tinta.
       icon: {
         light: './assets/icona-gestable.png',
