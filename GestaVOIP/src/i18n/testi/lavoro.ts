@@ -28,6 +28,9 @@ export const it = {
   'lavoro.chat.scrivi': 'Scrivi un messaggio',
   'lavoro.chat.messaggio': 'Messaggio',
   'lavoro.chat.invia': 'Invia',
+  'lavoro.chat.inviato': 'Inviato',
+  'lavoro.chat.ricevuto': 'Ricevuto',
+  'lavoro.chat.letto': 'Letto',
 
   // Attivita'
   'lavoro.attivita.titolo': 'Attività',
@@ -73,6 +76,9 @@ export const en: Record<keyof typeof it, string> = {
   'lavoro.chat.scrivi': 'Write a message',
   'lavoro.chat.messaggio': 'Message',
   'lavoro.chat.invia': 'Send',
+  'lavoro.chat.inviato': 'Sent',
+  'lavoro.chat.ricevuto': 'Delivered',
+  'lavoro.chat.letto': 'Read',
 
   'lavoro.attivita.titolo': 'Activities',
   'lavoro.attivita.tipo': 'Activity',

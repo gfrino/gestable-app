@@ -240,6 +240,83 @@ export async function inviaChat(server: string, canale: Id, html: string): Promi
   })
 }
 
+/**
+ * Fin dove gli altri hanno letto: le spunte dei miei messaggi, come WhatsApp.
+ * `visto`: l'ultimo messaggio letto da tutti gli altri (due spunte verdi);
+ * `ricevuto`: l'ultimo arrivato a tutti (due spunte grigie; Odoo 20 non lo
+ * tiene piu', resta 0 e si passa da una spunta a due verdi). Solo chat a due e
+ * di gruppo: nei canali aperti a tutta l'azienda non ha senso.
+ */
+export type Letture = { visto: Id; ricevuto: Id }
+
+const campiMembroDi = new Map<string, Promise<Set<string>>>()
+
+function campiMembro(server: string): Promise<Set<string>> {
+  let p = campiMembroDi.get(server)
+  if (!p) {
+    p = callKw<Record<string, unknown>>(server, 'discuss.channel.member', 'fields_get', [], { attributes: ['type'] }).then(
+      (f) => new Set(Object.keys(f)),
+    )
+    p.catch(() => campiMembroDi.delete(server))
+    campiMembroDi.set(server, p)
+  }
+  return p
+}
+
+export async function letture(server: string, uid: number, canale: Id): Promise<Letture> {
+  const io = await mioPartner(server, uid)
+  const campi = await campiMembro(server)
+  const conRicevuto = campi.has('fetched_message_id')
+  const altri = await callKw<{ partner_id: M2o; seen_message_id: M2o; fetched_message_id?: M2o }[]>(
+    server,
+    'discuss.channel.member',
+    'search_read',
+    [],
+    {
+      domain: [['channel_id', '=', canale], ['partner_id', '!=', io], ['partner_id', '!=', false]],
+      fields: ['partner_id', 'seen_message_id', ...(conRicevuto ? ['fetched_message_id'] : [])],
+      limit: 50,
+    },
+  )
+  if (!altri.length) {
+    return { visto: 0, ricevuto: 0 }
+  }
+  const id = (v: M2o | undefined) => (v ? v[0] : 0)
+  const visto = Math.min(...altri.map((a) => id(a.seen_message_id)))
+  const ricevuto = conRicevuto ? Math.min(...altri.map((a) => Math.max(id(a.fetched_message_id), id(a.seen_message_id)))) : 0
+  return { visto, ricevuto }
+}
+
+/**
+ * Chi chiamare dalla chat a due: l'interno se la persona e' un collega con il
+ * telefono dell'ufficio, altrimenti il suo numero (cellulare prima).
+ */
+export async function numeroDelPartner(server: string, partner: Id): Promise<{ utente: Id | null; numero: string }> {
+  const [utenti, dati] = await Promise.all([
+    callKw<{ id: Id }[]>(server, 'res.users', 'search_read', [], {
+      domain: [['partner_id', '=', partner], ['share', '=', false]],
+      fields: ['id'],
+      limit: 1,
+    }).catch(() => []),
+    callKw<{ phone?: string | false; mobile?: string | false }[]>(server, 'res.partner', 'read', [[partner], ['phone', 'mobile']]).catch(() =>
+      callKw<{ phone?: string | false; mobile?: string | false }[]>(server, 'res.partner', 'read', [[partner], ['phone']]).catch(() => []),
+    ),
+  ])
+  const p = dati[0]
+  return { utente: utenti[0]?.id || null, numero: (p?.mobile || p?.phone || '') as string }
+}
+
+/** Il partner dall'altra parte di una chat a due. */
+export async function altroNellaChat(server: string, uid: number, canale: Id): Promise<Id | null> {
+  const io = await mioPartner(server, uid)
+  const r = await callKw<{ partner_id: M2o }[]>(server, 'discuss.channel.member', 'search_read', [], {
+    domain: [['channel_id', '=', canale], ['partner_id', '!=', io], ['partner_id', '!=', false]],
+    fields: ['partner_id'],
+    limit: 1,
+  })
+  return r[0]?.partner_id ? r[0].partner_id[0] : null
+}
+
 /** Segna letta la chat fino al messaggio dato. Odoo 18+ e Odoo 17 hanno route diverse. */
 export async function segnaLetta(server: string, canale: Id, ultimo: Id): Promise<void> {
   try {
