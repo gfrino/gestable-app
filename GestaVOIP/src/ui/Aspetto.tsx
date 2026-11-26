@@ -17,9 +17,14 @@ import { t } from '../i18n'
 export type Modo = 'auto' | 'chiaro' | 'scuro'
 export type ColoreTema = 'viola' | 'blu' | 'acqua' | 'arancio' | 'rosa'
 /** I nomi delle schermate in app/(tabs). */
-export type Scheda = 'index' | 'recenti' | 'contatti' | 'calendario' | 'odoo'
+/**
+ * Le schede della barra in basso. «gestable» raccoglie le app native di Odoo
+ * (Helpdesk, ...): Odoo completo si apre dal suo menu ≡ e resta una scheda
+ * nascosta (app/(tabs)/odoo.tsx), cosi' «Apri in Odoo» funziona da ovunque.
+ */
+export type Scheda = 'index' | 'recenti' | 'contatti' | 'calendario' | 'gestable'
 
-export const SCHEDE: Scheda[] = ['index', 'recenti', 'contatti', 'calendario', 'odoo']
+export const SCHEDE: Scheda[] = ['index', 'recenti', 'contatti', 'calendario', 'gestable']
 /** Tastierino e Recenti esistono solo con il telefono (VOIP AI). */
 export const SCHEDE_TELEFONO: Scheda[] = ['index', 'recenti']
 
@@ -43,7 +48,10 @@ function pulisci(v: unknown): Aspetto {
   const o = (v && typeof v === 'object' ? v : {}) as Partial<Record<keyof Aspetto, unknown>>
   const modo = o.modo === 'chiaro' || o.modo === 'scuro' ? o.modo : 'auto'
   const colore = typeof o.colore === 'string' && o.colore in COLORI_TEMA ? (o.colore as ColoreTema) : 'viola'
-  const lette = Array.isArray(o.schede) ? o.schede.filter((x): x is Scheda => SCHEDE.includes(x as Scheda)) : []
+  // Fino alla 1.2 la scheda si chiamava «odoo»: il posto scelto passa a GestABLE.
+  const lette = Array.isArray(o.schede)
+    ? o.schede.map((x) => (x === 'odoo' ? 'gestable' : x)).filter((x): x is Scheda => SCHEDE.includes(x as Scheda))
+    : []
   const schede = [...new Set(lette)]
   for (const x of SCHEDE) {
     if (!schede.includes(x)) {
@@ -113,12 +121,12 @@ export const ICONE_SCHEDE: Record<Scheda, 'keypad' | 'time' | 'people' | 'calend
   recenti: 'time',
   contatti: 'people',
   calendario: 'calendar',
-  odoo: 'apps',
+  gestable: 'apps',
 }
 
 export function titoloScheda(s: Scheda): string {
-  if (s === 'odoo') {
-    return 'Odoo'
+  if (s === 'gestable') {
+    return 'GestABLE'
   }
   return t(s === 'index' ? 'schede.tastierino' : `schede.${s}`)
 }
@@ -129,9 +137,9 @@ export function titoloScheda(s: Scheda): string {
  */
 export function schedaAvvio(a: Aspetto, telefono: boolean): Scheda {
   if (!telefono && !a.personalizzato) {
-    return 'odoo'
+    return 'gestable'
   }
-  return schedeVisibili(a.schede, telefono)[0] || 'odoo'
+  return schedeVisibili(a.schede, telefono)[0] || 'gestable'
 }
 
 /** Le schede nell'ordine scelto, solo quelle che questo utente vede. */

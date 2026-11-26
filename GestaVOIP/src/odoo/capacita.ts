@@ -19,7 +19,15 @@ export const APP = {
   contatti: 'contacts.menu_contacts',
   messaggi: 'mail.menu_root_discuss',
   spese: 'hr_expense.menu_hr_expense_root',
+  /** Helpdesk OCA (helpdesk_mgmt) e Helpdesk di Odoo Enterprise. */
+  helpdesk: 'helpdesk_mgmt.helpdesk_ticket_main_menu',
+  helpdeskEnterprise: 'helpdesk.menu_helpdesk_root',
 } as const
+
+/** C'e' l'Helpdesk (uno dei due) tra le app di questo utente? */
+export function conHelpdesk(menu: Set<string> | null): boolean {
+  return !!menu && (menu.has(APP.helpdesk) || menu.has(APP.helpdeskEnterprise))
+}
 
 /**
  * Le app di Odoo che l'app mostra con schermate sue: nella griglia della
@@ -29,6 +37,8 @@ export const APP_NATIVE: readonly string[] = [
   APP.calendario,
   APP.contatti,
   APP.messaggi,
+  APP.helpdesk,
+  APP.helpdeskEnterprise,
   // Le Spese sono native solo dove c'e' lo scanner (build 1.2+ su iPhone).
   ...(spesePossibili ? [APP.spese] : []),
 ]

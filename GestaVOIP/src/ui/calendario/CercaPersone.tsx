@@ -24,9 +24,13 @@ type Props = {
   chiudi: () => void
   /** Invitati: aggiunge o toglie. Organizzatore: sceglie e chiude. */
   tocca: (p: Persona) => void
+  /** Titolo del foglio al posto di «Invitati» / «Organizzatore» (es. Helpdesk). */
+  titolo?: string
+  /** Contatti: se ne sceglie uno solo e il foglio si chiude (es. il cliente di un ticket). */
+  singolo?: boolean
 }
 
-export function CercaPersone({ aperto, server, tipo, scelti, chiudi, tocca }: Props) {
+export function CercaPersone({ aperto, server, tipo, scelti, chiudi, tocca, titolo, singolo }: Props) {
   const c = useColori()
   const [testo, setTesto] = useState('')
   const [lista, setLista] = useState<Persona[] | null>(null)
@@ -61,6 +65,9 @@ export function CercaPersone({ aperto, server, tipo, scelti, chiudi, tocca }: Pr
       const p = await creaInvitato(server, testo)
       tocca(p)
       setTesto('')
+      if (singolo) {
+        chiudiTutto()
+      }
     } catch (e) {
       Alert.alert(t('calendario.invitatoNonAggiunto'), e instanceof Error ? e.message : String(e))
     } finally {
@@ -72,7 +79,7 @@ export function CercaPersone({ aperto, server, tipo, scelti, chiudi, tocca }: Pr
   const emailNuova = tipo === 'invitati' && EMAIL.test(testo.trim()) && !lista?.some((p) => p.email.toLowerCase() === testo.trim().toLowerCase())
 
   return (
-    <Foglio aperto={aperto} titolo={tipo === 'invitati' ? t('calendario.invitati') : t('calendario.organizzatore')} chiudi={chiudiTutto}>
+    <Foglio aperto={aperto} titolo={titolo || (tipo === 'invitati' ? t('calendario.invitati') : t('calendario.organizzatore'))} chiudi={chiudiTutto}>
       <View style={[s.cerca, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
         <Ionicons name="search" size={18} color={c.testo3} />
         <TextInput
@@ -119,7 +126,7 @@ export function CercaPersone({ aperto, server, tipo, scelti, chiudi, tocca }: Pr
               <Pressable
                 onPress={() => {
                   tocca(p)
-                  if (tipo === 'organizzatore') {
+                  if (tipo === 'organizzatore' || singolo) {
                     chiudiTutto()
                   }
                 }}
@@ -138,11 +145,15 @@ export function CercaPersone({ aperto, server, tipo, scelti, chiudi, tocca }: Pr
                     </Text>
                   ) : null}
                 </View>
-                <Ionicons
-                  name={scelto ? 'checkmark-circle' : tipo === 'invitati' ? 'add-circle-outline' : 'ellipse-outline'}
-                  size={26}
-                  color={scelto ? c.primario : c.testo3}
-                />
+                {singolo && !scelto ? (
+                  <Ionicons name="chevron-forward" size={18} color={c.testo3} />
+                ) : (
+                  <Ionicons
+                    name={scelto ? 'checkmark-circle' : tipo === 'invitati' ? 'add-circle-outline' : 'ellipse-outline'}
+                    size={26}
+                    color={scelto ? c.primario : c.testo3}
+                  />
+                )}
               </Pressable>
             )
           }}

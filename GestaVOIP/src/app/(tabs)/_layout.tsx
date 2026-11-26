@@ -1,11 +1,14 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { Tabs, useRouter } from 'expo-router'
 import { useEffect, useRef } from 'react'
+import { Image } from 'react-native'
 import { conTelefono } from '../../odoo/sessione'
 import { ICONE_SCHEDE, SCHEDE_TELEFONO, schedaAvvio, titoloScheda, useAspetto } from '../../ui/Aspetto'
 import { useApp, useTelefono } from '../../voip/Contesto'
-import { inviaOdoo } from '../../ui/comandiOdoo'
 import { useColori } from '../../ui/tema'
+
+// La «G» del logo, a un colore (si tinge come le altre icone della barra).
+const G = require('../../../assets/caricamento-g.png') as number
 
 export default function LayoutSchede() {
   const c = useColori()
@@ -52,17 +55,21 @@ export default function LayoutSchede() {
         <Tabs.Screen
           key={nome}
           name={nome}
-          // Il tasto Odoo porta sempre alla home di Odoo, anche se si e' gia' li'.
-          listeners={nome === 'odoo' ? { tabPress: () => inviaOdoo({ tipo: 'home' }) } : undefined}
           options={{
             href: telefono || !SCHEDE_TELEFONO.includes(nome) ? undefined : null,
-            // Odoo si prepara dietro dall'avvio (vedi odoo.tsx): toccandolo e' gia' pronto.
-            lazy: nome === 'odoo' ? false : undefined,
             title: titoloScheda(nome),
-            tabBarIcon: ({ color, size }) => <Ionicons name={ICONE_SCHEDE[nome]} color={color} size={size} />,
+            tabBarIcon: ({ color, size }) =>
+              nome === 'gestable' ? (
+                <Image source={G} style={{ width: size, height: size, tintColor: color }} accessibilityIgnoresInvertColors />
+              ) : (
+                <Ionicons name={ICONE_SCHEDE[nome]} color={color} size={size} />
+              ),
           }}
         />
       ))}
+      {/* Odoo completo: si apre dal menu ≡ di GestABLE e da «Apri in Odoo»; non ha
+          un tasto in basso. Si prepara dietro dall'avvio (vedi odoo.tsx). */}
+      <Tabs.Screen name="odoo" options={{ href: null, lazy: false, title: 'Odoo' }} />
     </Tabs>
   )
 }
