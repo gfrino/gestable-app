@@ -272,7 +272,7 @@ function Spunte({ id, letto, chiaro }: { id: number; letto: Letture; chiaro: boo
   return (
     <Ionicons
       name={arrivato ? 'checkmark-done' : 'checkmark'}
-      size={16}
+      size={21}
       color={visto ? VERDE_LETTO : grigio}
       style={[s.spunte, !visto && { opacity: 0.75 }]}
       accessibilityLabel={visto ? t('lavoro.chat.letto') : arrivato ? t('lavoro.chat.ricevuto') : t('lavoro.chat.inviato')}
@@ -306,9 +306,9 @@ const s = StyleSheet.create({
   autore: { fontSize: 13, fontWeight: '700', marginBottom: 2 },
   testo: { fontSize: 16, lineHeight: 21 },
   allegato: { fontSize: 13, marginTop: 4, fontStyle: 'italic' },
-  piede: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', gap: 3, marginTop: 3 },
-  ora: { fontSize: 11, opacity: 0.8 },
-  spunte: { marginRight: -2 },
+  piede: { flexDirection: 'row', alignItems: 'center', alignSelf: 'flex-end', gap: 4, marginTop: 2, minHeight: 21 },
+  ora: { fontSize: 12, opacity: 0.8 },
+  spunte: { marginRight: -3, marginVertical: -2 },
   chiama: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   scrivi: { flexDirection: 'row', alignItems: 'flex-end', gap: spazio.s, padding: spazio.s, borderTopWidth: StyleSheet.hairlineWidth },
   campo: { flex: 1, minHeight: 42, maxHeight: 130, borderWidth: 1, borderRadius: 21, paddingHorizontal: 16, paddingTop: 11, paddingBottom: 10, fontSize: 16 },
