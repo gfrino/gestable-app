@@ -32,7 +32,10 @@ export type Spesa = {
   modificabile: boolean
   pagataDa: 'own_account' | 'company_account'
   note: string
+  /** Lo scontrino: l'allegato principale, altrimenti il primo allegato della spesa. */
   ricevutaId: number | null
+  /** Lo scontrino e' un PDF (si apre a parte, non ha l'anteprima come le foto). */
+  ricevutaPdf: boolean
   /** Odoo 17: la nota spese in cui e' la spesa. */
   notaId: number | null
 }
@@ -52,6 +55,7 @@ type Riga = {
   payment_mode: 'own_account' | 'company_account'
   description: string | false
   message_main_attachment_id?: M2o
+  attachment_ids?: number[]
   sheet_id?: M2o
 }
 
@@ -112,7 +116,10 @@ function daRiga(r: Riga): Spesa {
     modificabile: r.is_editable !== false && (r.state === 'draft' || r.state === 'reported'),
     pagataDa: r.payment_mode,
     note: r.description || '',
-    ricevutaId: r.message_main_attachment_id ? r.message_main_attachment_id[0] : null,
+    // Le spese create in Odoo (es. da un PDF arrivato per email) spesso non hanno
+    // l'allegato principale: si usa il primo allegato.
+    ricevutaId: r.message_main_attachment_id ? r.message_main_attachment_id[0] : r.attachment_ids?.[0] || null,
+    ricevutaPdf: false,
     notaId: r.sheet_id ? r.sheet_id[0] : null,
   }
 }
@@ -120,7 +127,20 @@ function daRiga(r: Riga): Spesa {
 async function leggiCampi(server: string): Promise<string[]> {
   const f = await campi(server)
   const base = ['name', 'date', 'total_amount_currency', 'quantity', 'currency_id', 'product_id', 'state', 'payment_mode', 'description']
-  return [...base, ...['is_editable', 'message_main_attachment_id', 'sheet_id'].filter((x) => f.has(x))]
+  return [...base, ...['is_editable', 'message_main_attachment_id', 'attachment_ids', 'sheet_id'].filter((x) => f.has(x))]
+}
+
+/** Segna gli scontrini che sono PDF (una sola lettura per tutta la lista). */
+async function conTipoRicevuta(server: string, spese: Spesa[]): Promise<Spesa[]> {
+  const ids = [...new Set(spese.map((x) => x.ricevutaId).filter((x): x is number => !!x))]
+  if (!ids.length) {
+    return spese
+  }
+  const tipi = await callKw<{ id: number; mimetype: string | false }[]>(server, 'ir.attachment', 'read', [ids, ['mimetype']]).catch(
+    () => [],
+  )
+  const pdf = new Set(tipi.filter((a) => a.mimetype === 'application/pdf').map((a) => a.id))
+  return spese.map((x) => (x.ricevutaId && pdf.has(x.ricevutaId) ? { ...x, ricevutaPdf: true } : x))
 }
 
 /** Le mie spese, le piu' recenti prima. */
@@ -131,12 +151,17 @@ export async function mieSpese(server: string, uid: number): Promise<Spesa[]> {
     order: 'date desc, id desc',
     limit: 200,
   })
-  return righe.map(daRiga)
+  return conTipoRicevuta(server, righe.map(daRiga))
 }
 
 export async function spesa(server: string, id: number): Promise<Spesa | null> {
   const righe = await callKw<Riga[]>(server, 'hr.expense', 'read', [[id], await leggiCampi(server)])
-  return righe[0] ? daRiga(righe[0]) : null
+  return righe[0] ? (await conTipoRicevuta(server, [daRiga(righe[0])]))[0] : null
+}
+
+/** Indirizzo del file (per i PDF): Odoo lo mostra nel browser invece di scaricarlo. */
+export function urlFile(server: string, allegatoId: number): string {
+  return `${server}/web/content/${allegatoId}`
 }
 
 /** Le categorie che si possono usare nelle spese. `costo` > 0: si indica la quantita' (es. km). */

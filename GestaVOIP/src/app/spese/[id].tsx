@@ -21,8 +21,9 @@ import {
   View,
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
+import { WebView } from 'react-native-webview'
 import { t } from '../../i18n'
-import { categorie as caricaCategorie, eliminaSpesa, inviaSpesa, salvaSpesa, spesa as caricaSpesa, urlRicevuta, type Categoria, type Spesa } from '../../odoo/spese'
+import { categorie as caricaCategorie, eliminaSpesa, inviaSpesa, salvaSpesa, spesa as caricaSpesa, urlFile, urlRicevuta, type Categoria, type Spesa } from '../../odoo/spese'
 import { Caricamento } from '../../ui/Caricamento'
 import { SceltaGiorno } from '../../ui/calendario/Selettori'
 import { Foglio } from '../../ui/Foglio'
@@ -172,7 +173,20 @@ export default function SchedaSpesa() {
       <Testata titolo={titolo} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={s.contenuto} keyboardShouldPersistTaps="handled">
-          {spesa.ricevutaId ? (
+          {spesa.ricevutaId && spesa.ricevutaPdf ? (
+            <Pressable
+              onPress={() => setScontrino(true)}
+              style={({ pressed }) => [s.ricevuta, s.ricevutaVuota, { backgroundColor: pressed ? c.superficie2 : c.superficie, borderColor: c.bordo, borderWidth: StyleSheet.hairlineWidth }]}
+              accessibilityRole="button"
+              accessibilityLabel={t('spese.scontrinoPdf')}
+            >
+              <View style={[s.pdfIcona, { backgroundColor: c.rossoTenue }]}>
+                <Ionicons name="document-text" size={34} color={c.rosso} />
+              </View>
+              <Text style={[s.pdfTitolo, { color: c.testo }]}>{t('spese.scontrinoPdf')}</Text>
+              <Text style={{ color: c.testo2 }}>{t('spese.toccaPerAprire')}</Text>
+            </Pressable>
+          ) : spesa.ricevutaId ? (
             <Pressable onPress={() => setScontrino(true)} accessibilityRole="imagebutton" accessibilityLabel={t('spese.scontrino')}>
               <Image source={{ uri: urlRicevuta(server, spesa.ricevutaId) }} style={[s.ricevuta, { backgroundColor: c.superficie2 }]} resizeMode="cover" />
             </Pressable>
@@ -320,13 +334,27 @@ export default function SchedaSpesa() {
         </ScrollView>
       </Foglio>
 
-      <Modal visible={scontrino} animationType="fade" onRequestClose={() => setScontrino(false)}>
-        <Pressable style={s.schermoNero} onPress={() => setScontrino(false)} accessibilityLabel={t('comune.chiudi')}>
-          {spesa.ricevutaId ? (
-            <Image source={{ uri: urlRicevuta(server, spesa.ricevutaId, 1600) }} style={StyleSheet.absoluteFill} resizeMode="contain" />
-          ) : null}
-        </Pressable>
-      </Modal>
+      {spesa.ricevutaPdf && spesa.ricevutaId ? (
+        <Foglio aperto={scontrino} titolo={t('spese.scontrino')} chiudi={() => setScontrino(false)} fatto={t('comune.chiudi')}>
+          {/* Il PDF si apre con la sessione di Odoo del telefono (cookie condivisi, come la scheda Odoo). */}
+          <WebView
+            source={{ uri: urlFile(server, spesa.ricevutaId) }}
+            sharedCookiesEnabled
+            thirdPartyCookiesEnabled
+            startInLoadingState
+            renderLoading={() => <Caricamento style={StyleSheet.absoluteFill} />}
+            style={{ flex: 1, backgroundColor: c.sfondo }}
+          />
+        </Foglio>
+      ) : (
+        <Modal visible={scontrino} animationType="fade" onRequestClose={() => setScontrino(false)}>
+          <Pressable style={s.schermoNero} onPress={() => setScontrino(false)} accessibilityLabel={t('comune.chiudi')}>
+            {spesa.ricevutaId ? (
+              <Image source={{ uri: urlRicevuta(server, spesa.ricevutaId, 1600) }} style={StyleSheet.absoluteFill} resizeMode="contain" />
+            ) : null}
+          </Pressable>
+        </Modal>
+      )}
     </SafeAreaView>
   )
 }
@@ -337,6 +365,8 @@ const s = StyleSheet.create({
   errore: { fontSize: 15, textAlign: 'center', marginTop: spazio.xl, paddingHorizontal: spazio.xl },
   ricevuta: { height: 220, borderRadius: raggio.l, overflow: 'hidden' },
   ricevutaVuota: { alignItems: 'center', justifyContent: 'center', gap: spazio.xs },
+  pdfIcona: { width: 64, height: 64, borderRadius: 18, alignItems: 'center', justifyContent: 'center', marginBottom: spazio.xs },
+  pdfTitolo: { fontSize: 17, fontWeight: '700' },
   chip: { alignSelf: 'flex-start', flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: raggio.tondo, marginTop: spazio.xs },
   punto: { width: 8, height: 8, borderRadius: 4 },
   chipTesto: { fontSize: 13, fontWeight: '800' },

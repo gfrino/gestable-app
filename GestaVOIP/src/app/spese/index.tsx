@@ -186,7 +186,12 @@ export default function SchermataSpese() {
               style={({ pressed }) => [s.scheda, { backgroundColor: pressed ? c.superficie2 : c.superficie, borderColor: c.bordo }]}
               accessibilityRole="button"
             >
-              {item.ricevutaId ? (
+              {item.ricevutaId && item.ricevutaPdf ? (
+                <View style={[s.mini, s.miniVuota, { backgroundColor: c.rossoTenue }]}>
+                  <Ionicons name="document-text" size={22} color={c.rosso} />
+                  <Text style={[s.pdf, { color: c.rosso }]}>PDF</Text>
+                </View>
+              ) : item.ricevutaId ? (
                 <Image source={{ uri: urlRicevuta(server, item.ricevutaId, 160) }} style={[s.mini, { backgroundColor: c.superficie2 }]} />
               ) : (
                 <View style={[s.mini, s.miniVuota, { backgroundColor: c.primarioTenue }]}>
@@ -242,6 +247,7 @@ const s = StyleSheet.create({
   },
   mini: { width: 48, height: 48, borderRadius: raggio.m },
   miniVuota: { alignItems: 'center', justifyContent: 'center' },
+  pdf: { fontSize: 9, fontWeight: '800', marginTop: -2 },
   titolo: { fontSize: 16, fontWeight: '600' },
   dettaglio: { fontSize: 13 },
   importo: { fontSize: 16, fontWeight: '700' },
