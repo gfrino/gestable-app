@@ -44,7 +44,7 @@ module.exports = {
     slug: 'gestavoip',
     owner: 'ticinoweb',
     scheme: 'gestavoip',
-    version: '1.2.0',
+    version: '1.3.0',
     orientation: 'portrait',
 
     // Aggiornamenti OTA (EAS Update): il JavaScript nuovo arriva senza una
@@ -64,7 +64,7 @@ module.exports = {
 
     ios: {
       bundleIdentifier: IDENTIFICATIVO,
-      buildNumber: '11',
+      buildNumber: '12',
       // La «G» di GestABLE: chiara, scura (sfondo del sistema) e tinta.
       icon: {
         light: './assets/icona-gestable.png',
@@ -138,6 +138,10 @@ module.exports = {
       './plugins/ciclo-scene-ios',
       // Siri, Recenti di iOS e CarPlay (dopo ciclo-scene-ios, che riscrive il manifest delle scene).
       './plugins/carplay-siri',
+      // Notifiche dei messaggi (modulo tw_gestable_mobile): solo iPhone. Su Android
+      // la libreria e' esclusa (package.json, expo.autolinking): il suo ricevitore
+      // Firebase toglierebbe a Twilio le chiamate in arrivo.
+      ['expo-notifications', { mode: APS }],
       // Avvio: la «G» al centro; in app si ingrandisce fino a scoprire la prima schermata (ui/Apertura.tsx).
       [
         'expo-splash-screen',

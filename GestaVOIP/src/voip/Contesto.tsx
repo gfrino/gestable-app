@@ -12,6 +12,7 @@ import { conTelefono, dimenticaSessione, leggiSessione, salvaSessione, type Sess
 import { segnalaErrore, utenteCrash } from '../ui/crash'
 import { telefono, type StatoTelefono } from './telefono'
 import { svuota as svuotaArchivio } from '../odoo/archivio'
+import { togliTelefono } from '../notifiche/push'
 import { ascolta, chiediSiri, prendiNumeroInAttesa } from '../../modules/gestable-nativo'
 
 type Fase = 'caricamento' | 'fuori' | 'dentro'
@@ -160,6 +161,8 @@ export function ProviderApp({ children }: { children: ReactNode }) {
           await telefono.ferma()
         }
         if (server) {
+          // Prima della chiusura della sessione: la richiesta vuole l'utente collegato.
+          await togliTelefono(server)
           await esci(server)
         }
         await chiudiLocale()

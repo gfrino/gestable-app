@@ -8,11 +8,13 @@ import { useFocusEffect } from 'expo-router'
 import * as Updates from 'expo-updates'
 import { useCallback, useState } from 'react'
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { Alert, Pressable, ScrollView, StyleSheet, Switch, Text, useColorScheme, View } from 'react-native'
+import { Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, useColorScheme, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { LINGUE, linguaTelefono, loc, t, type SceltaLingua } from '../i18n'
 import { useLingua } from '../i18n/Lingua'
 import { conTelefono } from '../odoo/sessione'
+import { chiediPermesso, permesso, pushDisponibile, registraTelefono, serverConNotifiche, type Permesso } from '../notifiche/push'
+import { segnalaErrore } from '../ui/crash'
 import { preferenze, type Preferenze } from '../voip/api'
 import { useApp, useTelefono } from '../voip/Contesto'
 import { telefono } from '../voip/telefono'
@@ -53,14 +55,42 @@ export default function Impostazioni() {
   const telefonoAttivo = conTelefono(sessione)
   const [pref, setPref] = useState<Preferenze | null>(null)
   const [uscita, setUscita] = useState(false)
+  // Notifiche dei messaggi: solo iPhone e solo se il server ha il modulo GestABLE.
+  const [notifiche, setNotifiche] = useState<Permesso | 'senza-modulo' | null>(null)
+
+  const leggiNotifiche = useCallback(async () => {
+    if (!pushDisponibile() || !sessione?.utente.uid) {
+      return setNotifiche(null)
+    }
+    try {
+      setNotifiche((await serverConNotifiche(sessione.server)) ? await permesso() : 'senza-modulo')
+    } catch {
+      setNotifiche(null)
+    }
+  }, [sessione])
 
   useFocusEffect(
     useCallback(() => {
       if (sessione && conTelefono(sessione)) {
         preferenze(sessione.server).then(setPref).catch(() => setPref(null))
       }
-    }, [sessione]),
+      void leggiNotifiche()
+    }, [sessione, leggiNotifiche]),
   )
+
+  async function attivaNotifiche() {
+    if (!sessione) {
+      return
+    }
+    try {
+      if (await chiediPermesso()) {
+        registraTelefono(sessione.server).catch((e) => segnalaErrore(e, 'notifiche: impostazioni'))
+      }
+    } catch (e) {
+      segnalaErrore(e, 'notifiche: impostazioni')
+    }
+    void leggiNotifiche()
+  }
 
   async function centralino(valore: boolean) {
     if (!sessione) {
@@ -156,6 +186,47 @@ export default function Impostazioni() {
               <Riga c={c} titolo={t('impostazioni.numeroDiretto')} testo={pref?.direct_number || t('comune.nessuno')} />
             </View>
           </>
+        ) : null}
+
+        {notifiche ? (
+          <View style={scheda}>
+            <Riga
+              c={c}
+              titolo={t('notifiche.titolo')}
+              testo={
+                notifiche === 'concesso'
+                  ? t('notifiche.attive')
+                  : notifiche === 'negato'
+                    ? t('notifiche.spente')
+                    : notifiche === 'senza-modulo'
+                      ? t('notifiche.senzaModulo')
+                      : t('notifiche.daAttivare')
+              }
+            >
+              {notifiche === 'concesso' || notifiche === 'da-chiedere' ? (
+                <Switch
+                  value={notifiche === 'concesso'}
+                  disabled={notifiche === 'concesso'}
+                  onValueChange={(v) => {
+                    if (v) {
+                      void attivaNotifiche()
+                    }
+                  }}
+                  trackColor={{ true: c.verde }}
+                />
+              ) : null}
+            </Riga>
+            {notifiche === 'negato' ? (
+              <>
+                <View style={[s.sep, { backgroundColor: c.bordo }]} />
+                <Pressable onPress={() => void Linking.openSettings()} accessibilityRole="button">
+                  <Riga c={c} titolo={t('notifiche.apriImpostazioni')}>
+                    <Ionicons name="open-outline" size={18} color={c.primario} />
+                  </Riga>
+                </Pressable>
+              </>
+            ) : null}
+          </View>
         ) : null}
 
         <Text style={[s.sezione, { color: c.testo2 }]}>{t('impostazioni.lingua')}</Text>

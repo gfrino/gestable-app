@@ -29,6 +29,7 @@ import { chiamaNumero } from '../../ui/chiama'
 import { AURORA, AURORA_CHIARA } from '../../ui/odooIniettato'
 import { colleghi } from '../../voip/api'
 import { segnalaErrore } from '../../ui/crash'
+import { quandoArriva, segnaChatAperta } from '../../notifiche/push'
 import { ErroreOdoo } from '../../odoo/client'
 import { htmlDaTesto, oraBreve, testoDaHtml } from '../../odoo/testo'
 import { useMenu } from '../../ui/MenuLaterale'
@@ -146,6 +147,13 @@ export default function Conversazione() {
           void carica()
         }
       }, 5_000)
+      // Chat aperta: niente banner per lei, e un messaggio nuovo si vede subito.
+      const via = segnaChatAperta(canale)
+      const arrivo = quandoArriva((d) => {
+        if (d.model === 'discuss.channel' && d.res_id === canale) {
+          void carica()
+        }
+      })
       const stato = AppState.addEventListener('change', (adesso) => {
         if (adesso === 'active') {
           guasti.current = 0
@@ -155,8 +163,10 @@ export default function Conversazione() {
       return () => {
         clearInterval(timer)
         stato.remove()
+        via()
+        arrivo()
       }
-    }, [carica]),
+    }, [carica, canale]),
   )
 
   async function invia() {

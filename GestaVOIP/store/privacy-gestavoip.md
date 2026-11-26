@@ -35,6 +35,17 @@ telefonico scelto dalla tua azienda). Per far squillare l'app quando è chiusa
 si usano le notifiche di Apple (PushKit) e di Google (Firebase Cloud
 Messaging), che ricevono solo un avviso tecnico di chiamata in arrivo.
 
+## Notifiche dei messaggi (iPhone)
+
+Se lo permetti, l'iPhone riceve una notifica quando un collega ti scrive in
+Odoo. L'app registra sul server Odoo della tua azienda un codice di notifica di
+questo telefono (con il modello del telefono e la versione dell'app), e lo
+toglie quando esci dall'app. Il server Odoo della tua azienda manda la notifica
+tramite il servizio push di Expo e le notifiche di Apple: contiene il nome di
+chi scrive e, se la tua azienda lo lascia attivo, il testo del messaggio. Expo e
+Apple la consegnano e non la conservano per altri scopi. Le notifiche si
+spengono in qualsiasi momento dalle Impostazioni dell'iPhone.
+
 ## Report degli errori (Android)
 
 Sui telefoni Android, quando l'app incontra un errore (anche senza chiudersi),
