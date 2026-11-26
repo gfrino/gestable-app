@@ -1,12 +1,13 @@
 /**
  * Comandi per la vista di Odoo da qualsiasi schermata: tornare alla home di
- * Odoo, aprire un record (da un'attivita' o da una notifica).
+ * Odoo, aprire un record (da un'attivita' o da una notifica), una voce del menu
+ * utente di Odoo (dal menu ≡ della scheda GestABLE, per testo).
  *
  * Se la vista non e' ancora montata il comando resta in attesa e lo esegue
  * appena c'e'.
  */
 
-export type ComandoOdoo = { tipo: 'home' } | { tipo: 'apri'; percorso: string }
+export type ComandoOdoo = { tipo: 'home' } | { tipo: 'apri'; percorso: string } | { tipo: 'utente'; testo: string }
 
 type Ascoltatore = (c: ComandoOdoo) => void
 
@@ -46,3 +47,4 @@ export function prendiInAttesa(): ComandoOdoo | null {
 export function rottaOdoo(): '/(tabs)/odoo' {
   return '/(tabs)/odoo'
 }
+

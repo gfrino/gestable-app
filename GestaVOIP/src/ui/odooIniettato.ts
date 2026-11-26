@@ -297,6 +297,10 @@ export function dopoIlCaricamento(): string {
     var m = svc && svc.getMenu ? svc.getMenu(id) : null;
     if (m) { nascondi(); svc.selectMenu(m); }
   };
+  window.__gvVoceUtenteTesto = function (t) {
+    window.__gvVociTesti = [t];
+    window.__gvVoceUtente(0);
+  };
   window.__gvVoceUtente = function (i) {
     var cerca = (window.__gvVociTesti || [])[i];
     if (!cerca) { return; }
@@ -316,6 +320,8 @@ export const MOSTRA_HOME = 'window.__gvHome && window.__gvHome(); true;'
 export const APRI_PANNELLO = 'window.__gvPannello && window.__gvPannello(); true;'
 export const scegliMenu = (id: number) => `window.__gvScegli && window.__gvScegli(${Number(id)}); true;`
 export const voceUtente = (i: number) => `window.__gvVoceUtente && window.__gvVoceUtente(${Number(i)}); true;`
+export const voceUtenteTesto = (testo: string) =>
+  `window.__gvVoceUtenteTesto && window.__gvVoceUtenteTesto(${JSON.stringify(testo)}); true;`
 
 export function vaiA(percorso: string): string {
   // Stesso percorso e hash diverso (/web#...): il client di Odoo non ricarica da

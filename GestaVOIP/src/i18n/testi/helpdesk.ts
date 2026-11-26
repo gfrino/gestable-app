@@ -3,13 +3,9 @@
 export const it = {
   // Scheda GestABLE
   'gestable.titolo': 'GestABLE',
-  'gestable.sottotitolo': 'Le app di Odoo, fatte per il telefono',
-  'gestable.menu': 'Altre app',
-  'gestable.odoo': 'Odoo – tutte le app',
-  'gestable.odooTesto': 'Apri Odoo completo, come nel browser',
+  'gestable.odoo': 'Odoo Web',
   'gestable.nessunaApp': 'Nessuna app nativa per questo Odoo',
-  'gestable.nessunaAppTesto': 'Le app di Odoo sono comunque tutte disponibili dal menu ≡ in alto a destra.',
-  'gestable.prossimamente': 'Altre app arriveranno qui, una alla volta.',
+  'gestable.nessunaAppTesto': 'Le app di Odoo sono comunque tutte disponibili dal menu ≡ in alto a destra, voce «Odoo Web».',
 
   // Helpdesk: elenco
   'helpdesk.titolo': 'Helpdesk',
@@ -105,13 +101,9 @@ export const it = {
 
 export const en: Record<keyof typeof it, string> = {
   'gestable.titolo': 'GestABLE',
-  'gestable.sottotitolo': 'Odoo apps, made for the phone',
-  'gestable.menu': 'More apps',
-  'gestable.odoo': 'Odoo – all apps',
-  'gestable.odooTesto': 'Open the full Odoo, as in the browser',
+  'gestable.odoo': 'Odoo Web',
   'gestable.nessunaApp': 'No native apps for this Odoo',
-  'gestable.nessunaAppTesto': 'All Odoo apps are still available from the ≡ menu at the top right.',
-  'gestable.prossimamente': 'More apps will show up here, one at a time.',
+  'gestable.nessunaAppTesto': 'All Odoo apps are still available from the ≡ menu at the top right, «Odoo Web».',
 
   'helpdesk.titolo': 'Helpdesk',
   'helpdesk.app': 'Helpdesk',

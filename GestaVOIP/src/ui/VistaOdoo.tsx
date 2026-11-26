@@ -25,10 +25,12 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { WebView, type WebViewNavigation } from 'react-native-webview'
 import type { ShouldStartLoadRequest } from 'react-native-webview/lib/WebViewTypes'
 import { t } from '../i18n'
+import { scrivi } from '../odoo/archivio'
+import { useApp } from '../voip/Contesto'
 import { ascoltaOdoo, prendiInAttesa, type ComandoOdoo } from './comandiOdoo'
 import { PulsanteMenu } from './MenuLaterale'
 import { MenuOdoo, type DatiPannello } from './MenuOdoo'
-import { APRI_PANNELLO, AURORA, AURORA_CHIARA, dopoIlCaricamento, MOSTRA_HOME, PRIMA_DEL_CARICAMENTO, scegliMenu, vaiA, voceUtente } from './odooIniettato'
+import { APRI_PANNELLO, AURORA, AURORA_CHIARA, dopoIlCaricamento, MOSTRA_HOME, PRIMA_DEL_CARICAMENTO, scegliMenu, vaiA, voceUtente, voceUtenteTesto } from './odooIniettato'
 import { Pulsante } from './Pulsante'
 import { spazio, useColori } from './tema'
 import { Caricamento } from './Caricamento'
@@ -74,6 +76,14 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
   const [nelLogin, setNelLogin] = useState(false)
   // Menu di destra: si apre quando la pagina manda sezioni e voci (gv-pannello:).
   const [pannello, setPannello] = useState<DatiPannello | null>(null)
+  // Le voci dell'account (profilo, documentazione...) si raccolgono anche senza
+  // aprire il menu, una volta per caricamento, e si salvano: il menu ≡ della
+  // scheda GestABLE le mostra senza la pagina (una scheda nascosta non carica).
+  const uid = useApp().sessione?.utente.uid || 0
+  const raccolta = useRef(false)
+  const raccolte = useRef(false)
+  // Voce dell'account scelta dalla scheda GestABLE prima che la pagina fosse pronta.
+  const voceInAttesa = useRef('')
   // Con la griglia delle app a vista la barra in alto e' trasparente sopra la
   // stessa sfumatura «Aurora» della pagina (scura o chiara), senza stacco.
   const scuro = useColorScheme() === 'dark'
@@ -89,6 +99,15 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
   useEffect(
     () =>
       ascoltaOdoo((comando: ComandoOdoo) => {
+        // Dalla scheda GestABLE: una voce del menu dell'account di Odoo.
+        if (comando.tipo === 'utente') {
+          if (pronta.current) {
+            vista.current?.injectJavaScript(voceUtenteTesto(comando.testo))
+          } else {
+            voceInAttesa.current = comando.testo
+          }
+          return
+        }
         if (!pronta.current) {
           if (comando.tipo === 'home') {
             homeAlCaricamento.current = true
@@ -218,7 +237,15 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
               setHome(m === 'gv-home:1')
             } else if (m.startsWith('gv-pannello:')) {
               try {
-                setPannello(JSON.parse(m.slice('gv-pannello:'.length)) as DatiPannello)
+                const dati = JSON.parse(m.slice('gv-pannello:'.length)) as DatiPannello
+                if (dati.utente.length) {
+                  scrivi(server, uid, 'menu-utente', dati.utente)
+                }
+                if (raccolta.current) {
+                  raccolta.current = false
+                } else {
+                  setPannello(dati)
+                }
               } catch {
                 // messaggio rovinato: il menu resta chiuso
               }
@@ -236,6 +263,17 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
           onLoadEnd={() => {
             pronta.current = true
             passaAlto()
+            if (voceInAttesa.current) {
+              const testo = voceInAttesa.current
+              voceInAttesa.current = ''
+              setTimeout(() => vista.current?.injectJavaScript(voceUtenteTesto(testo)), 800)
+            } else if (!raccolte.current && !nelLogin) {
+              raccolte.current = true
+              setTimeout(() => {
+                raccolta.current = true
+                vista.current?.injectJavaScript(APRI_PANNELLO)
+              }, 1500)
+            }
             // Alla prima apertura si parte dalla home; «Ricarica» resta dov'e'.
             if (recordInAttesa.current) {
               const percorso = recordInAttesa.current

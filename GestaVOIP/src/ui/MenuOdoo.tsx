@@ -59,9 +59,11 @@ type Props = {
   chiudi: () => void
   scegliMenu: (id: number) => void
   scegliUtente: (i: number) => void
+  /** Prima voce in alto (scheda GestABLE: «Odoo Web»). */
+  prima?: { testo: string; icona: keyof typeof Ionicons.glyphMap; onPress: () => void }
 }
 
-export function MenuOdoo({ dati, azienda, chiudi, scegliMenu, scegliUtente }: Props) {
+export function MenuOdoo({ dati, azienda, chiudi, scegliMenu, scegliUtente, prima }: Props) {
   const c = useColori()
   const margini = useSafeAreaInsets()
   const { width } = useWindowDimensions()
@@ -125,6 +127,25 @@ export function MenuOdoo({ dati, azienda, chiudi, scegliMenu, scegliUtente }: Pr
         </View>
 
         <ScrollView contentContainerStyle={{ paddingBottom: margini.bottom + 130 }} showsVerticalScrollIndicator={false}>
+          {prima ? (
+            <View style={s.blocco}>
+              <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
+                <Pressable
+                  onPress={() => esci(prima.onPress)}
+                  style={({ pressed }) => [s.voce, pressed && { backgroundColor: c.superficie2 }]}
+                  accessibilityRole="button"
+                >
+                  <View style={[s.icona, { backgroundColor: c.primarioTenue }]}>
+                    <Ionicons name={prima.icona} size={18} color={c.primario} />
+                  </View>
+                  <Text style={[s.voceTesto, { color: c.testo }]} numberOfLines={1}>
+                    {prima.testo}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={18} color={c.testo3} />
+                </Pressable>
+              </View>
+            </View>
+          ) : null}
           {dati.sezioni.map((sez, k) => (
             <View key={`${sez.nome}-${k}`} style={s.blocco}>
               {sez.nome ? <Text style={[s.sezione, { color: c.testo2 }]}>{sez.nome}</Text> : null}
