@@ -10,6 +10,7 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect, useNavigation, useRouter } from 'expo-router'
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import {
+  AppState,
   FlatList,
   Pressable,
   RefreshControl,
@@ -41,6 +42,10 @@ function lunedi(d: Date): Date {
   return x
 }
 
+function inizioGiorno(d: Date): Date {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate())
+}
+
 function piuGiorni(d: Date, n: number): Date {
   const x = new Date(d)
   x.setDate(x.getDate() + n)
@@ -60,9 +65,13 @@ function VistaCalendario() {
   const server = sessione?.server || ''
   const uid = sessione?.utente.uid || 0
 
-  const oggi = useMemo(() => new Date(), [])
+  // Oggi cambia anche ad app aperta: la scheda resta montata per giorni (tornando
+  // all'app la mattina dopo «Oggi» portava a ieri). Si ricalcola ogni minuto e
+  // quando l'app torna in primo piano.
+  const [oggi, setOggi] = useState(() => inizioGiorno(new Date()))
+  const oggiRef = useRef(oggi)
   const lunediOggi = useMemo(() => lunedi(oggi), [oggi])
-  const [scelto, setScelto] = useState(() => new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate()))
+  const [scelto, setScelto] = useState(() => oggi)
   const [pagina, setPagina] = useState(SETTIMANE)
   // Le tre settimane attorno a oggi: si salvano sul telefono e all'apertura si
   // vedono subito, mentre arrivano quelle aggiornate da Odoo.
@@ -84,10 +93,34 @@ function VistaCalendario() {
   const striscia = useRef<FlatList<number>>(null)
   // L'ora corrente, per «Ora» e per gli appuntamenti gia' passati: si aggiorna ogni minuto.
   const [adesso, setAdesso] = useState(() => Date.now())
-  useEffect(() => {
-    const t = setInterval(() => setAdesso(Date.now()), 60_000)
-    return () => clearInterval(t)
+
+  /** Aggiorna l'ora; se il giorno e' cambiato torna a oggi. Restituisce oggi. */
+  const aggiornaOggi = useCallback((): Date => {
+    const ora = Date.now()
+    setAdesso(ora)
+    const d = inizioGiorno(new Date(ora))
+    if (d.getTime() !== oggiRef.current.getTime()) {
+      oggiRef.current = d
+      setOggi(d)
+      setScelto(d)
+      setPagina(SETTIMANE)
+      striscia.current?.scrollToIndex({ index: SETTIMANE, animated: false })
+    }
+    return d
   }, [])
+
+  useEffect(() => {
+    const t = setInterval(aggiornaOggi, 60_000)
+    const via = AppState.addEventListener('change', (stato) => {
+      if (stato === 'active') {
+        aggiornaOggi()
+      }
+    })
+    return () => {
+      clearInterval(t)
+      via.remove()
+    }
+  }, [aggiornaOggi])
 
   const inizioSettimana = useCallback((p: number) => piuGiorni(lunediOggi, (p - SETTIMANE) * 7), [lunediOggi])
 
@@ -131,10 +164,10 @@ function VistaCalendario() {
   )
 
   const vaiAOggi = useCallback(() => {
-    setScelto(new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate()))
+    setScelto(aggiornaOggi())
     setPagina(SETTIMANE)
     striscia.current?.scrollToIndex({ index: SETTIMANE, animated: true })
-  }, [oggi])
+  }, [aggiornaOggi])
 
   // Il tasto Calendario, toccato quando si e' gia' qui, torna a oggi.
   useEffect(
@@ -155,7 +188,7 @@ function VistaCalendario() {
     setPagina(p)
     // Stesso giorno della settimana nella settimana nuova (oggi, se e' questa).
     const g = (scelto.getDay() + 6) % 7
-    setScelto(p === SETTIMANE ? new Date(oggi.getFullYear(), oggi.getMonth(), oggi.getDate()) : piuGiorni(inizioSettimana(p), g))
+    setScelto(p === SETTIMANE ? oggi : piuGiorni(inizioSettimana(p), g))
     void caricaSettimane(p)
   }
 
