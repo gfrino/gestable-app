@@ -248,6 +248,20 @@ const s = StyleSheet.create({
   vuoto: { fontSize: 15, textAlign: 'center', marginTop: spazio.xl, paddingHorizontal: spazio.xl },
   vuotoBlocco: { alignItems: 'center', marginTop: spazio.xxl * 2, paddingHorizontal: spazio.xl },
   velo: { backgroundColor: 'rgba(5,6,12,0.45)', alignItems: 'center', justifyContent: 'center', zIndex: 10 },
-  attesa: { paddingVertical: spazio.xl, paddingHorizontal: spazio.xxl, borderRadius: raggio.l, alignItems: 'center', gap: spazio.m },
-  attesaTesto: { fontSize: 16, fontWeight: '600' },
+  // Riquadro compatto al centro, staccato dai bordi: il testo va a capo invece di allargarlo.
+  attesa: {
+    width: 240,
+    maxWidth: '80%',
+    paddingVertical: spazio.xl,
+    paddingHorizontal: spazio.l,
+    borderRadius: 24,
+    alignItems: 'center',
+    gap: spazio.m,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 8 },
+    elevation: 8,
+  },
+  attesaTesto: { fontSize: 15, lineHeight: 20, fontWeight: '600', textAlign: 'center' },
 })
