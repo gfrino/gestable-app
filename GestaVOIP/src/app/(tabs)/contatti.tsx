@@ -6,7 +6,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useRef, useState } from 'react'
-import { ActivityIndicator, Pressable, RefreshControl, SectionList, StyleSheet, Text, TextInput, View } from 'react-native'
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, SectionList, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { t } from '../../i18n'
 import { cercaContatti, lettera, type Contatto, type Filtro } from '../../odoo/contatti'
@@ -20,6 +20,8 @@ import { APP } from '../../odoo/capacita'
 import { RichiedeApp } from '../../ui/RichiedeApp'
 import { leggi, scrivi } from '../../odoo/archivio'
 import { Caricamento } from '../../ui/Caricamento'
+import { conTelefono } from '../../odoo/sessione'
+import { colleghi, type Collega } from '../../voip/api'
 
 const PAGINA = 60
 // Chiavi dei testi: t() si chiama mostrando la lista (la lingua puo' cambiare).
@@ -43,6 +45,24 @@ function ElencoContatti() {
   const [errore, setErrore] = useState('')
   const [ricarica, setRicarica] = useState(false)
   const giro = useRef(0)
+  // «Interni»: i colleghi con il loro interno, solo con il telefono (VOIP AI).
+  const telefono = conTelefono(sessione)
+  const [interni, setInterni] = useState(false)
+  const [elencoInterni, setElencoInterni] = useState<Collega[] | null>(() => leggi<Collega[]>(server, uid, 'interni'))
+
+  useFocusEffect(
+    useCallback(() => {
+      if (!interni || !server) {
+        return
+      }
+      colleghi(server)
+        .then((r) => {
+          setElencoInterni(r)
+          scrivi(server, uid, 'interni', r)
+        })
+        .catch(() => setElencoInterni((x) => x || []))
+    }, [interni, server, uid]),
+  )
 
   // Prima pagina: dopo una breve pausa mentre si scrive; vale solo l'ultima risposta.
   const primaPagina = useCallback(
@@ -156,11 +176,14 @@ function ElencoContatti() {
 
       <View style={s.filtri}>
         {FILTRI.map((f) => {
-          const attivo = f.valore === filtro
+          const attivo = !interni && f.valore === filtro
           return (
             <Pressable
               key={f.valore}
-              onPress={() => setFiltro(f.valore)}
+              onPress={() => {
+                setInterni(false)
+                setFiltro(f.valore)
+              }}
               style={[s.filtro, { borderColor: attivo ? c.primario : c.bordo, backgroundColor: attivo ? c.primarioTenue : 'transparent' }]}
               accessibilityRole="button"
               accessibilityState={{ selected: attivo }}
@@ -171,9 +194,23 @@ function ElencoContatti() {
             </Pressable>
           )
         })}
+        {telefono ? (
+          <Pressable
+            onPress={() => setInterni(true)}
+            style={[s.filtro, { borderColor: interni ? c.primario : c.bordo, backgroundColor: interni ? c.primarioTenue : 'transparent' }]}
+            accessibilityRole="button"
+            accessibilityState={{ selected: interni }}
+          >
+            <Text style={[s.filtroTesto, { color: interni ? c.primario : c.testo2 }]} numberOfLines={1}>
+              {t('schede.filtroInterni')}
+            </Text>
+          </Pressable>
+        ) : null}
       </View>
 
-      {errore && !lista ? (
+      {interni ? (
+        <ElencoInterni lista={elencoInterni} testo={testo} />
+      ) : errore && !lista ? (
         <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>
       ) : !lista ? (
         <Caricamento style={{ marginTop: spazio.xxl }} />
@@ -244,6 +281,59 @@ function ElencoContatti() {
   )
 }
 
+/** I colleghi con il loro interno: un tocco e si chiama (resta dentro il centralino). */
+function ElencoInterni({ lista, testo }: { lista: Collega[] | null; testo: string }) {
+  const c = useColori()
+  const { sessione } = useApp()
+  if (!lista) {
+    return <Caricamento style={{ marginTop: spazio.xxl }} />
+  }
+  const q = testo.trim().toLowerCase()
+  const voci = lista
+    .filter((x) => x.extension && (!q || x.name.toLowerCase().includes(q) || x.extension.startsWith(q)))
+    .sort((a, b) => Number(b.available) - Number(a.available) || a.name.localeCompare(b.name, 'it', { sensitivity: 'base' }))
+  return (
+    <FlatList
+      data={voci}
+      keyExtractor={(x) => String(x.id)}
+      keyboardShouldPersistTaps="handled"
+      keyboardDismissMode="on-drag"
+      ListEmptyComponent={
+        <View style={s.vuotoBlocco}>
+          <Ionicons name="call-outline" size={48} color={c.testo3} />
+          <Text style={[s.vuoto, { color: c.testo2 }]}>{t('schede.nessunInterno')}</Text>
+        </View>
+      }
+      renderItem={({ item }) => (
+        <Pressable
+          onPress={() => chiamaNumero(sessione, item.extension, item.name)}
+          style={({ pressed }) => [s.riga, { backgroundColor: pressed ? c.superficie : 'transparent' }]}
+          accessibilityRole="button"
+          accessibilityLabel={`${t('schede.chiamaNome', { nome: item.name })}, ${t('schede.interno', { n: item.extension })}, ${
+            item.available ? t('schede.disponibile') : t('schede.nonDisponibile')
+          }`}
+        >
+          <View>
+            <Avatar url={sessione ? urlAvatar(sessione.server, 'res.users', item.id) : undefined} nome={item.name} lato={46} />
+            <View style={[s.presenza, { backgroundColor: item.available ? c.verde : c.testo3, borderColor: c.sfondo }]} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[s.nome, { color: c.testo }]} numberOfLines={1}>
+              {item.name}
+            </Text>
+            <Text style={[s.sotto, { color: c.testo2 }]} numberOfLines={1}>
+              {t('schede.interno', { n: item.extension })}
+            </Text>
+          </View>
+          <View style={[s.chiama, { backgroundColor: c.verdeTenue }]}>
+            <Ionicons name="call" size={18} color={c.verde} />
+          </View>
+        </Pressable>
+      )}
+    />
+  )
+}
+
 const s = StyleSheet.create({
   pagina: { flex: 1 },
   testa: { flexDirection: 'row', alignItems: 'center', gap: spazio.s, paddingHorizontal: spazio.m, paddingVertical: spazio.s },
@@ -267,6 +357,7 @@ const s = StyleSheet.create({
   nome: { fontSize: 16, fontWeight: '600' },
   sotto: { fontSize: 13, marginTop: 1 },
   chiama: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  presenza: { position: 'absolute', right: -1, bottom: -1, width: 14, height: 14, borderRadius: 7, borderWidth: 2 },
   vuoto: { fontSize: 15, textAlign: 'center', marginTop: spazio.s, paddingHorizontal: spazio.xl },
   vuotoBlocco: { alignItems: 'center', marginTop: spazio.xxl },
 })

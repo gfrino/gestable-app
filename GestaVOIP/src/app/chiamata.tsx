@@ -330,7 +330,7 @@ export default function SchermataChiamata() {
             onPress={() => setSceltaAudio(true)}
           />
           <Tasto c={c} icona="pause" testo={t('telefono.attesa')} attivo={chiamata.attesa} onPress={() => void telefono.attesa()} disabilitato={!connessa} />
-          <Tasto c={c} icona="swap-horizontal" testo={t('telefono.trasferisci')} onPress={apriTrasferimento} disabilitato={!connessa || chiamata.direzione !== 'entrata'} />
+          <Tasto c={c} icona="swap-horizontal" testo={t('telefono.trasferisci')} onPress={apriTrasferimento} disabilitato={!connessa || chiamata.direzione !== 'entrata' || !!chiamata.interna} />
         </View>
       )}
 

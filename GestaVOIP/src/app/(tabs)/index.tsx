@@ -11,7 +11,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Alert, FlatList, Keyboard, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { t } from '../../i18n'
-import { cercaContatti, type Contatto } from '../../voip/api'
+import { cercaContatti, colleghi, type Collega, type Contatto } from '../../voip/api'
 import { conTelefono } from '../../odoo/sessione'
 import { useApp } from '../../voip/Contesto'
 import { telefono } from '../../voip/telefono'
@@ -70,6 +70,15 @@ function Tastierino() {
   const [scelto, setScelto] = useState<Contatto | null>(null)
   const [trovati, setTrovati] = useState<{ termine: string; voci: Contatto[] }>({ termine: '', voci: [] })
   const ricerca = useRef(0)
+  // I colleghi con l'interno: compaiono per primi fra i suggerimenti.
+  const [interni, setInterni] = useState<Collega[]>([])
+  useEffect(() => {
+    if (sessione) {
+      colleghi(sessione.server)
+        .then(setInterni)
+        .catch(() => undefined)
+    }
+  }, [sessione])
   // Con il tastierino si cerca fra i numeri da 3 cifre in su; con la ricerca
   // per nome dal secondo carattere.
   const termine = (modo === 'nome' ? nome : testo).trim()
@@ -95,9 +104,25 @@ function Tastierino() {
   // nome vero: in Odoo ci sono record il cui nome e' il numero stesso
   // (chiamate da sconosciuti), che come suggerimento non dicono nulla.
   const cifre = (x: string) => x.replace(/\D/g, '')
-  const risultati = (cerca && trovati.termine === termine ? trovati.voci : []).filter(
-    (v) => v.name.trim() && cifre(v.name) !== cifre(v.number),
-  )
+  const q = termine.toLowerCase()
+  const colleghiTrovati: Contatto[] =
+    termine && !scelto
+      ? interni
+          .filter((x) => x.extension && (modo === 'nome' ? q.length >= 2 && x.name.toLowerCase().includes(q) : x.extension.startsWith(termine)))
+          .map((x) => ({
+            key: `int-${x.id}`,
+            id: x.id,
+            model: 'res.users' as const,
+            name: x.name,
+            subtitle: '',
+            number: x.extension,
+            label: t('schede.tipoInterno'),
+          }))
+      : []
+  const risultati = [
+    ...colleghiTrovati,
+    ...(cerca && trovati.termine === termine ? trovati.voci : []).filter((v) => v.name.trim() && cifre(v.name) !== cifre(v.number)),
+  ]
 
   function premi(cifra: string) {
     void Haptics.selectionAsync()

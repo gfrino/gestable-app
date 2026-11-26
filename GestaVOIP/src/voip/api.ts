@@ -73,7 +73,7 @@ export async function chiamataFinita(
 export type Contatto = {
   key: string
   id: number
-  model: 'res.partner' | 'crm.lead'
+  model: 'res.partner' | 'crm.lead' | 'res.users'
   name: string
   subtitle: string
   number: string

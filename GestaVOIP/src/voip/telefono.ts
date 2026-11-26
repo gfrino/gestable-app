@@ -38,6 +38,8 @@ export type Chiamata = {
   numero: string
   nome: string
   logId: string | null
+  /** Chiamata da un collega (interno): niente registro da chiudere ne' trasferimento. */
+  interna?: boolean
   sid?: string
   fase: Fase
   inizio: number | null
@@ -201,6 +203,7 @@ export class Telefono {
             numero: param.caller || viva.getFrom() || '',
             nome: param.caller_name || '',
             logId: param.log_id || null,
+            interna: param.internal === '1',
             sid: viva.getSid(),
             fase: 'connessa',
             inizio: viva.getInitialConnectedTimestamp()?.getTime() || Date.now(),
@@ -330,6 +333,7 @@ export class Telefono {
         numero: param.caller || invito.getFrom() || '',
         nome: param.caller_name || '',
         logId: param.log_id || null,
+        interna: param.internal === '1',
         sid: invito.getCallSid(),
         fase: 'in-arrivo',
         inizio: null,
@@ -433,7 +437,8 @@ export class Telefono {
     const qualita = this.fineMisura()
     const chiamata = this.stato.chiamata
     this.aggiornaChiamata({ fase: 'finita', avvisi: [] })
-    if (this.sessione && chiamata) {
+    // Una chiamata ricevuta da un collega non ha un registro suo: la riga e' di chi chiama.
+    if (this.sessione && chiamata && !(chiamata.interna && chiamata.direzione === 'entrata')) {
       const durata = chiamata.inizio ? Math.round((Date.now() - chiamata.inizio) / 1000) : 0
       // Solo Odoo puo' scrivere la nota sul contatto e chiudere il log: il
       // telefono e' l'unico a sapere quando l'operatore ha riagganciato.
