@@ -6,6 +6,11 @@ export const it = {
   'gestable.odoo': 'Odoo Web',
   'gestable.nessunaApp': 'Nessuna app nativa per questo Odoo',
   'gestable.nessunaAppTesto': 'Le app di Odoo sono comunque tutte disponibili dal menu ≡ in alto a destra, voce «Odoo Web».',
+  'gestable.trascinaAiuto': 'Trascina le app per cambiare l’ordine.',
+  'gestable.tieniPremuto': 'Tieni premuto per riordinare le app.',
+  'gestable.riordina': 'Riordina le app',
+  'gestable.spostaPrima': 'Sposta prima',
+  'gestable.spostaDopo': 'Sposta dopo',
 
   // Helpdesk: elenco
   'helpdesk.titolo': 'Helpdesk',
@@ -104,6 +109,11 @@ export const en: Record<keyof typeof it, string> = {
   'gestable.odoo': 'Odoo Web',
   'gestable.nessunaApp': 'No native apps for this Odoo',
   'gestable.nessunaAppTesto': 'All Odoo apps are still available from the ≡ menu at the top right, «Odoo Web».',
+  'gestable.trascinaAiuto': 'Drag the apps to change their order.',
+  'gestable.tieniPremuto': 'Touch and hold to reorder the apps.',
+  'gestable.riordina': 'Reorder apps',
+  'gestable.spostaPrima': 'Move earlier',
+  'gestable.spostaDopo': 'Move later',
 
   'helpdesk.titolo': 'Helpdesk',
   'helpdesk.app': 'Helpdesk',

@@ -3,19 +3,22 @@
  * Spese, Messaggi e Attivita' stanno nel menu ☰). Compaiono solo quelle che
  * l'utente ha in Odoo; le stesse app spariscono dalla griglia di Odoo. Il menu ≡ in alto a destra e'
  * quello della scheda Odoo (voci dell'account) con in cima «Odoo Web».
+ * Tenendo premuta un'icona le app si riordinano trascinandole (ui/GrigliaApp.tsx);
+ * l'ordine resta sul telefono, per server e utente.
  */
 
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect, useRouter, type Href } from 'expo-router'
-import { useCallback, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { Image, Pressable, ScrollView, StyleSheet, Text, useColorScheme, useWindowDimensions, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { t } from '../../i18n'
-import { leggi } from '../../odoo/archivio'
+import { leggi, scrivi } from '../../odoo/archivio'
 import { APP, conHelpdesk, menuOdoo, menuSalvato } from '../../odoo/capacita'
 import { iconaCrm } from '../../odoo/crm'
 import { iconaFerie } from '../../odoo/ferie'
 import { inviaOdoo, rottaOdoo } from '../../ui/comandiOdoo'
+import { GrigliaApp } from '../../ui/GrigliaApp'
 import { MenuOdoo, type DatiPannello } from '../../ui/MenuOdoo'
 import { PulsanteMenu } from '../../ui/MenuLaterale'
 import { AURORA, AURORA_CHIARA } from '../../ui/odooIniettato'
@@ -46,7 +49,7 @@ export default function SchedaGestable() {
   const c = useColori()
   const scuro = useColorScheme() === 'dark'
   const router = useRouter()
-  const { width } = useWindowDimensions()
+  const { width, fontScale } = useWindowDimensions()
   const { sessione } = useApp()
   const server = sessione?.server || ''
   const uid = sessione?.utente.uid || 0
@@ -54,6 +57,8 @@ export default function SchedaGestable() {
   // Menu di destra come nella scheda Odoo: «Odoo Web» in alto, poi le voci
   // dell'account di Odoo salvate dalla scheda Odoo l'ultima volta che ha caricato.
   const [pannello, setPannello] = useState<DatiPannello | null>(null)
+  const [ordineSalvato, setOrdineSalvato] = useState<string[]>(() => leggi<string[]>(server, uid, 'gestable-ordine') || [])
+  const [modifica, setModifica] = useState(false)
 
   useFocusEffect(
     useCallback(() => {
@@ -62,11 +67,13 @@ export default function SchedaGestable() {
           .then((m) => m && setMenu(m))
           .catch(() => undefined)
       }
+      // Uscendo dalla scheda si esce anche dalla modifica dell'ordine.
+      return () => setModifica(false)
     }, [server, uid]),
   )
 
   const nativo = !!uid
-  const apps: App[] = [
+  const tutte: App[] = [
     ...(nativo && conHelpdesk(menu)
       ? [{ chiave: 'helpdesk', nome: t('helpdesk.app'), percorso: '/helpdesk' as Href, immagine: iconaHelpdesk(server, menu) }]
       : []),
@@ -74,9 +81,31 @@ export default function SchedaGestable() {
     ...(nativo && menu?.has(APP.ferie) ? [{ chiave: 'ferie', nome: t('ferie.app'), percorso: '/ferie' as Href, immagine: iconaFerie(server) }] : []),
   ]
 
+  // Nell'ordine scelto dall'utente; le app nuove in fondo, nell'ordine di sempre.
+  const chiaviTutte = tutte.map((a) => a.chiave).join('|')
+  const apps = useMemo(() => {
+    const posto = (a: App) => {
+      const i = ordineSalvato.indexOf(a.chiave)
+      return i < 0 ? ordineSalvato.length + tutte.indexOf(a) : i
+    }
+    return [...tutte].sort((a, b) => posto(a) - posto(b))
+    // Le app cambiano solo quando cambia l'elenco delle chiavi.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [chiaviTutte, ordineSalvato, server])
+
+  function salvaOrdine(chiavi: string[]) {
+    // Si tengono anche le app che ora mancano: tornando, riprendono il loro posto.
+    const altre = ordineSalvato.filter((k) => !chiavi.includes(k))
+    const nuovo = [...chiavi, ...altre]
+    setOrdineSalvato(nuovo)
+    scrivi(server, uid, 'gestable-ordine', nuovo)
+  }
+
   // Quattro app per riga sul telefono, sei sui display piu' larghi.
   const colonne = width >= 600 ? 6 : 4
   const lato = Math.floor((width - spazio.l * 2) / colonne)
+  // Icona, nome (una riga, cresce con il testo grande di iOS) e spazio sotto.
+  const altezza = 64 + spazio.s + Math.ceil(18 * fontScale) + spazio.l
 
   function apriMenu() {
     setPannello({ app: null, sezioni: [], utente: leggi<DatiPannello['utente']>(server, uid, 'menu-utente') || [] })
@@ -96,31 +125,51 @@ export default function SchedaGestable() {
         <Text style={[s.titolo, { color: c.testo }]} numberOfLines={1}>
           GestABLE
         </Text>
-        <Pressable
-          onPress={apriMenu}
-          hitSlop={10}
-          style={s.tasto}
-          accessibilityRole="button"
-          accessibilityLabel={t('accesso.menuOdoo')}
-        >
-          <Ionicons name="reorder-three-outline" size={28} color={c.testo} />
-        </Pressable>
+        {modifica ? (
+          <Pressable
+            onPress={() => setModifica(false)}
+            hitSlop={10}
+            style={[s.fine, { backgroundColor: c.primario }]}
+            accessibilityRole="button"
+          >
+            <Text style={[s.fineTesto, { color: c.primarioTesto }]} numberOfLines={1}>
+              {t('comune.fine')}
+            </Text>
+          </Pressable>
+        ) : (
+          <Pressable
+            onPress={apriMenu}
+            hitSlop={10}
+            style={s.tasto}
+            accessibilityRole="button"
+            accessibilityLabel={t('accesso.menuOdoo')}
+          >
+            <Ionicons name="reorder-three-outline" size={28} color={c.testo} />
+          </Pressable>
+        )}
       </View>
+      {modifica ? (
+        <Text style={[s.aiuto, { color: c.testo2 }]} accessibilityLiveRegion="polite">
+          {t('gestable.trascinaAiuto')}
+        </Text>
+      ) : null}
 
-      <ScrollView contentContainerStyle={s.contenuto}>
+      <ScrollView contentContainerStyle={s.contenuto} scrollEnabled={!modifica}>
         {menu && !apps.length ? (
           <StatoVuoto icona="apps-outline" titolo={t('gestable.nessunaApp')} testo={t('gestable.nessunaAppTesto')} />
         ) : null}
-        <View style={s.griglia}>
-          {apps.map((a) => (
-            <Pressable
-              key={a.chiave}
-              onPress={() => router.push(a.percorso)}
-              style={({ pressed }) => [s.app, { width: lato, opacity: pressed ? 0.7 : 1 }]}
-              accessibilityRole="button"
-              accessibilityLabel={a.numero ? `${a.nome}, ${a.numero}` : a.nome}
-            >
-              <View style={[s.tessera, { backgroundColor: scuro ? '#2E3456' : '#FFFFFF' }]}>
+        <GrigliaApp
+          voci={apps}
+          colonne={colonne}
+          lato={lato}
+          altezza={altezza}
+          modifica={modifica}
+          entraInModifica={() => setModifica(true)}
+          apri={(a) => router.push(a.percorso)}
+          ordina={salvaOrdine}
+          disegna={(a, sollevata) => (
+            <View style={[s.app, { width: lato }]}>
+              <View style={[s.tessera, { backgroundColor: scuro ? '#2E3456' : '#FFFFFF' }, sollevata && s.sollevata]}>
                 {a.immagine ? (
                   <Image source={{ uri: a.immagine }} style={s.immagine} accessibilityIgnoresInvertColors />
                 ) : (
@@ -135,9 +184,9 @@ export default function SchedaGestable() {
               <Text style={[s.nome, { color: c.testo }]} numberOfLines={1}>
                 {a.nome}
               </Text>
-            </Pressable>
-          ))}
-        </View>
+            </View>
+          )}
+        />
       </ScrollView>
 
       <MenuOdoo
@@ -165,8 +214,11 @@ const s = StyleSheet.create({
   titolo: { flex: 1, fontSize: 24, fontWeight: '800', letterSpacing: -0.3 },
   tasto: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center' },
   contenuto: { paddingHorizontal: spazio.l, paddingTop: spazio.m, paddingBottom: spazio.xxl },
-  griglia: { flexDirection: 'row', flexWrap: 'wrap' },
-  app: { alignItems: 'center', marginBottom: spazio.l },
+  app: { alignItems: 'center' },
+  fine: { height: 36, borderRadius: 18, paddingHorizontal: spazio.l, alignItems: 'center', justifyContent: 'center' },
+  fineTesto: { fontSize: 16, fontWeight: '700' },
+  aiuto: { fontSize: 14, textAlign: 'center', paddingHorizontal: spazio.l, marginTop: -spazio.xs },
+  sollevata: { shadowOpacity: 0.28, shadowRadius: 16, shadowOffset: { width: 0, height: 8 }, elevation: 8 },
   tessera: {
     width: 64,
     height: 64,

@@ -11,6 +11,7 @@
  * toccando la notifica e non mostra il banner della chat che e' gia' aperta.
  */
 
+import { requireOptionalNativeModule } from 'expo'
 import * as Application from 'expo-application'
 import Constants from 'expo-constants'
 import * as Device from 'expo-device'
@@ -21,9 +22,24 @@ import { segnalaErrore } from '../ui/crash'
 
 type ModuloNotifiche = typeof import('expo-notifications')
 
-// Caricato solo su iOS: su Android il modulo nativo non c'e' (un import statico lo caricherebbe).
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const N: ModuloNotifiche | null = Platform.OS === 'ios' ? (require('expo-notifications') as ModuloNotifiche) : null
+/**
+ * Caricato solo se il modulo nativo c'e': su Android e' escluso dalla build, e
+ * le app 1.2 e precedenti (che ricevono lo stesso JavaScript per OTA) non lo
+ * hanno; un import statico le farebbe chiudere all'avvio. Senza, niente notifiche.
+ */
+function caricaNotifiche(): ModuloNotifiche | null {
+  if (Platform.OS !== 'ios' || !requireOptionalNativeModule('ExpoPushTokenManager') || !requireOptionalNativeModule('ExpoNotificationsEmitter')) {
+    return null
+  }
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    return require('expo-notifications') as ModuloNotifiche
+  } catch {
+    return null
+  }
+}
+
+const N: ModuloNotifiche | null = caricaNotifiche()
 
 const CHIAVE_TOKEN = 'gestable.push.token'
 const CHIAVE_CHIESTO = 'gestable.push.chiesto'
