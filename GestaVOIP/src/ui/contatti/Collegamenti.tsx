@@ -10,7 +10,7 @@
 
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
-import { raggio, useColori } from '../tema'
+import { useColori } from '../tema'
 
 type Social = { chiave: string; icona: keyof typeof Ionicons.glyphMap; colore: string; nome: string; dominio: RegExp }
 
@@ -82,8 +82,8 @@ export function Collegamenti({ sito, social }: ReturnType<typeof trovaCollegamen
   return (
     <View style={s.riga}>
       {sito ? (
-        <Pressable onPress={() => apri(url(sito))} style={({ pressed }) => [s.sito, { backgroundColor: pressed ? c.superficie2 : c.primarioTenue }]} accessibilityRole="link" accessibilityLabel={sito}>
-          <Ionicons name="globe-outline" size={16} color={c.primario} />
+        <Pressable onPress={() => apri(url(sito))} style={({ pressed }) => [s.sito, { opacity: pressed ? 0.6 : 1 }]} accessibilityRole="link" accessibilityLabel={sito}>
+          <Ionicons name="globe-outline" size={18} color={c.primario} />
           <Text style={[s.sitoTesto, { color: c.primario }]} numberOfLines={1}>
             {dominio(sito) || sito}
           </Text>
@@ -94,11 +94,11 @@ export function Collegamenti({ sito, social }: ReturnType<typeof trovaCollegamen
           key={x.chiave}
           onPress={() => apri(u)}
           hitSlop={4}
-          style={({ pressed }) => [s.icona, { backgroundColor: c.superficie, borderColor: c.bordo, opacity: pressed ? 0.6 : 1 }]}
+          style={({ pressed }) => [s.icona, { opacity: pressed ? 0.6 : 1 }]}
           accessibilityRole="link"
           accessibilityLabel={x.nome}
         >
-          <Ionicons name={x.icona} size={18} color={x.chiave === 'x' || x.chiave === 'tiktok' || x.chiave === 'github' ? c.testo : x.colore} />
+          <Ionicons name={x.icona} size={22} color={x.chiave === 'x' || x.chiave === 'tiktok' || x.chiave === 'github' ? c.testo : x.colore} />
         </Pressable>
       ))}
     </View>
@@ -106,8 +106,9 @@ export function Collegamenti({ sito, social }: ReturnType<typeof trovaCollegamen
 }
 
 const s = StyleSheet.create({
-  riga: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
-  sito: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 32, paddingHorizontal: 10, borderRadius: raggio.tondo, maxWidth: '100%', flexShrink: 1 },
-  sitoTesto: { fontSize: 13, fontWeight: '700', flexShrink: 1 },
-  icona: { width: 32, height: 32, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
+  // Tutto parte dal bordo sinistro del nome: niente riquadri o margini davanti al sito.
+  riga: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: 14, rowGap: 4, alignSelf: 'stretch' },
+  sito: { flexDirection: 'row', alignItems: 'center', gap: 5, minHeight: 30, maxWidth: '100%', flexShrink: 1 },
+  sitoTesto: { fontSize: 15, fontWeight: '600', flexShrink: 1 },
+  icona: { minHeight: 30, alignItems: 'center', justifyContent: 'center' },
 })

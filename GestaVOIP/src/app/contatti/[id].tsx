@@ -438,7 +438,7 @@ const s = StyleSheet.create({
   vuoto: { fontSize: 15, textAlign: 'center', marginTop: spazio.xl, paddingHorizontal: spazio.xl },
   eroe: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, paddingTop: spazio.xs },
   eroeTesto: { flex: 1, alignItems: 'flex-start', gap: 4 },
-  nome: { fontSize: 26, fontWeight: '800', letterSpacing: -0.3, alignSelf: 'stretch' },
+  nome: { fontSize: 26, fontWeight: '800', letterSpacing: -0.3, alignSelf: 'stretch', textAlign: 'left' },
   funzione: { fontSize: 15 },
   azienda: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, maxWidth: '100%' },
   aziendaTesto: { fontSize: 14, fontWeight: '700' },
