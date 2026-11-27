@@ -365,13 +365,36 @@ export const voceUtente = (i: number) => `window.__gvVoceUtente && window.__gvVo
 export const voceUtenteTesto = (testo: string) =>
   `window.__gvVoceUtenteTesto && window.__gvVoceUtenteTesto(${JSON.stringify(testo)}); true;`
 
+/**
+ * Apre un percorso di Odoo (un record: /web#model=...&id=...). Prima dentro il
+ * client gia' caricato, con il servizio delle azioni: e' immediato, mentre
+ * ricaricare la pagina rifa' partire tutto Odoo (secondi). Solo se il client non
+ * c'e' ancora o l'azione non riesce si ricarica come prima: stesso percorso e
+ * hash diverso (il client non ricarica da solo) o percorso diverso (si naviga).
+ */
 export function vaiA(percorso: string): string {
-  // Stesso percorso e hash diverso (/web#...): il client di Odoo non ricarica da
-  // solo, quindi si ricarica la pagina; percorso diverso: basta navigare.
   return `(function () {
     window.__gvNascondiHome && window.__gvNascondiHome();
     var u = new URL(${JSON.stringify(percorso)}, window.location.origin);
-    if (u.pathname === window.location.pathname) { window.location.hash = u.hash; window.location.reload(); }
-    else { window.location.href = u.href; }
+    function ricarica() {
+      if (u.pathname === window.location.pathname) { window.location.hash = u.hash; window.location.reload(); }
+      else { window.location.href = u.href; }
+    }
+    var p = new URLSearchParams((u.hash || '').replace(/^#/, '') || u.search);
+    var modello = p.get('model'), id = Number(p.get('id')) || 0, azione = Number(p.get('action')) || 0;
+    if (!(modello && id) && !azione) { ricarica(); return; }
+    var prove = 0;
+    (function prova() {
+      var svc = null;
+      try { svc = window.odoo.__WOWL_DEBUG__.root.env.services.action; } catch (e) {}
+      if (!svc || !svc.doAction) {
+        if (++prove < 20) { setTimeout(prova, 250); } else { ricarica(); }
+        return;
+      }
+      var cosa = modello && id
+        ? { type: 'ir.actions.act_window', res_model: modello, res_id: id, views: [[false, 'form']], target: 'current' }
+        : azione;
+      Promise.resolve(svc.doAction(cosa, { clearBreadcrumbs: true })).catch(ricarica);
+    })();
   })(); true;`
 }
