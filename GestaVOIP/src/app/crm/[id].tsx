@@ -3,6 +3,7 @@
  * atteso, cliente con chiama ed email, venditore, team, etichette, chiusura
  * prevista, attività (fatte con un tocco, nuove in pochi tocchi), note e
  * conversazione. In fondo «Vinta» e «Persa» (con il motivo), come in Odoo.
+ * Con l'app Vendite: i preventivi dell'opportunità e «Nuovo preventivo» (sale_crm).
  */
 
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -32,8 +33,10 @@ import {
   type Scelta,
   type TipoAttivita,
 } from '../../odoo/crm'
+import { APP, menuSalvato } from '../../odoo/capacita'
 import { percorsoRecord, urlAvatar } from '../../odoo/lavoro'
 import { segui } from '../../odoo/registro'
+import { diOpportunita, type Ordine } from '../../odoo/vendite'
 import { Avatar } from '../../ui/Avatar'
 import { Caricamento } from '../../ui/Caricamento'
 import { CercaPersone } from '../../ui/calendario/CercaPersone'
@@ -41,6 +44,7 @@ import { SceltaGiorno } from '../../ui/calendario/Selettori'
 import { chiamaNumero } from '../../ui/chiama'
 import { inviaOdoo, rottaOdoo } from '../../ui/comandiOdoo'
 import { Foglio } from '../../ui/Foglio'
+import { coloreStato, importo as importoVendita, testoStato } from '../../ui/formatoVendite'
 import { coloreAttivita, colorePriorita, data, giornoIso, iconaAttivita, importo, leggiImporto, quando } from '../../ui/formatoCrm'
 import { Pulsante } from '../../ui/Pulsante'
 import { Registro } from '../../ui/Registro'
@@ -104,22 +108,31 @@ export default function SchedaOpportunita() {
   const [scadenza, setScadenza] = useState(() => traGiorni(0))
   const [riassunto, setRiassunto] = useState('')
   const [occupato, setOccupato] = useState('')
+  // Vendite: solo se l'utente ha l'app in Odoo (menu letto dalla scheda GestABLE).
+  const conVendite = !!menuSalvato(server, uid)?.has(APP.vendite)
+  const [preventivi, setPreventivi] = useState<Ordine[]>([])
 
   const ricarica = useCallback(async () => {
     if (!server || !id) {
       return
     }
     try {
-      const [r, f, a] = await Promise.all([dettaglio(server, id), caricaFasi(server).catch(() => [] as Fase[]), caricaAttivita(server, id).catch(() => [] as Attivita[])])
+      const [r, f, a, v] = await Promise.all([
+        dettaglio(server, id),
+        caricaFasi(server).catch(() => [] as Fase[]),
+        caricaAttivita(server, id).catch(() => [] as Attivita[]),
+        conVendite ? diOpportunita(server, id).catch(() => [] as Ordine[]) : Promise.resolve([] as Ordine[]),
+      ])
       setOp(r)
       setTutteFasi(f)
       setLavori(a)
+      setPreventivi(v)
       setProblema('')
       setVersione((v) => v + 1)
     } catch (e) {
       setProblema(e instanceof Error ? e.message : String(e))
     }
-  }, [server, id])
+  }, [server, id, conVendite])
 
   useFocusEffect(
     useCallback(() => {
@@ -430,6 +443,45 @@ export default function SchedaOpportunita() {
             )}
             <Pulsante testo={t('crm.pianifica')} variante="tenue" onPress={() => void apriAttivita()} />
           </Sezione>
+
+          {conVendite ? (
+            <Sezione titolo={t('vendite.filtro.preventivi')}>
+              {preventivi.map((v) => {
+                const colore = coloreStato(v.stato, c)
+                return (
+                  <Pressable
+                    key={v.id}
+                    onPress={() => router.push({ pathname: '/vendite/[id]', params: { id: String(v.id) } })}
+                    style={[s.attivita, { borderColor: c.bordo }]}
+                    accessibilityRole="button"
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={[s.sotto, { color: c.testo, fontWeight: '600' }]} numberOfLines={1}>
+                        {v.nome}
+                      </Text>
+                      <Text style={[s.piccolo, { color: colore.testo }]} numberOfLines={1}>
+                        {testoStato(v.stato)}
+                      </Text>
+                    </View>
+                    <Text style={[s.valore, { color: c.testo }]} numberOfLines={1}>
+                      {importoVendita(v.totale, v.valuta)}
+                    </Text>
+                    <Ionicons name="chevron-forward" size={16} color={c.testo3} />
+                  </Pressable>
+                )
+              })}
+              <Pulsante
+                testo={t('vendite.nuovo')}
+                variante="tenue"
+                onPress={() =>
+                  router.push({
+                    pathname: '/vendite/nuovo',
+                    params: { opportunita: String(op.id), ...(op.clienteId ? { cliente: String(op.clienteId), clienteNome: op.cliente } : {}) },
+                  })
+                }
+              />
+            </Sezione>
+          ) : null}
 
           {op.descrizione ? (
             <Sezione titolo={t('crm.note')}>

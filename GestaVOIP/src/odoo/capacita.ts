@@ -26,6 +26,8 @@ export const APP = {
   ferie: 'hr_holidays.menu_hr_holidays_root',
   /** CRM (crm): la radice del menu, uguale dalla 17 alla 20. */
   crm: 'crm.crm_menu_root',
+  /** Vendite (sale_management attiva il menu di sale): uguale dalla 17 alla 20. */
+  vendite: 'sale.sale_menu_root',
 } as const
 
 /** C'e' l'Helpdesk (uno dei due) tra le app di questo utente? */
@@ -45,6 +47,7 @@ export const APP_NATIVE: readonly string[] = [
   APP.helpdeskEnterprise,
   APP.ferie,
   APP.crm,
+  APP.vendite,
   // Le Spese sono native solo dove c'e' lo scanner (build 1.2+ su iPhone).
   ...(spesePossibili ? [APP.spese] : []),
 ]
