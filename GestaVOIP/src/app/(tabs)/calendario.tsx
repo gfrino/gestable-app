@@ -470,7 +470,7 @@ const s = StyleSheet.create({
   freccia: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   segmenti: { flex: 1, flexDirection: 'row', padding: 4, borderRadius: raggio.m },
   segmento: { flex: 1, paddingVertical: 8, paddingHorizontal: 4, borderRadius: raggio.s, alignItems: 'center' },
-  segmentoTesto: { fontSize: 15, fontWeight: '700' },
+  segmentoTesto: { fontSize: 13, fontWeight: '600', letterSpacing: 0.1 },
   striscia: { flexGrow: 0 },
   settimana: { flexDirection: 'row', paddingHorizontal: spazio.s, paddingBottom: spazio.s },
   giorno: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 4 },

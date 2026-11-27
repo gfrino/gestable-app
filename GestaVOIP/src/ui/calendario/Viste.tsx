@@ -3,9 +3,10 @@
  * appuntamento usata anche nella vista Giorno.
  *
  * Settimana: i sette giorni uno sotto l'altro, a sinistra la data (si tocca per
- * aprire quel giorno), a destra i suoi appuntamenti.
- * Mese: la griglia del mese; nelle celle strette (iPhone) i pallini, in quelle
- * larghe (iPhone Duo aperto, iPad) i titoli. Toccare un giorno apre quel giorno.
+ * aprire quel giorno), a destra i suoi appuntamenti raccolti in un riquadro.
+ * Mese: la griglia del mese a tessere; nelle celle strette (iPhone) fino a 10
+ * pallini in file da 5, in quelle larghe (iPhone Duo aperto) i titoli.
+ * Toccare un giorno apre quel giorno.
  */
 
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -43,11 +44,9 @@ type Carta = {
   adesso: number
   larghezzaOre: number
   onPress: () => void
-  /** Settimana: una riga sola, senza invitati e videochiamata. */
-  compatta?: boolean
 }
 
-export function CartaEvento({ evento: e, adesso, larghezzaOre, onPress, compatta }: Carta) {
+export function CartaEvento({ evento: e, adesso, larghezzaOre, onPress }: Carta) {
   const c = useColori()
   const inCorso = !e.tuttoIlGiorno && e.inizio.getTime() <= adesso && adesso < e.fine.getTime()
   const passato = !e.tuttoIlGiorno && e.fine.getTime() < adesso
@@ -56,7 +55,7 @@ export function CartaEvento({ evento: e, adesso, larghezzaOre, onPress, compatta
       onPress={onPress}
       accessibilityRole="button"
       style={({ pressed }) => [
-        compatta ? s.cartaCompatta : s.carta,
+        s.carta,
         { backgroundColor: pressed ? c.superficie2 : c.superficie, borderColor: inCorso ? c.primario : c.bordo, opacity: passato ? 0.6 : 1 },
       ]}
     >
@@ -65,7 +64,7 @@ export function CartaEvento({ evento: e, adesso, larghezzaOre, onPress, compatta
           <Text style={[s.tutto, { color: c.primario }]}>{t('calendario.tuttoIlGiorno')}</Text>
         ) : (
           <>
-            <Text style={[compatta ? s.oraInizioCompatta : s.oraInizio, { color: c.testo }]} numberOfLines={1}>
+            <Text style={[s.oraInizio, { color: c.testo }]} numberOfLines={1}>
               {oraBreve(e.inizio)}
             </Text>
             <Text style={[s.oraFine, { color: c.testo3 }]} numberOfLines={1}>
@@ -74,9 +73,9 @@ export function CartaEvento({ evento: e, adesso, larghezzaOre, onPress, compatta
           </>
         )}
       </View>
-      <View style={{ flex: 1, gap: compatta ? 2 : 3 }}>
+      <View style={{ flex: 1, gap: 3 }}>
         <View style={s.rigaTitolo}>
-          <Text style={[compatta ? s.titoloCompatto : s.titolo, { color: c.testo }]} numberOfLines={compatta ? 1 : 2}>
+          <Text style={[s.titolo, { color: c.testo }]} numberOfLines={2}>
             {e.titolo}
           </Text>
           {inCorso ? (
@@ -93,20 +92,20 @@ export function CartaEvento({ evento: e, adesso, larghezzaOre, onPress, compatta
             </Text>
           </View>
         ) : null}
-        {e.video && !compatta ? (
+        {e.video ? (
           <View style={s.dettaglio}>
             <Ionicons name="videocam-outline" size={14} color={c.testo2} />
             <Text style={[s.dettaglioTesto, { color: c.testo2 }]}>{t('calendario.videochiamata')}</Text>
           </View>
         ) : null}
-        {e.partecipanti > 1 && !compatta ? (
+        {e.partecipanti > 1 ? (
           <View style={s.dettaglio}>
             <Ionicons name="people-outline" size={14} color={c.testo2} />
             <Text style={[s.dettaglioTesto, { color: c.testo2 }]}>{tn('calendario.partecipanti', e.partecipanti)}</Text>
           </View>
         ) : null}
       </View>
-      {compatta ? null : <Ionicons name="chevron-forward" size={18} color={c.testo3} />}
+      <Ionicons name="chevron-forward" size={18} color={c.testo3} />
     </Pressable>
   )
 }
@@ -120,6 +119,52 @@ type Comuni = {
   oggi: Date
   onGiorno: (d: Date) => void
   refreshControl: ReactElement<RefreshControlProps>
+}
+
+/** Un appuntamento nel riquadro di un giorno della settimana. */
+function RigaSettimana({ evento: e, adesso, larghezzaOre, primo, onPress }: { evento: Evento; adesso: number; larghezzaOre: number; primo: boolean; onPress: () => void }) {
+  const c = useColori()
+  const inCorso = !e.tuttoIlGiorno && e.inizio.getTime() <= adesso && adesso < e.fine.getTime()
+  const passato = !e.tuttoIlGiorno && e.fine.getTime() < adesso
+  return (
+    <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [s.riga7, pressed && { backgroundColor: c.superficie2 }]}>
+      {primo ? null : <View style={[s.divisore, { backgroundColor: c.bordo, left: spazio.m + larghezzaOre + spazio.m }]} />}
+      <View style={[s.ore7, { width: larghezzaOre, opacity: passato ? 0.5 : 1 }]}>
+        {e.tuttoIlGiorno ? (
+          <Text style={[s.tutto, { color: c.primario }]}>{t('calendario.tuttoIlGiorno')}</Text>
+        ) : (
+          <>
+            <Text style={[s.ora7, { color: c.testo }]} numberOfLines={1}>
+              {oraBreve(e.inizio)}
+            </Text>
+            <Text style={[s.oraFine7, { color: c.testo3 }]} numberOfLines={1}>
+              {oraBreve(e.fine)}
+            </Text>
+          </>
+        )}
+      </View>
+      <View style={{ flex: 1, gap: 2, opacity: passato ? 0.5 : 1 }}>
+        <View style={s.rigaTitolo}>
+          <Text style={[s.titolo7, { color: c.testo }]} numberOfLines={1}>
+            {e.titolo}
+          </Text>
+          {inCorso ? (
+            <View style={[s.ora, { backgroundColor: c.verdeTenue }]}>
+              <Text style={[s.oraTesto, { color: c.verde }]}>{t('calendario.adesso')}</Text>
+            </View>
+          ) : null}
+        </View>
+        {e.luogo || e.video ? (
+          <View style={s.dettaglio}>
+            <Ionicons name={e.luogo ? 'location-outline' : 'videocam-outline'} size={13} color={c.testo3} />
+            <Text style={[s.dettaglio7, { color: c.testo2 }]} numberOfLines={1}>
+              {e.luogo || t('calendario.videochiamata')}
+            </Text>
+          </View>
+        ) : null}
+      </View>
+    </Pressable>
+  )
 }
 
 export function VistaSettimana({
@@ -141,6 +186,8 @@ export function VistaSettimana({
   onEvento: (id: number) => void
 }) {
   const c = useColori()
+  // Le ore in questa vista hanno un carattere piu' piccolo: colonna piu' stretta.
+  const ore = Math.round(larghezzaOre * 0.9)
   return (
     <ScrollView contentContainerStyle={s.settimana} refreshControl={refreshControl}>
       {errore && !dati ? <Text style={[s.errore, { color: c.rosso }]}>{errore}</Text> : null}
@@ -149,7 +196,7 @@ export function VistaSettimana({
         const eOggi = giornoChiave(giorno) === giornoChiave(oggi)
         const lista = dati ? delGiorno(dati, giorno) : null
         return (
-          <View key={g} style={[s.giornoSettimana, g > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.bordo }]}>
+          <View key={g} style={s.giornoSettimana}>
             <Pressable
               onPress={() => onGiorno(giorno)}
               hitSlop={4}
@@ -161,20 +208,22 @@ export function VistaSettimana({
                 {giorno.toLocaleDateString(loc(), { weekday: 'short' }).replace('.', '')}
               </Text>
               <View style={[s.dataNumero, eOggi && { backgroundColor: c.primario }]}>
-                <Text style={[s.dataNumeroTesto, { color: eOggi ? c.primarioTesto : c.testo }]}>{giorno.getDate()}</Text>
+                <Text style={[s.dataNumeroTesto, { color: eOggi ? c.primarioTesto : g > 4 ? c.testo2 : c.testo }]}>{giorno.getDate()}</Text>
               </View>
             </Pressable>
             <View style={s.eventiGiorno}>
               {!lista ? (
-                <View style={[s.segnaposto, { backgroundColor: c.superficie2 }]} />
+                <View style={[s.segnaposto, { backgroundColor: c.superficie }]} />
               ) : !lista.length ? (
-                <Pressable onPress={() => onGiorno(giorno)} style={s.libero} accessibilityRole="button">
+                <Pressable onPress={() => onGiorno(giorno)} style={({ pressed }) => [s.libero, pressed && { opacity: 0.6 }]} accessibilityRole="button">
                   <Text style={[s.liberoTesto, { color: c.testo3 }]}>{t('calendario.libero')}</Text>
                 </Pressable>
               ) : (
-                lista.map((e) => (
-                  <CartaEvento key={e.id} evento={e} adesso={adesso} larghezzaOre={larghezzaOre} onPress={() => onEvento(e.id)} compatta />
-                ))
+                <View style={[s.gruppo, { backgroundColor: c.superficie }]}>
+                  {lista.map((e, i) => (
+                    <RigaSettimana key={e.id} evento={e} adesso={adesso} larghezzaOre={ore} primo={i === 0} onPress={() => onEvento(e.id)} />
+                  ))}
+                </View>
               )}
             </View>
           </View>
@@ -183,6 +232,8 @@ export function VistaSettimana({
     </ScrollView>
   )
 }
+
+const PALLINI_MAX = 10 // in file da 5
 
 export function VistaMese({
   mese,
@@ -202,11 +253,11 @@ export function VistaMese({
   const c = useColori()
   const [misura, setMisura] = useState({ w: 0, h: 0 })
   const settimane = settimaneDelMese(mese)
-  const larghezzaCella = misura.w / 7
-  const altezzaCella = misura.h / settimane.length
+  const larghezzaCella = (misura.w - 6 * GRIGLIA_SPAZIO) / 7
+  const altezzaCella = (misura.h - (settimane.length - 1) * GRIGLIA_SPAZIO) / settimane.length
   // Celle larghe: i titoli (quanti ne stanno); strette: i pallini.
   const conTitoli = larghezzaCella >= 72
-  const titoliMax = Math.max(1, Math.floor((altezzaCella - 34) / 16))
+  const titoliMax = Math.max(1, Math.floor((altezzaCella - 40) / 18))
   const chiaveOggi = giornoChiave(oggi)
   const chiaveScelto = giornoChiave(scelto)
   const manca = settimane.some((x) => !perSettimana[giornoChiave(x)])
@@ -231,28 +282,29 @@ export function VistaMese({
         {settimane.map((inizio) => {
           const dati = perSettimana[giornoChiave(inizio)]
           return (
-            <View key={giornoChiave(inizio)} style={[s.riga, { borderTopColor: c.bordo }]}>
+            <View key={giornoChiave(inizio)} style={s.rigaMese}>
               {Array.from({ length: 7 }, (_, g) => {
                 const giorno = piuGiorni(inizio, g)
                 const chiave = giornoChiave(giorno)
                 const fuori = giorno.getMonth() !== mese.getMonth()
                 const eOggi = chiave === chiaveOggi
-                const eScelto = chiave === chiaveScelto
+                const eScelto = chiave === chiaveScelto && !eOggi
                 const lista = dati ? delGiorno(dati, giorno) : []
+                const sfondo = eScelto ? c.primarioTenue : fuori ? 'transparent' : c.superficie
                 return (
                   <Pressable
                     key={chiave}
                     onPress={() => onGiorno(giorno)}
-                    style={({ pressed }) => [s.cella, pressed && { backgroundColor: c.superficie2 }]}
+                    style={({ pressed }) => [s.cella, { backgroundColor: pressed ? c.superficie2 : sfondo }]}
                     accessibilityRole="button"
                     accessibilityLabel={etichettaGiorno(giorno, lista.length)}
                   >
-                    <View style={[s.numero, eScelto && { backgroundColor: c.primario }]}>
+                    <View style={[s.numero, eOggi && { backgroundColor: c.primario }]}>
                       <Text
                         style={[
                           s.numeroTesto,
-                          { color: eScelto ? c.primarioTesto : eOggi ? c.primario : fuori ? c.testo3 : c.testo },
-                          (eScelto || eOggi) && { fontWeight: '800' },
+                          { color: eOggi ? c.primarioTesto : eScelto ? c.primario : fuori ? c.testo3 : g > 4 ? c.testo2 : c.testo },
+                          (eOggi || eScelto) && { fontWeight: '700' },
                         ]}
                       >
                         {giorno.getDate()}
@@ -261,11 +313,7 @@ export function VistaMese({
                     {!lista.length ? null : conTitoli ? (
                       <View style={[s.titoli, fuori && { opacity: 0.5 }]}>
                         {lista.slice(0, lista.length > titoliMax ? titoliMax - 1 : titoliMax).map((e) => (
-                          <Text
-                            key={e.id}
-                            numberOfLines={1}
-                            style={[s.titoloCella, { backgroundColor: c.primarioTenue, color: c.testo }]}
-                          >
+                          <Text key={e.id} numberOfLines={1} style={[s.titoloCella, { backgroundColor: c.primarioTenue, color: c.testo }]}>
                             {e.titolo}
                           </Text>
                         ))}
@@ -277,10 +325,12 @@ export function VistaMese({
                       </View>
                     ) : (
                       <View style={[s.pallini, fuori && { opacity: 0.5 }]}>
-                        {lista.slice(0, 3).map((e) => (
+                        {lista.slice(0, PALLINI_MAX).map((e) => (
                           <View key={e.id} style={[s.pallino, { backgroundColor: c.primario }]} />
                         ))}
-                        {lista.length > 3 ? <Text style={[s.altri, { color: c.testo2 }]}>+{lista.length - 3}</Text> : null}
+                        {lista.length > PALLINI_MAX ? (
+                          <Text style={[s.altri, { color: c.testo2 }]}>+{lista.length - PALLINI_MAX}</Text>
+                        ) : null}
                       </View>
                     )}
                   </Pressable>
@@ -294,54 +344,69 @@ export function VistaMese({
   )
 }
 
+const GRIGLIA_SPAZIO = 4
+const PALLINO = 5
+const PALLINO_SPAZIO = 3
+
+const ombra = {
+  shadowColor: '#000',
+  shadowOpacity: 0.06,
+  shadowRadius: 10,
+  shadowOffset: { width: 0, height: 2 },
+  elevation: 1,
+} as const
+
 const s = StyleSheet.create({
   carta: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, padding: spazio.m, borderRadius: raggio.l, borderWidth: 1 },
-  cartaCompatta: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spazio.s,
-    paddingVertical: spazio.s,
-    paddingHorizontal: spazio.m,
-    borderRadius: raggio.m,
-    borderWidth: 1,
-  },
   ore: { alignItems: 'flex-start' },
   oraInizio: { fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
-  oraInizioCompatta: { fontSize: 15, fontWeight: '700', fontVariant: ['tabular-nums'] },
   oraFine: { fontSize: 13, fontVariant: ['tabular-nums'], marginTop: 2 },
   tutto: { fontSize: 12, fontWeight: '700', lineHeight: 15 },
   rigaTitolo: { flexDirection: 'row', alignItems: 'center', gap: spazio.s },
   titolo: { flex: 1, fontSize: 16, fontWeight: '700' },
-  titoloCompatto: { flex: 1, fontSize: 15, fontWeight: '700' },
   ora: { paddingHorizontal: 8, paddingVertical: 2, borderRadius: 10 },
   oraTesto: { fontSize: 11, fontWeight: '800' },
   dettaglio: { flexDirection: 'row', alignItems: 'center', gap: 5 },
   dettaglioTesto: { flex: 1, fontSize: 13 },
   errore: { fontSize: 15, textAlign: 'center', marginVertical: spazio.s },
 
-  settimana: { paddingHorizontal: spazio.l, paddingTop: spazio.xs, paddingBottom: spazio.xxl },
-  giornoSettimana: { flexDirection: 'row', gap: spazio.m, paddingVertical: spazio.m },
-  data: { width: 44, alignItems: 'center', gap: 2 },
-  dataGiorno: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase' },
-  dataNumero: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  dataNumeroTesto: { fontSize: 18, fontWeight: '700' },
-  eventiGiorno: { flex: 1, gap: spazio.s, justifyContent: 'center' },
-  segnaposto: { height: 40, borderRadius: raggio.m, opacity: 0.6 },
-  libero: { minHeight: 40, justifyContent: 'center' },
-  liberoTesto: { fontSize: 15 },
+  settimana: { paddingHorizontal: spazio.l, paddingTop: spazio.xs, paddingBottom: spazio.xxl, gap: spazio.m },
+  giornoSettimana: { flexDirection: 'row', gap: spazio.m },
+  data: { width: 40, alignItems: 'center', gap: 2, paddingTop: 2 },
+  dataGiorno: { fontSize: 11, fontWeight: '600', letterSpacing: 0.6, textTransform: 'uppercase' },
+  dataNumero: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  dataNumeroTesto: { fontSize: 19, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  eventiGiorno: { flex: 1 },
+  gruppo: { borderRadius: raggio.l, overflow: 'hidden', ...ombra },
+  riga7: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, paddingVertical: 11, paddingHorizontal: spazio.m },
+  divisore: { position: 'absolute', top: 0, right: 0, height: StyleSheet.hairlineWidth },
+  ore7: { alignItems: 'flex-start' },
+  ora7: { fontSize: 14, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  oraFine7: { fontSize: 12, fontVariant: ['tabular-nums'], marginTop: 1 },
+  titolo7: { flex: 1, fontSize: 15, fontWeight: '600' },
+  dettaglio7: { flex: 1, fontSize: 13 },
+  segnaposto: { height: 52, borderRadius: raggio.l, opacity: 0.7 },
+  libero: { minHeight: 50, justifyContent: 'center', paddingHorizontal: spazio.xs },
+  liberoTesto: { fontSize: 14 },
 
   mese: { flexGrow: 1, paddingHorizontal: spazio.s, paddingBottom: spazio.m },
-  lettere: { flexDirection: 'row', paddingBottom: spazio.xs },
-  lettera: { flex: 1, textAlign: 'center', fontSize: 12, fontWeight: '700' },
-  griglia: { flex: 1 },
-  riga: { flex: 1, minHeight: 64, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth },
-  cella: { flex: 1, alignItems: 'center', paddingTop: 4, gap: 3, borderRadius: raggio.s, overflow: 'hidden' },
-  numero: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
-  numeroTesto: { fontSize: 16, fontWeight: '600', fontVariant: ['tabular-nums'] },
-  pallini: { flexDirection: 'row', alignItems: 'center', gap: 3, height: 14 },
+  lettere: { flexDirection: 'row', paddingBottom: 6, gap: GRIGLIA_SPAZIO },
+  lettera: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '600', letterSpacing: 0.4 },
   attesa: { position: 'absolute', top: 0, right: spazio.m },
-  pallino: { width: 6, height: 6, borderRadius: 3 },
-  titoli: { alignSelf: 'stretch', gap: 2, paddingHorizontal: 2 },
-  titoloCella: { fontSize: 11, fontWeight: '600', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 4, overflow: 'hidden' },
-  altri: { fontSize: 11, lineHeight: 14, fontWeight: '700', textAlign: 'center' },
+  griglia: { flex: 1, gap: GRIGLIA_SPAZIO },
+  rigaMese: { flex: 1, minHeight: 58, flexDirection: 'row', gap: GRIGLIA_SPAZIO },
+  cella: { flex: 1, alignItems: 'center', paddingTop: 5, gap: 5, borderRadius: raggio.m, overflow: 'hidden' },
+  numero: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  numeroTesto: { fontSize: 15, fontWeight: '500', fontVariant: ['tabular-nums'] },
+  pallini: {
+    width: PALLINO * 5 + PALLINO_SPAZIO * 4,
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: PALLINO_SPAZIO,
+  },
+  pallino: { width: PALLINO, height: PALLINO, borderRadius: PALLINO / 2 },
+  titoli: { alignSelf: 'stretch', gap: 3, paddingHorizontal: 4 },
+  titoloCella: { fontSize: 11, fontWeight: '500', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 5, overflow: 'hidden' },
+  altri: { fontSize: 10, lineHeight: PALLINO + 2, fontWeight: '700', textAlign: 'center' },
 })

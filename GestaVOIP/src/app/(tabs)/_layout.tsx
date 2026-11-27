@@ -8,8 +8,9 @@ import { useMenu } from '../../ui/MenuLaterale'
 import { useTelefono } from '../../voip/Contesto'
 import { useColori } from '../../ui/tema'
 
-// La «G» del logo, a un colore (si tinge come le altre icone della barra).
-const G = require('../../../assets/caricamento-g.png') as number
+// La «G» del logo con il suo spicchio, a un colore (si tinge come le altre
+// icone della barra). Fatta da Grafiche/Logo GestABLE.png.
+const G = require('../../../assets/scheda-g.png') as number
 
 export default function LayoutSchede() {
   const c = useColori()
