@@ -7,6 +7,9 @@
  * Mese: la griglia del mese; nelle celle strette (iPhone) fino a 10
  * pallini in file da 5, in quelle larghe (iPhone Duo aperto) i titoli.
  * Toccare un giorno apre quel giorno.
+ *
+ * Con colleghi scelti (calendario del team) ogni appuntamento ha il pallino
+ * del colore di chi partecipa (viola i miei) e il nome del collega.
  */
 
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -15,6 +18,7 @@ import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDi
 import { loc, t, tn } from '../../i18n'
 import { delGiorno, giornoChiave, giornoEsteso, lettereGiorni, oraBreve, type Evento } from '../../odoo/calendario'
 import { raggio, spazio, useColori } from '../tema'
+import { useDiChi } from './Team'
 
 export function piuGiorni(d: Date, n: number): Date {
   const x = new Date(d)
@@ -98,8 +102,30 @@ type Carta = {
   onPress: () => void
 }
 
+/** Il pallino del colore di chi partecipa (solo nel calendario del team). */
+function Pallino({ colore }: { colore: string | null | undefined }) {
+  return colore ? <View style={[s.pallinoTeam, { backgroundColor: colore }]} /> : null
+}
+
+/** «Rita Ispan, Michael Ferrari»: i colleghi scelti che partecipano. */
+function Chi({ nomi, piccolo }: { nomi: string[]; piccolo?: boolean }) {
+  const c = useColori()
+  if (!nomi.length) {
+    return null
+  }
+  return (
+    <View style={s.dettaglio}>
+      <Ionicons name="person-outline" size={piccolo ? 13 : 14} color={c.testo2} />
+      <Text style={[piccolo ? s.dettaglio7 : s.dettaglioTesto, { color: c.testo2 }]} numberOfLines={1}>
+        {nomi.join(', ')}
+      </Text>
+    </View>
+  )
+}
+
 export function CartaEvento({ evento: e, adesso, larghezzaOre, onPress }: Carta) {
   const c = useColori()
+  const chi = useDiChi(e)
   const inCorso = !e.tuttoIlGiorno && e.inizio.getTime() <= adesso && adesso < e.fine.getTime()
   const passato = !e.tuttoIlGiorno && e.fine.getTime() < adesso
   return (
@@ -127,6 +153,7 @@ export function CartaEvento({ evento: e, adesso, larghezzaOre, onPress }: Carta)
       </View>
       <View style={{ flex: 1, gap: 3 }}>
         <View style={s.rigaTitolo}>
+          <Pallino colore={chi?.colore} />
           <Text style={[s.titolo, { color: c.testo }]} numberOfLines={2}>
             {e.titolo}
           </Text>
@@ -136,6 +163,7 @@ export function CartaEvento({ evento: e, adesso, larghezzaOre, onPress }: Carta)
             </View>
           ) : null}
         </View>
+        <Chi nomi={chi?.nomi || []} />
         {e.luogo ? (
           <View style={s.dettaglio}>
             <Ionicons name="location-outline" size={14} color={c.testo2} />
@@ -176,6 +204,7 @@ type Comuni = {
 /** Un appuntamento nel riquadro di un giorno della settimana. */
 function RigaSettimana({ evento: e, adesso, larghezzaOre, primo, onPress }: { evento: Evento; adesso: number; larghezzaOre: number; primo: boolean; onPress: () => void }) {
   const c = useColori()
+  const chi = useDiChi(e)
   const inCorso = !e.tuttoIlGiorno && e.inizio.getTime() <= adesso && adesso < e.fine.getTime()
   const passato = !e.tuttoIlGiorno && e.fine.getTime() < adesso
   return (
@@ -197,6 +226,7 @@ function RigaSettimana({ evento: e, adesso, larghezzaOre, primo, onPress }: { ev
       </View>
       <View style={{ flex: 1, gap: 2, opacity: passato ? 0.5 : 1 }}>
         <View style={s.rigaTitolo}>
+          <Pallino colore={chi?.colore} />
           <Text style={[s.titolo7, { color: c.testo }]} numberOfLines={1}>
             {e.titolo}
           </Text>
@@ -206,6 +236,7 @@ function RigaSettimana({ evento: e, adesso, larghezzaOre, primo, onPress }: { ev
             </View>
           ) : null}
         </View>
+        <Chi nomi={chi?.nomi || []} piccolo />
         {e.luogo || e.video ? (
           <View style={s.dettaglio}>
             <Ionicons name={e.luogo ? 'location-outline' : 'videocam-outline'} size={13} color={c.testo3} />
@@ -362,9 +393,7 @@ export function VistaMese({
                     {!lista.length ? null : conTitoli ? (
                       <View style={[s.titoli, fuori && { opacity: 0.5 }]}>
                         {lista.slice(0, lista.length > titoliMax ? titoliMax - 1 : titoliMax).map((e) => (
-                          <Text key={e.id} numberOfLines={1} style={[s.titoloCella, { backgroundColor: c.primarioTenue, color: c.testo }]}>
-                            {e.titolo}
-                          </Text>
+                          <TitoloCella key={e.id} evento={e} />
                         ))}
                         {lista.length > titoliMax ? (
                           <Text style={[s.altri, { color: c.testo2 }]} numberOfLines={1}>
@@ -375,7 +404,7 @@ export function VistaMese({
                     ) : (
                       <View style={[s.pallini, fuori && { opacity: 0.5 }]}>
                         {lista.slice(0, PALLINI_MAX).map((e) => (
-                          <View key={e.id} style={[s.pallino, { backgroundColor: c.primario }]} />
+                          <PallinoCella key={e.id} evento={e} />
                         ))}
                         {lista.length > PALLINI_MAX ? (
                           <Text style={[s.altri, { color: c.testo2 }]}>+{lista.length - PALLINI_MAX}</Text>
@@ -396,7 +425,29 @@ export function VistaMese({
 const PALLINO = 5
 const PALLINO_SPAZIO = 3
 
+/** Nella griglia del mese: il pallino ha il colore di chi partecipa (viola senza team). */
+function PallinoCella({ evento }: { evento: Evento }) {
+  const c = useColori()
+  const chi = useDiChi(evento)
+  return <View style={[s.pallino, { backgroundColor: chi?.colore || c.primario }]} />
+}
+
+function TitoloCella({ evento }: { evento: Evento }) {
+  const c = useColori()
+  const chi = useDiChi(evento)
+  return (
+    <View style={[s.titoloCellaRiga, { backgroundColor: c.primarioTenue }]}>
+      <Pallino colore={chi?.colore} />
+      <Text numberOfLines={1} style={[s.titoloCella, { color: c.testo }]}>
+        {evento.titolo}
+      </Text>
+    </View>
+  )
+}
+
 const s = StyleSheet.create({
+  pallinoTeam: { width: 9, height: 9, borderRadius: 5 },
+  titoloCellaRiga: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingLeft: 4, borderRadius: 5, overflow: 'hidden' },
   carta: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, padding: spazio.m, borderRadius: raggio.l, borderWidth: 1 },
   ore: { alignItems: 'flex-start' },
   oraInizio: { fontSize: 16, fontWeight: '700', fontVariant: ['tabular-nums'] },
@@ -444,6 +495,6 @@ const s = StyleSheet.create({
   },
   pallino: { width: PALLINO, height: PALLINO, borderRadius: PALLINO / 2 },
   titoli: { alignSelf: 'stretch', gap: 3, paddingHorizontal: 4 },
-  titoloCella: { fontSize: 11, fontWeight: '500', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 5, overflow: 'hidden' },
+  titoloCella: { flex: 1, fontSize: 11, fontWeight: '500', paddingHorizontal: 1, paddingVertical: 2 },
   altri: { fontSize: 10, lineHeight: PALLINO + 2, fontWeight: '700', textAlign: 'center' },
 })

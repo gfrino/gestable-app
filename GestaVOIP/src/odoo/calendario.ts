@@ -1,5 +1,6 @@
 /**
- * Il calendario di Odoo (calendar.event): i miei appuntamenti, la scheda
+ * Il calendario di Odoo (calendar.event): i miei appuntamenti e, a scelta,
+ * quelli dei colleghi (come i «Partecipanti» del calendario di Odoo), la scheda
  * completa, la risposta a un invito, creare, modificare ed eliminare.
  *
  * Tutti i campi del modulo di Odoo sono nell'app: titolo, date, tutto il
@@ -33,6 +34,8 @@ export type Evento = {
   video: string
   organizzatore: string
   partecipanti: number
+  /** I contatti invitati: dicono di chi e' l'appuntamento nel calendario del team. */
+  partnerIds?: Id[]
 }
 
 export type Stato = 'accepted' | 'declined' | 'tentative' | 'needsAction'
@@ -161,18 +164,23 @@ function daRiga(r: Riga): Evento {
     video: r.videocall_location || '',
     organizzatore: r.user_id ? r.user_id[1] : '',
     partecipanti: r.partner_ids?.length || 0,
+    partnerIds: r.partner_ids || [],
   }
 }
 
-/** I miei appuntamenti (partecipo o li organizzo) che toccano l'intervallo. */
-export async function eventi(server: string, uid: number, da: Date, a: Date): Promise<Evento[]> {
+/**
+ * I miei appuntamenti (partecipo o li organizzo) che toccano l'intervallo, piu'
+ * quelli dei colleghi scelti (i loro contatti tra i partecipanti). Gli
+ * appuntamenti privati degli altri Odoo li manda gia' nascosti («Occupato»).
+ */
+export async function eventi(server: string, uid: number, da: Date, a: Date, altri: Id[] = []): Promise<Evento[]> {
   const io = await mioPartner(server, uid)
   // Un giorno di margine: gli eventi di tutto il giorno stanno in UTC a cavallo
   // della mezzanotte; il filtro per giorno lo fa l'app.
   const prima = new Date(da.getTime() - 86_400_000)
   const dopo = new Date(a.getTime() + 86_400_000)
   const righe = await callKw<Riga[]>(server, 'calendar.event', 'search_read', [], {
-    domain: [['partner_ids', 'in', [io]], ['start', '<', utc(dopo)], ['stop', '>', utc(prima)]],
+    domain: [['partner_ids', 'in', [io, ...altri]], ['start', '<', utc(dopo)], ['stop', '>', utc(prima)]],
     fields: CAMPI,
     order: 'start asc',
     limit: 500,
@@ -381,6 +389,25 @@ export async function creaInvitato(server: string, email: string): Promise<Perso
   }
   const id = await callKw<Id>(server, 'res.partner', 'create', [{ name: e, email: e }])
   return { id, nome: e, email: e, azienda: '' }
+}
+
+export type Collega = { uid: Id; partnerId: Id; nome: string }
+
+/** I colleghi (utenti interni attivi, io escluso), per il calendario del team. */
+export async function colleghi(server: string, uid: number): Promise<Collega[]> {
+  const r = await callKw<{ id: Id; name: string; partner_id: M2o }[]>(server, 'res.users', 'search_read', [], {
+    domain: [['share', '=', false], ['id', '!=', uid]],
+    fields: ['name', 'partner_id'],
+    order: 'name asc',
+    limit: 300,
+  })
+  return r.filter((u) => u.partner_id).map((u) => ({ uid: u.id, partnerId: (u.partner_id as [Id, string])[0], nome: u.name }))
+}
+
+/** Un colore per collega, sempre lo stesso (si distinguono a colpo d'occhio, chiari e scuri). */
+const COLORI_TEAM = ['#E8590C', '#0CA678', '#1C7ED6', '#D6336C', '#7048E8', '#F59F00', '#0B7285', '#5C940D', '#C2255C', '#3B5BDB']
+export function coloreCollega(partnerId: Id): string {
+  return COLORI_TEAM[partnerId % COLORI_TEAM.length]
 }
 
 /** Utenti interni di Odoo: possono organizzare un appuntamento. */

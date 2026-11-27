@@ -7,6 +7,10 @@
  * giorno scelto. Settimana: i sette giorni uno sotto l'altro. Mese: la griglia;
  * toccare un giorno lo apre nella vista Giorno. Il tasto Calendario in basso,
  * toccato di nuovo, torna a oggi. La vista scelta si ricorda.
+ *
+ * Il tasto con le persone apre i colleghi: quelli spuntati aggiungono i loro
+ * appuntamenti ai miei, con il loro colore e il loro nome (calendario del
+ * team, come i Partecipanti di Odoo). La scelta si ricorda sul telefono.
  */
 
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -27,7 +31,9 @@ import {
 } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { lingua, loc, t } from '../../i18n'
-import { delGiorno, eventi, giornoChiave, giornoEsteso, lettereGiorni, type Evento } from '../../odoo/calendario'
+import { coloreCollega, delGiorno, eventi, giornoChiave, giornoEsteso, lettereGiorni, type Collega, type Evento } from '../../odoo/calendario'
+import { mioPartner } from '../../odoo/lavoro'
+import { SceltaColleghi, TeamCalendario, type Team } from '../../ui/calendario/Team'
 import { PulsanteMenu } from '../../ui/MenuLaterale'
 import { raggio, spazio, useColori } from '../../ui/tema'
 import { useApp } from '../../voip/Contesto'
@@ -127,6 +133,26 @@ function VistaCalendario() {
   }, [perSettimana, vicine, server, uid])
   const [errore, setErrore] = useState('')
   const [ricarica, setRicarica] = useState(false)
+  // Calendario del team: i colleghi scelti e il mio contatto (per il colore dei miei).
+  const [scelti, setScelti] = useState<Collega[]>(() => leggi<Collega[]>(server, uid, 'calendarioTeam') || [])
+  const [io, setIo] = useState<number | null>(null)
+  const [sceltaTeam, setSceltaTeam] = useState(false)
+  useEffect(() => {
+    if (server && uid) {
+      mioPartner(server, uid)
+        .then(setIo)
+        .catch(() => undefined)
+    }
+  }, [server, uid])
+  const team: Team = useMemo(() => ({ io, scelti }), [io, scelti])
+  const altri = useMemo(() => scelti.map((x) => x.partnerId), [scelti])
+
+  function cambiaTeam(nuovi: Collega[]) {
+    setScelti(nuovi)
+    scrivi(server, uid, 'calendarioTeam', nuovi)
+    // Si ricarica tutto con i colleghi nuovi.
+    setPerSettimana({})
+  }
   const striscia = useRef<FlatList<number>>(null)
   // La pagina che la striscia mostra davvero (per seguirla quando il giorno cambia con le frecce).
   const paginaStriscia = useRef(pagina)
@@ -186,7 +212,7 @@ function VistaCalendario() {
       nuove.forEach((k) => inCorso.current.add(k))
       try {
         const lunedi = nuove.map((k) => new Date(`${k}T00:00:00`)).sort((x, y) => x.getTime() - y.getTime())
-        const lista = await eventi(server, uid, lunedi[0], piuGiorni(lunedi[lunedi.length - 1], 7))
+        const lista = await eventi(server, uid, lunedi[0], piuGiorni(lunedi[lunedi.length - 1], 7), altri)
         setPerSettimana((prima) => {
           const nuovo = { ...prima }
           for (const s of lunedi) {
@@ -202,7 +228,7 @@ function VistaCalendario() {
         nuove.forEach((k) => inCorso.current.delete(k))
       }
     },
-    [server, uid],
+    [server, uid, altri],
   )
 
   // Quelle che mancano si caricano appena servono.
@@ -334,6 +360,20 @@ function VistaCalendario() {
           </Text>
         </Pressable>
         <Pressable
+          onPress={() => setSceltaTeam(true)}
+          hitSlop={6}
+          style={({ pressed }) => [s.teamTasto, { backgroundColor: scelti.length ? c.primarioTenue : pressed ? c.superficie2 : c.superficie, borderColor: scelti.length ? c.primario : c.bordo }]}
+          accessibilityRole="button"
+          accessibilityLabel={scelti.length ? t('calendario.teamScelti', { n: scelti.length }) : t('calendario.team')}
+        >
+          <Ionicons name={scelti.length ? 'people' : 'people-outline'} size={20} color={c.primario} />
+          {scelti.length ? (
+            <View style={[s.teamNumero, { backgroundColor: c.primario, borderColor: c.sfondo }]}>
+              <Text style={[s.teamNumeroTesto, { color: c.primarioTesto }]}>{scelti.length}</Text>
+            </View>
+          ) : null}
+        </Pressable>
+        <Pressable
           onPress={() => router.push({ pathname: '/calendario/nuovo', params: { giorno: giornoChiave(scelto) } })}
           hitSlop={8}
           style={({ pressed }) => [s.piu, { backgroundColor: c.primario, opacity: pressed ? 0.85 : 1 }]}
@@ -371,6 +411,26 @@ function VistaCalendario() {
         </View>
         {freccia('forward', dopo, aiuto[1])}
       </View>
+
+      {scelti.length ? (
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.legenda} style={s.legendaRiga}>
+          <View style={s.legendaVoce}>
+            <View style={[s.legendaPunto, { backgroundColor: c.primario }]} />
+            <Text style={[s.legendaTesto, { color: c.testo2 }]} numberOfLines={1}>
+              {t('calendario.io')}
+            </Text>
+          </View>
+          {scelti.map((x) => (
+            <Pressable key={x.partnerId} onPress={() => setSceltaTeam(true)} style={s.legendaVoce} accessibilityRole="button">
+              <View style={[s.legendaPunto, { backgroundColor: coloreCollega(x.partnerId) }]} />
+              <Text style={[s.legendaTesto, { color: c.testo2 }]} numberOfLines={1}>
+                {x.nome}
+              </Text>
+            </Pressable>
+          ))}
+        </ScrollView>
+      ) : null}
+      <TeamCalendario.Provider value={team}>
 
       {vista === 'settimana' ? (
         <VistaSettimana
@@ -452,6 +512,9 @@ function VistaCalendario() {
           </ScrollView>
         </>
       )}
+      </TeamCalendario.Provider>
+
+      <SceltaColleghi aperto={sceltaTeam} server={server} uid={uid} scelti={scelti} chiudi={() => setSceltaTeam(false)} cambia={cambiaTeam} />
     </SafeAreaView>
   )
 }
@@ -463,6 +526,14 @@ const s = StyleSheet.create({
   // Il tasto non si stringe mai (con il testo grande diventava «O…»): si rimpicciolisce il titolo.
   oggi: { flexShrink: 0, minHeight: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   oggiTesto: { fontSize: 15, fontWeight: '700' },
+  teamTasto: { flexShrink: 0, width: 36, height: 36, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  teamNumero: { position: 'absolute', top: -5, right: -5, minWidth: 18, height: 18, borderRadius: 9, borderWidth: 2, paddingHorizontal: 3, alignItems: 'center', justifyContent: 'center' },
+  teamNumeroTesto: { fontSize: 10, fontWeight: '800' },
+  legendaRiga: { flexGrow: 0, flexShrink: 0 },
+  legenda: { gap: spazio.m, paddingHorizontal: spazio.l, paddingVertical: 2, paddingBottom: spazio.s, alignItems: 'center' },
+  legendaVoce: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  legendaPunto: { width: 9, height: 9, borderRadius: 5 },
+  legendaTesto: { fontSize: 13, fontWeight: '600', maxWidth: 160 },
   piu: { flexShrink: 0, width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   comandi: { flexDirection: 'row', alignItems: 'center', gap: spazio.s, paddingHorizontal: spazio.m, paddingBottom: spazio.s },
   freccia: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
