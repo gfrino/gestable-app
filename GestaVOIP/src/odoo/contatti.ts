@@ -86,7 +86,11 @@ async function conFoto(server: string, ids: Id[]): Promise<Set<Id>> {
   return new Set(r)
 }
 
-export type Filtro = 'tutti' | 'aziende' | 'persone' | 'clienti' | 'fornitori'
+/**
+ * Due scelte indipendenti, combinabili (es. clienti che sono aziende):
+ * ruolo = clienti o fornitori, tipo = aziende o persone; null = tutti.
+ */
+export type Filtro = { ruolo: 'clienti' | 'fornitori' | null; tipo: 'aziende' | 'persone' | null }
 
 /**
  * Clienti e fornitori come li conta Odoo (customer_rank / supplier_rank sale a
@@ -107,13 +111,14 @@ export async function cercaContatti(
 ): Promise<Contatto[]> {
   const campi = await campiPartner(server)
   const dominio: unknown[] = [['name', '!=', false]]
-  if (filtro === 'aziende') {
+  if (filtro.tipo === 'aziende') {
     dominio.push(['is_company', '=', true])
-  } else if (filtro === 'persone') {
+  } else if (filtro.tipo === 'persone') {
     dominio.push(['is_company', '=', false])
-  } else if (filtro === 'clienti' && campi.has('customer_rank')) {
+  }
+  if (filtro.ruolo === 'clienti' && campi.has('customer_rank')) {
     dominio.push(['customer_rank', '>', 0])
-  } else if (filtro === 'fornitori' && campi.has('supplier_rank')) {
+  } else if (filtro.ruolo === 'fornitori' && campi.has('supplier_rank')) {
     dominio.push(['supplier_rank', '>', 0])
   }
   const t = testo.trim()

@@ -1,6 +1,8 @@
 /**
  * Contatti di Odoo: cerca per nome, azienda, email o numero, filtra aziende e
- * persone, chiama con un tocco. La lista arriva a pagine mentre si scorre.
+ * persone, clienti e fornitori (anche insieme: clienti che sono aziende),
+ * chiama con un tocco. La lista arriva a pagine mentre si scorre. L'ultimo
+ * filtro scelto resta alla prossima apertura.
  */
 
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -26,13 +28,21 @@ import { colleghi, type Collega } from '../../voip/api'
 const PAGINA = 60
 // Chiavi dei testi: t() si chiama mostrando la lista (la lingua puo' cambiare).
 // Clienti e Fornitori solo dove Odoo li conta (haClientiFornitori).
-const FILTRI: { valore: Filtro; chiave: string; rank?: boolean }[] = [
-  { valore: 'tutti', chiave: 'schede.filtroTutti' },
-  { valore: 'clienti', chiave: 'schede.filtroClienti', rank: true },
-  { valore: 'fornitori', chiave: 'schede.filtroFornitori', rank: true },
+const RUOLI: { valore: NonNullable<Filtro['ruolo']>; chiave: string }[] = [
+  { valore: 'clienti', chiave: 'schede.filtroClienti' },
+  { valore: 'fornitori', chiave: 'schede.filtroFornitori' },
+]
+const TIPI: { valore: NonNullable<Filtro['tipo']>; chiave: string }[] = [
   { valore: 'aziende', chiave: 'schede.filtroAziende' },
   { valore: 'persone', chiave: 'schede.filtroPersone' },
 ]
+
+type FiltroSalvato = Filtro & { interni?: boolean }
+
+/** Copia locale della prima pagina, una per combinazione di filtri. */
+function chiaveElenco(f: Filtro): string {
+  return !f.ruolo && !f.tipo ? 'contatti' : `contatti-${f.ruolo || 'tutti'}-${f.tipo || 'tutti'}`
+}
 
 function ElencoContatti() {
   const c = useColori()
@@ -41,8 +51,10 @@ function ElencoContatti() {
   const server = sessione?.server || ''
   const uid = sessione?.utente.uid || 0
   const [testo, setTesto] = useState('')
-  const [filtro, setFiltro] = useState<Filtro>('tutti')
-  const [lista, setLista] = useState<Contatto[] | null>(() => leggi<Contatto[]>(server, uid, 'contatti'))
+  // L'ultimo filtro scelto, per questo utente su questo server.
+  const [salvato] = useState(() => leggi<FiltroSalvato>(server, uid, 'contatti-filtro'))
+  const [filtro, setFiltro] = useState<Filtro>(() => ({ ruolo: salvato?.ruolo ?? null, tipo: salvato?.tipo ?? null }))
+  const [lista, setLista] = useState<Contatto[] | null>(() => leggi<Contatto[]>(server, uid, chiaveElenco(filtro)))
   const [finita, setFinita] = useState(false)
   const [altri, setAltri] = useState(false)
   const [errore, setErrore] = useState('')
@@ -50,19 +62,38 @@ function ElencoContatti() {
   const giro = useRef(0)
   // «Interni»: i colleghi con il loro interno, solo con il telefono (VOIP AI).
   const telefono = conTelefono(sessione)
-  const [conRank, setConRank] = useState(false)
+  // Ricordato per non far sparire per un attimo i filtri Clienti/Fornitori all'apertura.
+  const [conRank, setConRank] = useState(() => !!leggi<boolean>(server, uid, 'contatti-rank'))
   useEffect(() => {
     let vivo = true
     if (server) {
       haClientiFornitori(server)
-        .then((x) => vivo && setConRank(x))
+        .then((x) => {
+          if (vivo) {
+            setConRank(x)
+            scrivi(server, uid, 'contatti-rank', x)
+          }
+        })
         .catch(() => undefined)
     }
     return () => {
       vivo = false
     }
-  }, [server])
-  const [interni, setInterni] = useState(false)
+  }, [server, uid])
+  const [interni, setInterni] = useState(() => !!salvato?.interni && telefono)
+  const ruolo = conRank ? filtro.ruolo : null
+
+  function cambia(nuovo: Filtro, conInterni: boolean) {
+    setInterni(conInterni)
+    if (nuovo.ruolo !== filtro.ruolo || nuovo.tipo !== filtro.tipo) {
+      setFiltro(nuovo)
+      const copia = leggi<Contatto[]>(server, uid, chiaveElenco(nuovo))
+      if (copia && !testo) {
+        setLista(copia)
+      }
+    }
+    scrivi(server, uid, 'contatti-filtro', { ...nuovo, interni: conInterni })
+  }
   const [elencoInterni, setElencoInterni] = useState<Collega[] | null>(() => leggi<Collega[]>(server, uid, 'interni'))
 
   useFocusEffect(
@@ -96,8 +127,8 @@ function ElencoContatti() {
         const r = await cercaContatti(server, testo, filtro, 0, PAGINA)
         if (mio === giro.current) {
           setLista(r)
-          if (!testo && filtro === 'tutti') {
-            scrivi(server, uid, 'contatti', r)
+          if (!testo) {
+            scrivi(server, uid, chiaveElenco(filtro), r)
           }
           setFinita(r.length < PAGINA)
           setErrore('')
@@ -190,28 +221,30 @@ function ElencoContatti() {
       </View>
 
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtriRiga} contentContainerStyle={s.filtri}>
-        {FILTRI.filter((f) => !f.rank || conRank).map((f) => {
-          const attivo = !interni && f.valore === filtro
-          return (
-            <Pressable
-              key={f.valore}
-              onPress={() => {
-                setInterni(false)
-                setFiltro(f.valore)
-              }}
-              style={[s.filtro, { borderColor: attivo ? c.primario : c.bordo, backgroundColor: attivo ? c.primarioTenue : 'transparent' }]}
-              accessibilityRole="button"
-              accessibilityState={{ selected: attivo }}
-            >
-              <Text style={[s.filtroTesto, { color: attivo ? c.primario : c.testo2 }]} numberOfLines={1}>
-                {t(f.chiave)}
-              </Text>
-            </Pressable>
-          )
-        })}
+        {/* Tutti azzera; Clienti/Fornitori e Aziende/Persone si combinano (un tocco accende, un altro spegne). */}
+        <Chip testo={t('schede.filtroTutti')} attivo={!interni && !ruolo && !filtro.tipo} onPress={() => cambia({ ruolo: null, tipo: null }, false)} />
+        {conRank
+          ? RUOLI.map((f) => (
+              <Chip
+                key={f.valore}
+                testo={t(f.chiave)}
+                attivo={!interni && ruolo === f.valore}
+                onPress={() => cambia({ ...filtro, ruolo: !interni && filtro.ruolo === f.valore ? null : f.valore }, false)}
+              />
+            ))
+          : null}
+        {conRank ? <View style={[s.separa, { backgroundColor: c.bordo }]} /> : null}
+        {TIPI.map((f) => (
+          <Chip
+            key={f.valore}
+            testo={t(f.chiave)}
+            attivo={!interni && filtro.tipo === f.valore}
+            onPress={() => cambia({ ...filtro, tipo: !interni && filtro.tipo === f.valore ? null : f.valore }, false)}
+          />
+        ))}
         {telefono ? (
           <Pressable
-            onPress={() => setInterni(true)}
+            onPress={() => cambia(filtro, true)}
             style={[s.filtro, { borderColor: interni ? c.primario : c.bordo, backgroundColor: interni ? c.primarioTenue : 'transparent' }]}
             accessibilityRole="button"
             accessibilityState={{ selected: interni }}
@@ -296,6 +329,22 @@ function ElencoContatti() {
   )
 }
 
+function Chip({ testo, attivo, onPress }: { testo: string; attivo: boolean; onPress: () => void }) {
+  const c = useColori()
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[s.filtro, { borderColor: attivo ? c.primario : c.bordo, backgroundColor: attivo ? c.primarioTenue : 'transparent' }]}
+      accessibilityRole="button"
+      accessibilityState={{ selected: attivo }}
+    >
+      <Text style={[s.filtroTesto, { color: attivo ? c.primario : c.testo2 }]} numberOfLines={1}>
+        {testo}
+      </Text>
+    </Pressable>
+  )
+}
+
 /** I colleghi con il loro interno: un tocco e si chiama (resta dentro il centralino). */
 function ElencoInterni({ lista, testo }: { lista: Collega[] | null; testo: string }) {
   const c = useColori()
@@ -368,6 +417,7 @@ const s = StyleSheet.create({
   filtri: { flexDirection: 'row', gap: spazio.s, paddingHorizontal: spazio.l, paddingVertical: spazio.m },
   filtro: { paddingHorizontal: 14, height: 32, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   filtroTesto: { fontSize: 14, fontWeight: '700' },
+  separa: { width: 1, height: 20, alignSelf: 'center' },
   sezione: { fontSize: 13, fontWeight: '800', paddingHorizontal: spazio.l, paddingVertical: 4 },
   riga: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, paddingHorizontal: spazio.l, paddingVertical: 9 },
   nome: { fontSize: 16, fontWeight: '600' },
