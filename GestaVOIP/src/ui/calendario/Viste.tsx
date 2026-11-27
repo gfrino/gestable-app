@@ -4,8 +4,8 @@
  *
  * Settimana: i sette giorni uno sotto l'altro, a sinistra la data (si tocca per
  * aprire quel giorno), a destra i suoi appuntamenti.
- * Mese: la griglia del mese; nelle celle strette (iPhone) fino a 10
- * pallini in file da 5, in quelle larghe (iPhone Duo aperto) i titoli.
+ * Mese: la griglia del mese; nelle celle strette (iPhone) fino a 20
+ * pallini in file da 5 (oltre, «+N» sotto), in quelle larghe (iPhone Duo aperto) i titoli.
  * Toccare un giorno apre quel giorno.
  *
  * Con colleghi scelti (calendario del team) ogni appuntamento ha il pallino
@@ -318,7 +318,7 @@ export function VistaSettimana({
   )
 }
 
-const PALLINI_MAX = 10 // in file da 5
+const PALLINI_MAX = 20 // in file da 5; oltre, «+N» su una riga sua
 
 export function VistaMese({
   mese,
@@ -406,11 +406,13 @@ export function VistaMese({
                         {lista.slice(0, PALLINI_MAX).map((e) => (
                           <PallinoCella key={e.id} evento={e} />
                         ))}
-                        {lista.length > PALLINI_MAX ? (
-                          <Text style={[s.altri, { color: c.testo2 }]}>+{lista.length - PALLINI_MAX}</Text>
-                        ) : null}
                       </View>
                     )}
+                    {lista.length > PALLINI_MAX && !conTitoli ? (
+                      <Text style={[s.piuPallini, { color: c.testo2 }, fuori && { opacity: 0.5 }]} numberOfLines={1}>
+                        +{lista.length - PALLINI_MAX}
+                      </Text>
+                    ) : null}
                   </Pressable>
                 )
               })}
@@ -497,4 +499,5 @@ const s = StyleSheet.create({
   titoli: { alignSelf: 'stretch', gap: 3, paddingHorizontal: 4 },
   titoloCella: { flex: 1, fontSize: 11, fontWeight: '500', paddingHorizontal: 1, paddingVertical: 2 },
   altri: { fontSize: 10, lineHeight: PALLINO + 2, fontWeight: '700', textAlign: 'center' },
+  piuPallini: { fontSize: 11, lineHeight: 14, fontWeight: '700', textAlign: 'center', marginTop: -2 },
 })
