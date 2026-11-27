@@ -201,6 +201,48 @@ export function dopoIlCaricamento(): string {
   }
   window.__gvHome = mostra;
   window.__gvNascondiHome = nascondi;
+  // Chat che si aprono da sole: Odoo apre a tutto schermo la chat di ogni
+  // messaggio in arrivo (WhatsApp, chat dirette) e la riapre a ogni ricarica.
+  // Nell'app i messaggi arrivano gia' in Messaggi e nelle notifiche: una chat
+  // comparsa senza un tocco nei secondi prima si chiude subito. Quelle aperte
+  // dall'utente (pulsante WhatsApp di un contatto, chatter...) restano.
+  if (!window.__gvGuardiaChat) {
+    window.__gvGuardiaChat = true;
+    var tocco = 0, viste = new WeakSet();
+    ['touchstart', 'pointerdown', 'keydown'].forEach(function (ev) {
+      // Solo tocchi veri: i clic simulati da questo script non contano.
+      document.addEventListener(ev, function (e) { if (e.isTrusted) { tocco = Date.now(); } }, true);
+    });
+    var finestre = document.getElementsByClassName('o-mail-ChatWindow');
+    function chiudiChat(w) {
+      // Il tasto di chiusura si riconosce dal titolo (Odoo 17: «Close Chat Window»,
+      // 19-20: «Close Chat Window (ESC)»), nella lingua dell'utente o in inglese.
+      var titoli = ['Close Chat Window', 'Close Chat Window (ESC)'], x = null;
+      titoli = titoli.concat(titoli.map(tr));
+      var tasti = w.querySelectorAll('.o-mail-ChatWindow-header button, .o-mail-ChatWindow-header [title]');
+      for (var i = 0; i < tasti.length && !x; i++) {
+        var ti = tasti[i].getAttribute('title') || tasti[i].getAttribute('aria-label') || '';
+        if (titoli.indexOf(ti) !== -1) { x = tasti[i]; }
+      }
+      if (!x) {
+        var ic = w.querySelector('.o-mail-ChatWindow-header .fa-close, .o-mail-ChatWindow-header .oi-close, .o-mail-ChatWindow-header .fa-times');
+        x = ic && (ic.closest('button, a, .o-mail-ChatWindow-command') || ic);
+      }
+      if (x) { x.click(); } else { w.style.display = 'none'; }
+    }
+    function controlla() {
+      if (!finestre.length) { return; }
+      var recente = Date.now() - tocco < 4000;
+      Array.prototype.slice.call(finestre).forEach(function (w) {
+        if (viste.has(w)) { return; }
+        viste.add(w);
+        if (!recente) { setTimeout(function () { chiudiChat(w); }, 0); }
+      });
+    }
+    new MutationObserver(controlla).observe(document.body, { childList: true, subtree: true });
+    // Quelle gia' riaperte da Odoo durante il caricamento.
+    controlla();
+  }
   // Menu di destra, disegnato dall'app: qui si raccolgono le sezioni dell'app di
   // Odoo aperta e le voci del menu utente, e si eseguono quelle scelte.
   // Le voci del menu utente di Odoo (preferenze, supporto, documentazione...)

@@ -53,6 +53,30 @@ function iconaUtente(v: { id: string; testo: string }): keyof typeof Ionicons.gl
   return 'open-outline'
 }
 
+function stessoNome(a: string, b: string | undefined): boolean {
+  return !!b && a.trim().toLowerCase() === b.trim().toLowerCase()
+}
+
+/**
+ * Le sezioni come si disegnano: «Fogli ore» sotto il titolo «Fogli ore» confonde,
+ * quindi la sezione col nome dell'app perde l'intestazione; le voci senza
+ * intestazione una dopo l'altra (menu di primo livello senza figli) stanno in
+ * un'unica scheda invece che in tante schede da una voce.
+ */
+function raggruppa(sezioni: DatiPannello['sezioni'], app: string | undefined): DatiPannello['sezioni'] {
+  const fuori: DatiPannello['sezioni'] = []
+  for (const sez of sezioni) {
+    const nome = stessoNome(sez.nome, app) ? '' : sez.nome
+    const ultima = fuori[fuori.length - 1]
+    if (!nome && ultima && !ultima.nome) {
+      ultima.voci = [...ultima.voci, ...sez.voci]
+    } else {
+      fuori.push({ nome, voci: sez.voci })
+    }
+  }
+  return fuori
+}
+
 type Props = {
   dati: DatiPannello | null
   azienda: string
@@ -108,6 +132,12 @@ export function MenuOdoo({ dati, azienda, chiudi, scegliMenu, scegliUtente, prim
 
         <View style={s.testa}>
           <View style={{ flex: 1 }}>
+            {/* Dice cos'e' il pannello: il menu dell'app di Odoo aperta (non quello di GestABLE, a sinistra). */}
+            {dati.app ? (
+              <Text style={[s.occhiello, { color: c.primario }]} numberOfLines={1}>
+                {t('accesso.menuDellApp')}
+              </Text>
+            ) : null}
             <Text style={[s.titolo, { color: c.testo }]} numberOfLines={1}>
               {dati.app?.nome || 'Odoo'}
             </Text>
@@ -146,7 +176,7 @@ export function MenuOdoo({ dati, azienda, chiudi, scegliMenu, scegliUtente, prim
               </View>
             </View>
           ) : null}
-          {dati.sezioni.map((sez, k) => (
+          {raggruppa(dati.sezioni, dati.app?.nome).map((sez, k) => (
             <View key={`${sez.nome}-${k}`} style={s.blocco}>
               {sez.nome ? <Text style={[s.sezione, { color: c.testo2 }]}>{sez.nome}</Text> : null}
               <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
@@ -219,6 +249,7 @@ const s = StyleSheet.create({
   // Logo grande e trasparente al 60%: una firma discreta, non un elemento da toccare.
   logo: { position: 'absolute', right: spazio.l, width: 90, height: 90, opacity: 0.4 },
   testa: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, marginBottom: spazio.l, paddingLeft: spazio.xs },
+  occhiello: { fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 2 },
   titolo: { fontSize: 22, fontWeight: '800', letterSpacing: -0.2 },
   sottotitolo: { fontSize: 13, marginTop: 2 },
   chiudi: { width: 40, height: 40, borderRadius: 20, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
