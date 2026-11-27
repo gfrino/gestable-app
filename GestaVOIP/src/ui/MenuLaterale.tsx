@@ -1,5 +1,7 @@
 /**
- * Il menu laterale (hamburger): presenze, messaggi, attivita', spese, impostazioni.
+ * Il menu laterale (hamburger): presenze, poi le voci scelte in Impostazioni
+ * (all'inizio messaggi, attivita', spese; anche schede spostate dalla barra in
+ * basso), impostazioni ed esci.
  *
  * Prende il posto della barra in alto di Odoo: il pallino delle presenze, la
  * chat e l'orologio delle attivita' qui sono schermate dell'app.
@@ -11,15 +13,15 @@ import { useRouter, type Href } from 'expo-router'
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from 'react'
 import { ActivityIndicator, Alert, Animated, AppState, Easing, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native'
 import { useSafeAreaInsets } from 'react-native-safe-area-context'
-import { spesePossibili } from '../../modules/gestable-nativo'
 import { loc, t, tn } from '../i18n'
-import { APP, menuOdoo, menuSalvato } from '../odoo/capacita'
 import { cambiaPresenza, contatori, presenza, urlAvatar, type Contatori, type Presenza } from '../odoo/lavoro'
 import { conTelefono } from '../odoo/sessione'
 import { controllaLogo, logoSalvato, type LogoCliente } from '../odoo/logoCliente'
 import { iconaSpese } from '../odoo/spese'
 import { useApp } from '../voip/Contesto'
+import { ICONE_SCHEDE, schedeVisibili, titoloScheda, useAspetto, type Scheda } from './Aspetto'
 import { Avatar } from './Avatar'
+import { useDisponibili } from './disponibili'
 import { raggio, spazio, useColori, type Colori } from './tema'
 
 type ValoreMenu = {
@@ -182,21 +184,10 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
   const [pres, setPres] = useState<Presenza | null>(null)
   const [cambia, setCambia] = useState(false)
   const server = sessione?.server || ''
-  const uid = sessione?.utente.uid || 0
-  // Spese: solo se l'app Spese c'e' in Odoo per questo utente (e la build ha lo scanner).
-  const [spese, setSpese] = useState(() => spesePossibili && !!menuSalvato(server, uid)?.has(APP.spese))
-
-  useEffect(() => {
-    let vivo = true
-    if (spesePossibili && server && uid) {
-      menuOdoo(server, false, uid)
-        .then((m) => vivo && m && setSpese(m.has(APP.spese)))
-        .catch(() => undefined)
-    }
-    return () => {
-      vivo = false
-    }
-  }, [server, uid])
+  // Le voci scelte in Impostazioni, solo quelle che questo utente ha (Spese solo con l'app Spese in Odoo).
+  const disponibili = useDisponibili()
+  const { aspetto } = useAspetto()
+  const voci = schedeVisibili(aspetto.menu, disponibili)
 
   // Le presenze si leggono a ogni apertura del menu.
   useEffect(() => {
@@ -212,6 +203,20 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
   function vai(percorso: Href) {
     chiudi()
     router.push(percorso)
+  }
+
+  /** Messaggi, Attivita' e Spese si aprono sopra le schede; una scheda spostata nel menu si apre come scheda. */
+  function apriVoce(x: Scheda) {
+    if (x === 'messaggi') {
+      vai('/messaggi')
+    } else if (x === 'attivita') {
+      vai('/attivita')
+    } else if (x === 'spese') {
+      vai({ pathname: '/spese', params: { scansiona: '1' } })
+    } else {
+      chiudi()
+      router.navigate((x === 'index' ? '/' : `/${x}`) as Href)
+    }
   }
 
   async function timbra() {
@@ -310,22 +315,18 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
         ) : null}
 
         <View style={s.voci}>
-          {/* Chi e' entrato dalla pagina di Odoo (Google, Microsoft) le ha nella vista Odoo. */}
-          {sessione.utente.uid ? (
-            <>
-              <Voce c={c} icona="chatbubbles" testo={t('accesso.messaggi')} numero={n.messaggi} onPress={() => vai('/messaggi')} />
-              <Voce c={c} icona="checkmark-done-circle" testo={t('accesso.attivita')} numero={n.attivita} onPress={() => vai('/attivita')} />
-              {spese ? (
-                <Voce
-                  c={c}
-                  icona="receipt"
-                  immagine={iconaSpese(server)}
-                  testo={t('spese.titolo')}
-                  onPress={() => vai({ pathname: '/spese', params: { scansiona: '1' } })}
-                />
-              ) : null}
-            </>
-          ) : null}
+          {/* Messaggi e Attivita': chi e' entrato dalla pagina di Odoo (Google, Microsoft) li ha nella vista Odoo. */}
+          {voci.map((x) => (
+            <Voce
+              key={x}
+              c={c}
+              icona={ICONE_SCHEDE[x]}
+              immagine={x === 'spese' ? iconaSpese(server) : undefined}
+              testo={titoloScheda(x)}
+              numero={x === 'messaggi' ? n.messaggi : x === 'attivita' ? n.attivita : undefined}
+              onPress={() => apriVoce(x)}
+            />
+          ))}
           <Voce c={c} icona="settings" testo={t('impostazioni.titolo')} onPress={() => vai('/impostazioni')} />
         </View>
 
@@ -341,12 +342,10 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
 }
 
 /**
- * Il logo dell'azienda (da GestaClient), largo quanto il menu e con le sue
- * proporzioni. Su un riquadro bianco: i loghi scuri su trasparente si leggono
- * anche in tema scuro. Senza logo (404) non occupa spazio.
+ * Il logo dell'azienda (da GestaClient), con le sue proporzioni, allineato a
+ * sinistra sullo sfondo del menu (senza riquadro). Senza logo (404) non occupa spazio.
  */
 function LogoAzienda({ server }: { server: string }) {
-  const c = useColori()
   const [logo, setLogo] = useState<LogoCliente | undefined>(() => (server ? logoSalvato(server) : undefined))
 
   useEffect(() => {
@@ -362,11 +361,11 @@ function LogoAzienda({ server }: { server: string }) {
   if (!logo) {
     return null
   }
-  const largo = LARGHEZZA - spazio.l * 2 - spazio.m * 2
-  // Loghi quadrati o alti: non piu' di 72 punti, centrati.
+  const largo = LARGHEZZA - spazio.l * 2 - spazio.s * 2
+  // Loghi quadrati o alti: non piu' di 72 punti.
   const alto = Math.min(72, largo / logo.rapporto)
   return (
-    <View style={[s.logo, { borderColor: c.bordo }]} accessibilityRole="image" accessibilityLabel="Logo">
+    <View style={s.logo} accessibilityRole="image" accessibilityLabel="Logo">
       <Image source={{ uri: logo.url, cache: 'force-cache' }} style={{ width: alto * logo.rapporto, height: alto }} resizeMode="contain" />
     </View>
   )
@@ -415,13 +414,12 @@ const s = StyleSheet.create({
   numero: { minWidth: 26, height: 22, borderRadius: 11, paddingHorizontal: 7, alignItems: 'center', justifyContent: 'center' },
   numeroTesto: { fontSize: 12, fontWeight: '800' },
   versione: { fontSize: 12, textAlign: 'center', marginTop: spazio.s },
+  // Senza riquadro: il logo sta sullo sfondo del menu, allineato a sinistra come le voci.
   logo: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'center',
-    padding: spazio.m,
+    paddingHorizontal: spazio.s,
+    paddingVertical: spazio.s,
     marginBottom: spazio.m,
-    borderRadius: raggio.l,
-    borderWidth: StyleSheet.hairlineWidth,
-    backgroundColor: '#FFFFFF',
   },
 })

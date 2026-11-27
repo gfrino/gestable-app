@@ -18,7 +18,20 @@ import { segnalaErrore } from '../ui/crash'
 import { preferenze, type Preferenze } from '../voip/api'
 import { useApp, useTelefono } from '../voip/Contesto'
 import { telefono } from '../voip/telefono'
-import { COLORI_TEMA, ICONE_SCHEDE, schedaAvvio, schedeVisibili, titoloScheda, useAspetto, type ColoreTema, type Modo } from '../ui/Aspetto'
+import {
+  COLORI_TEMA,
+  ICONE_SCHEDE,
+  MAX_IN_BASSO,
+  rimonta,
+  schedaAvvio,
+  schedeVisibili,
+  titoloScheda,
+  useAspetto,
+  type ColoreTema,
+  type Modo,
+  type Scheda,
+} from '../ui/Aspetto'
+import { useDisponibili } from '../ui/disponibili'
 import { Pulsante } from '../ui/Pulsante'
 import { Testata } from '../ui/Testata'
 import { raggio, spazio, useColori, type Colori } from '../ui/tema'
@@ -53,6 +66,7 @@ export default function Impostazioni() {
   const { aspetto, cambia: cambiaAspetto } = useAspetto()
   const scuro = useColorScheme() === 'dark'
   const telefonoAttivo = conTelefono(sessione)
+  const disponibili = useDisponibili()
   const [pref, setPref] = useState<Preferenze | null>(null)
   const [uscita, setUscita] = useState(false)
   // Notifiche dei messaggi: solo iPhone e solo se il server ha il modulo GestABLE.
@@ -132,19 +146,57 @@ export default function Impostazioni() {
     { valore: 'chiaro', nome: t('impostazioni.modoChiaro') },
     { valore: 'scuro', nome: t('impostazioni.modoScuro') },
   ]
-  // Ordine delle schede: si spostano solo quelle che questo utente vede (senza
-  // telefono niente Tastierino e Recenti), le altre restano al loro posto.
-  const visibili = schedeVisibili(aspetto.schede, telefonoAttivo)
-  const avvio = schedaAvvio(aspetto, telefonoAttivo)
-  function sposta(i: number, verso: -1 | 1) {
-    const j = i + verso
-    if (j < 0 || j >= visibili.length) {
-      return
+  // Menu e schede: un solo elenco, sopra la linea la barra in basso, sotto il
+  // menu ≡. Le frecce spostano di un posto, anche oltre la linea. Si spostano
+  // solo i posti che questo utente vede (senza telefono niente Tastierino e
+  // Recenti, Spese solo con l'app Spese), gli altri restano dove sono.
+  const inBasso = schedeVisibili(aspetto.schede, disponibili)
+  const nelMenu = schedeVisibili(aspetto.menu, disponibili)
+  const avvio = schedaAvvio(aspetto, disponibili)
+  function salva(basso: Scheda[], menu: Scheda[]) {
+    cambiaAspetto({
+      schede: rimonta(aspetto.schede, basso, disponibili),
+      menu: rimonta(aspetto.menu, menu, disponibili),
+      personalizzato: true,
+    })
+  }
+  /** Su o giu' nella sua lista; dal fondo della barra scende in cima al menu, dalla cima del menu sale in fondo alla barra. */
+  function sposta(x: Scheda, verso: -1 | 1) {
+    const basso = [...inBasso]
+    const menu = [...nelMenu]
+    const i = basso.indexOf(x)
+    if (i >= 0) {
+      if (verso === 1 && i === basso.length - 1) {
+        basso.pop()
+        menu.unshift(x)
+      } else if (i + verso >= 0 && i + verso < basso.length) {
+        ;[basso[i], basso[i + verso]] = [basso[i + verso], basso[i]]
+      }
+    } else {
+      const j = menu.indexOf(x)
+      if (verso === -1 && j === 0) {
+        menu.shift()
+        basso.push(x)
+      } else if (j + verso >= 0 && j + verso < menu.length) {
+        ;[menu[j], menu[j + verso]] = [menu[j + verso], menu[j]]
+      }
     }
-    const nuove = [...visibili]
-    ;[nuove[i], nuove[j]] = [nuove[j], nuove[i]]
-    let k = 0
-    cambiaAspetto({ schede: aspetto.schede.map((x) => (visibili.includes(x) ? nuove[k++] : x)), personalizzato: true })
+    salva(basso, menu)
+  }
+  /** Le frecce che non si possono usare: in basso resta almeno una scheda e ce ne stanno al massimo MAX_IN_BASSO. */
+  function puoSalire(x: Scheda): boolean {
+    const i = inBasso.indexOf(x)
+    if (i >= 0) {
+      return i > 0
+    }
+    return nelMenu.indexOf(x) > 0 || inBasso.length < MAX_IN_BASSO
+  }
+  function puoScendere(x: Scheda): boolean {
+    const i = inBasso.indexOf(x)
+    if (i >= 0) {
+      return i < inBasso.length - 1 || inBasso.length > 1
+    }
+    return nelMenu.indexOf(x) < nelMenu.length - 1
   }
 
   const scheda = [s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]
@@ -295,45 +347,41 @@ export default function Impostazioni() {
 
         <Text style={[s.sezione, { color: c.testo2 }]}>{t('impostazioni.schede')}</Text>
         <View style={scheda}>
-          {visibili.map((nome, i) => (
+          <Text style={[s.gruppo, { color: c.testo2 }]}>{t('impostazioni.schedeInBasso')}</Text>
+          {inBasso.map((nome, i) => (
             <View key={nome}>
               {i > 0 ? <View style={[s.sep, { backgroundColor: c.bordo }]} /> : null}
-              <View style={s.rigaScheda}>
-                <Ionicons name={ICONE_SCHEDE[nome]} size={22} color={nome === avvio ? c.primario : c.testo2} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[s.rigaTitolo, { color: c.testo }]} numberOfLines={1}>
-                    {titoloScheda(nome)}
-                  </Text>
-                  {nome === avvio ? (
-                    <Text style={[s.rigaTesto, { color: c.primario }]}>{t('impostazioni.schedeAvvio')}</Text>
-                  ) : null}
-                </View>
-                <Pressable
-                  onPress={() => sposta(i, -1)}
-                  disabled={i === 0}
-                  hitSlop={6}
-                  style={({ pressed }) => [s.freccia, { backgroundColor: pressed ? c.superficie2 : 'transparent', opacity: i === 0 ? 0.25 : 1 }]}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('impostazioni.schedeSu', { nome: titoloScheda(nome) })}
-                >
-                  <Ionicons name="chevron-up" size={22} color={c.testo} />
-                </Pressable>
-                <Pressable
-                  onPress={() => sposta(i, 1)}
-                  disabled={i === visibili.length - 1}
-                  hitSlop={6}
-                  style={({ pressed }) => [
-                    s.freccia,
-                    { backgroundColor: pressed ? c.superficie2 : 'transparent', opacity: i === visibili.length - 1 ? 0.25 : 1 },
-                  ]}
-                  accessibilityRole="button"
-                  accessibilityLabel={t('impostazioni.schedeGiu', { nome: titoloScheda(nome) })}
-                >
-                  <Ionicons name="chevron-down" size={22} color={c.testo} />
-                </Pressable>
-              </View>
+              <RigaPosto
+                c={c}
+                nome={nome}
+                avvio={nome === avvio}
+                su={puoSalire(nome)}
+                giu={puoScendere(nome)}
+                onSu={() => sposta(nome, -1)}
+                onGiu={() => sposta(nome, 1)}
+              />
             </View>
           ))}
+          <View style={[s.lineaMenu, { borderTopColor: c.bordo, backgroundColor: c.superficie2 }]}>
+            <Ionicons name="menu" size={18} color={c.testo2} />
+            <Text style={[s.gruppoTesto, { color: c.testo2 }]}>{t('impostazioni.schedeNelMenu')}</Text>
+          </View>
+          {nelMenu.map((nome, i) => (
+            <View key={nome}>
+              {i > 0 ? <View style={[s.sep, { backgroundColor: c.bordo }]} /> : null}
+              <RigaPosto
+                c={c}
+                nome={nome}
+                su={puoSalire(nome)}
+                giu={puoScendere(nome)}
+                onSu={() => sposta(nome, -1)}
+                onGiu={() => sposta(nome, 1)}
+              />
+            </View>
+          ))}
+          {nelMenu.length === 0 ? (
+            <Text style={[s.vuoto, { color: c.testo3 }]}>{t('impostazioni.schedeMenuVuoto')}</Text>
+          ) : null}
         </View>
         <Text style={[s.nota, { color: c.testo3 }]}>{t('impostazioni.schedeTesto')}</Text>
 
@@ -357,6 +405,59 @@ export default function Impostazioni() {
   )
 }
 
+/** Una riga di «Menu e schede»: icona, nome, frecce su e giu'. */
+function RigaPosto({
+  c,
+  nome,
+  avvio,
+  su,
+  giu,
+  onSu,
+  onGiu,
+}: {
+  c: Colori
+  nome: Scheda
+  avvio?: boolean
+  su: boolean
+  giu: boolean
+  onSu: () => void
+  onGiu: () => void
+}) {
+  return (
+    <View style={s.rigaScheda}>
+      <Ionicons name={ICONE_SCHEDE[nome]} size={22} color={avvio ? c.primario : c.testo2} />
+      <View style={{ flex: 1 }}>
+        <Text style={[s.rigaTitolo, { color: c.testo }]} numberOfLines={1}>
+          {titoloScheda(nome)}
+        </Text>
+        {avvio ? <Text style={[s.rigaTesto, { color: c.primario }]}>{t('impostazioni.schedeAvvio')}</Text> : null}
+      </View>
+      <Pressable
+        onPress={onSu}
+        disabled={!su}
+        hitSlop={6}
+        style={({ pressed }) => [s.freccia, { backgroundColor: pressed ? c.superficie2 : 'transparent', opacity: su ? 1 : 0.25 }]}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !su }}
+        accessibilityLabel={t('impostazioni.schedeSu', { nome: titoloScheda(nome) })}
+      >
+        <Ionicons name="chevron-up" size={22} color={c.testo} />
+      </Pressable>
+      <Pressable
+        onPress={onGiu}
+        disabled={!giu}
+        hitSlop={6}
+        style={({ pressed }) => [s.freccia, { backgroundColor: pressed ? c.superficie2 : 'transparent', opacity: giu ? 1 : 0.25 }]}
+        accessibilityRole="button"
+        accessibilityState={{ disabled: !giu }}
+        accessibilityLabel={t('impostazioni.schedeGiu', { nome: titoloScheda(nome) })}
+      >
+        <Ionicons name="chevron-down" size={22} color={c.testo} />
+      </Pressable>
+    </View>
+  )
+}
+
 const s = StyleSheet.create({
   pagina: { flex: 1 },
   contenuto: { padding: spazio.xl, gap: spazio.l },
@@ -374,4 +475,15 @@ const s = StyleSheet.create({
   coloreNome: { fontSize: 12, fontWeight: '600' },
   rigaScheda: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, paddingVertical: spazio.s, paddingLeft: spazio.l, paddingRight: spazio.s, minHeight: 56 },
   freccia: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  gruppo: { fontSize: 13, fontWeight: '600', paddingHorizontal: spazio.l, paddingTop: spazio.m, paddingBottom: spazio.xs },
+  lineaMenu: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spazio.s,
+    paddingHorizontal: spazio.l,
+    paddingVertical: spazio.s,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
+  gruppoTesto: { fontSize: 13, fontWeight: '600' },
+  vuoto: { fontSize: 14, paddingHorizontal: spazio.l, paddingVertical: spazio.m },
 })

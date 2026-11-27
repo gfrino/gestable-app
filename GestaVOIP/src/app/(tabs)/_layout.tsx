@@ -2,9 +2,10 @@ import Ionicons from '@expo/vector-icons/Ionicons'
 import { Tabs, useRouter } from 'expo-router'
 import { useEffect, useRef } from 'react'
 import { Image } from 'react-native'
-import { conTelefono } from '../../odoo/sessione'
-import { ICONE_SCHEDE, SCHEDE_TELEFONO, schedaAvvio, titoloScheda, useAspetto } from '../../ui/Aspetto'
-import { useApp, useTelefono } from '../../voip/Contesto'
+import { ICONE_SCHEDE, MENU, ROTTA, SCHEDE, schedaAvvio, schedeVisibili, titoloScheda, useAspetto, type Scheda } from '../../ui/Aspetto'
+import { useDisponibili } from '../../ui/disponibili'
+import { useMenu } from '../../ui/MenuLaterale'
+import { useTelefono } from '../../voip/Contesto'
 import { useColori } from '../../ui/tema'
 
 // La «G» del logo, a un colore (si tinge come le altre icone della barra).
@@ -13,10 +14,10 @@ const G = require('../../../assets/caricamento-g.png') as number
 export default function LayoutSchede() {
   const c = useColori()
   const { chiamata } = useTelefono()
-  const { sessione } = useApp()
   // Stessa barra per tutti i server; Tastierino e Recenti solo con VOIP AI,
-  // senza l'app si apre su Odoo.
-  const telefono = conTelefono(sessione)
+  // Messaggi/Attivita'/Spese solo se ci sono (e se l'utente li ha messi in basso).
+  const disponibili = useDisponibili()
+  const { contatori } = useMenu()
   const router = useRouter()
   const aperta = useRef(false)
 
@@ -37,13 +38,17 @@ export default function LayoutSchede() {
   }, [chiamata, router])
 
   // Ordine scelto in Impostazioni; la prima scheda visibile si apre all'avvio.
+  // Ogni schermata di app/(tabs) va dichiarata: quelle non in basso con href null
+  // (si aprono lo stesso dal menu ≡). L'ordine dei figli e' l'ordine della barra.
   const { aspetto } = useAspetto()
-  const { schede } = aspetto
-  const prima = schedaAvvio(aspetto, telefono)
+  const inBasso = schedeVisibili(aspetto.schede, disponibili)
+  const nascoste = [...SCHEDE, ...MENU].filter((x) => !inBasso.includes(x))
+  const prima = schedaAvvio(aspetto, disponibili)
+  const numero = (x: Scheda) => (x === 'messaggi' ? contatori.messaggi : x === 'attivita' ? contatori.attivita : 0)
 
   return (
     <Tabs
-      initialRouteName={prima}
+      initialRouteName={ROTTA[prima]}
       screenOptions={{
         headerShown: false,
         tabBarActiveTintColor: c.primario,
@@ -51,13 +56,15 @@ export default function LayoutSchede() {
         tabBarStyle: { backgroundColor: c.superficie, borderTopColor: c.bordo },
       }}
     >
-      {schede.map((nome) => (
+      {[...inBasso, ...nascoste].map((nome) => (
         <Tabs.Screen
           key={nome}
-          name={nome}
+          name={ROTTA[nome]}
           options={{
-            href: telefono || !SCHEDE_TELEFONO.includes(nome) ? undefined : null,
+            href: inBasso.includes(nome) ? undefined : null,
             title: titoloScheda(nome),
+            tabBarBadge: numero(nome) ? (numero(nome) > 99 ? '99+' : numero(nome)) : undefined,
+            tabBarBadgeStyle: { backgroundColor: c.primario, color: c.primarioTesto },
             tabBarIcon: ({ color, size }) =>
               nome === 'gestable' ? (
                 <Image source={G} style={{ width: size, height: size, tintColor: color }} accessibilityIgnoresInvertColors />

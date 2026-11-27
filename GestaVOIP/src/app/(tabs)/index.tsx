@@ -15,7 +15,8 @@ import { cercaContatti, colleghi, type Collega, type Contatto } from '../../voip
 import { conTelefono } from '../../odoo/sessione'
 import { useApp } from '../../voip/Contesto'
 import { telefono } from '../../voip/telefono'
-import { schedaAvvio, useAspetto, type Scheda } from '../../ui/Aspetto'
+import { ROTTA, schedaAvvio, useAspetto, type Scheda } from '../../ui/Aspetto'
+import { useDisponibili } from '../../ui/disponibili'
 import { PulsanteMenu } from '../../ui/MenuLaterale'
 import { StatoLinea } from '../../ui/StatoLinea'
 import { raggio, spazio, useColori } from '../../ui/tema'
@@ -41,7 +42,8 @@ export default function SchedaTastierino() {
   const router = useRouter()
   const { aspetto } = useAspetto()
   const senza = !!sessione && !conTelefono(sessione)
-  const prima = schedaAvvio(aspetto, !senza)
+  const disponibili = useDisponibili()
+  const prima = schedaAvvio(aspetto, { ...disponibili, telefono: !senza })
   const vai = prima !== 'index' && (senza || !avvioFatto)
   // Si decide una volta, quando la scheda si monta: se poi l'ordine cambia
   // (da Impostazioni) non si deve saltare via dalla schermata aperta.
@@ -52,7 +54,7 @@ export default function SchedaTastierino() {
   useEffect(() => {
     avvioFatto = true
     if (salto.current) {
-      router.replace(`/${salto.current}`)
+      router.replace(`/${ROTTA[salto.current]}` as Parameters<typeof router.replace>[0])
     }
     // Una volta sola, al montaggio: dopo il salto il tastierino si mostra quando lo si tocca.
     // eslint-disable-next-line react-hooks/set-state-in-effect

@@ -1,18 +1,27 @@
-/** Barra in alto delle schermate aperte dal menu: indietro, titolo, azione a destra. */
+/**
+ * Barra in alto delle schermate aperte dal menu: indietro, titolo, azione a destra.
+ * Quando la stessa schermata e' una scheda in basso (Messaggi, Attivita', Spese
+ * spostati dal menu), al posto di «indietro» c'e' il pulsante del menu ≡.
+ */
 
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useRouter } from 'expo-router'
-import type { ReactNode } from 'react'
+import { createContext, useContext, type ReactNode } from 'react'
 import { Pressable, StyleSheet, Text, View } from 'react-native'
 import { t } from '../i18n'
+import { PulsanteMenu } from './MenuLaterale'
 import { spazio, useColori } from './tema'
+
+/** Vero dentro app/(tabs)/scheda-*.tsx: la schermata e' una scheda, non si torna indietro. */
+export const InScheda = createContext(false)
 
 export function Testata({ titolo, sottotitolo, destra, sinistra }: { titolo: string; sottotitolo?: string; destra?: ReactNode; sinistra?: ReactNode }) {
   const c = useColori()
   const router = useRouter()
+  const scheda = useContext(InScheda)
   return (
     <View style={[s.barra, { borderBottomColor: c.bordo }]}>
-      {sinistra ?? (
+      {sinistra ?? (scheda ? <PulsanteMenu /> : (
         <Pressable
           onPress={() => (router.canGoBack() ? router.back() : router.replace('/'))}
           hitSlop={12}
@@ -22,7 +31,7 @@ export function Testata({ titolo, sottotitolo, destra, sinistra }: { titolo: str
         >
           <Ionicons name="chevron-back" size={28} color={c.primario} />
         </Pressable>
-      )}
+      ))}
       <View style={{ flex: 1 }}>
         <Text style={[s.titolo, { color: c.testo }]} numberOfLines={1}>
           {titolo}
