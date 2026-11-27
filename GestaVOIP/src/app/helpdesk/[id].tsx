@@ -674,7 +674,7 @@ export default function SchedaTicket() {
             )}
           </Sezione>
 
-          <Pulsante testo={t('helpdesk.apriInOdoo')} variante="tenue" onPress={apriInOdoo} />
+          <Pulsante testo={t('helpdesk.apriInOdoo')} variante="tenue" icona="arrow-forward-circle" onPress={apriInOdoo} />
         </ScrollView>
       </KeyboardAvoidingView>
 

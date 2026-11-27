@@ -1,11 +1,14 @@
 /**
- * I contatti di Odoo (res.partner): ricerca a pagine, scheda, contatto nuovo.
+ * I contatti di Odoo (res.partner): ricerca a pagine, scheda, contatto nuovo,
+ * e la scheda completa con tutti i campi del modulo di Odoo (vedi in fondo:
+ * schedaCompleta, opzioniCampo, salvaContatto).
  *
  * Odoo 19 non ha piu' il campo «mobile» (solo «phone»): i campi si leggono
  * da fields_get una volta per server e si chiedono solo quelli che esistono.
  */
 
 import { callKw } from './client'
+import { htmlDaTesto, testoDaHtml } from './testo'
 
 type Id = number
 type M2o = [number, string] | false
@@ -241,6 +244,192 @@ export async function creaContatto(server: string, n: NuovoContatto): Promise<Id
     }
   }
   return id
+}
+
+// ---------------------------------------------------------------------------
+// Scheda completa: tutti i campi del modulo di Odoo
+// ---------------------------------------------------------------------------
+
+export type InfoCampo = { type: string; string?: string; selection?: [string, string][]; relation?: string; readonly?: boolean }
+
+const infoDi = new Map<string, Promise<Record<string, InfoCampo>>>()
+
+/** I campi del contatto su questo server (dipendono dalla versione e dalle app installate). */
+export function infoCampiPartner(server: string): Promise<Record<string, InfoCampo>> {
+  let p = infoDi.get(server)
+  if (!p) {
+    p = callKw<Record<string, InfoCampo>>(server, 'res.partner', 'fields_get', [], { attributes: ['type', 'string', 'selection', 'relation', 'readonly'] })
+    p.catch(() => infoDi.delete(server))
+    infoDi.set(server, p)
+  }
+  return p
+}
+
+export type Rel = { id: Id; nome: string }
+/** Una scelta per un campo: i campi a elenco di Odoo hanno anche il valore («it_IT», «invoice»). */
+export type Opzione = Rel & { valore?: string }
+
+/** I campi del modulo che l'app mostra e modifica (quelli che non esistono sul server si saltano). */
+export const CAMPI_TESTO = ['name', 'function', 'phone', 'mobile', 'email', 'website', 'vat', 'company_registry', 'street', 'street2', 'zip', 'city', 'ref', 'barcode'] as const
+export const CAMPI_UNO = [
+  'parent_id', 'title', 'state_id', 'country_id', 'user_id', 'team_id',
+  'property_payment_term_id', 'property_supplier_payment_term_id', 'property_product_pricelist', 'industry_id',
+] as const
+export const CAMPI_SCELTA = ['lang', 'type'] as const
+
+export type Valori = {
+  is_company: boolean
+  comment: string
+  category_id: Rel[]
+} & Record<(typeof CAMPI_TESTO)[number], string> &
+  Record<(typeof CAMPI_UNO)[number], Rel | null> &
+  Record<(typeof CAMPI_SCELTA)[number], string>
+
+export type Figlio = Contatto & { tipo: string; tipoNome: string; indirizzo: string }
+
+export type Completa = {
+  id: Id
+  foto: boolean
+  campi: Record<string, InfoCampo>
+  valori: Valori
+  banche: string[]
+  contatori: { opportunita: number | null; vendite: number | null; appuntamenti: number | null; fatturato: { importo: number; valuta: string } | null }
+  figli: Figlio[]
+  segue: boolean
+}
+
+/** Il nome leggibile di un valore di un campo a scelta («invoice» → «Indirizzo di fatturazione»). */
+export function nomeScelta(info: InfoCampo | undefined, valore: string): string {
+  return info?.selection?.find(([v]) => v === valore)?.[1] || valore
+}
+
+function indirizzoDi(r: Record<string, unknown>): string {
+  const m2o = (x: unknown) => (Array.isArray(x) ? (x[1] as string) : '')
+  return [r.street, r.street2, [r.zip, r.city].filter(Boolean).join(' '), m2o(r.state_id), m2o(r.country_id)].filter(Boolean).join('\n')
+}
+
+export async function schedaCompleta(server: string, id: Id): Promise<Completa | null> {
+  const campi = await infoCampiPartner(server)
+  const ha = (x: string) => x in campi
+  const nomi = [
+    'is_company', 'comment', 'category_id', 'child_ids', 'bank_ids', 'message_is_follower',
+    'opportunity_count', 'sale_order_count', 'meeting_count', 'currency_id',
+    ...CAMPI_TESTO, ...CAMPI_UNO, ...CAMPI_SCELTA,
+  ].filter(ha)
+  const [r] = await callKw<Record<string, unknown>[]>(server, 'res.partner', 'read', [[id], nomi])
+  if (!r) {
+    return null
+  }
+  const ids = (x: unknown) => (Array.isArray(x) ? (x as Id[]) : [])
+  const campiFiglio = ['name', 'parent_id', 'is_company', 'function', 'city', 'phone', 'mobile', 'email', 'type', 'street', 'street2', 'zip', 'state_id', 'country_id'].filter(ha)
+  const [etichette, figli, banche, foto, fatturato] = await Promise.all([
+    ids(r.category_id).length ? callKw<{ id: Id; name: string }[]>(server, 'res.partner.category', 'read', [ids(r.category_id), ['name']]).catch(() => []) : Promise.resolve([]),
+    ids(r.child_ids).length
+      ? callKw<Record<string, unknown>[]>(server, 'res.partner', 'search_read', [], { domain: [['parent_id', '=', id]], fields: campiFiglio, order: 'type, name', limit: 100 }).catch(() => [])
+      : Promise.resolve([]),
+    ids(r.bank_ids).length
+      ? callKw<{ acc_number: string; bank_id: [Id, string] | false }[]>(server, 'res.partner.bank', 'read', [ids(r.bank_ids), ['acc_number', 'bank_id']]).catch(() => [])
+      : Promise.resolve([]),
+    conFoto(server, [id, ...ids(r.child_ids)]),
+    // Il fatturato lo legge solo chi ha accesso alla contabilita'.
+    ha('total_invoiced')
+      ? callKw<{ total_invoiced: number }[]>(server, 'res.partner', 'read', [[id], ['total_invoiced']]).then((x) => x[0]?.total_invoiced ?? null).catch(() => null)
+      : Promise.resolve(null),
+  ])
+  const rel = (x: unknown): Rel | null => (Array.isArray(x) && x.length === 2 ? { id: x[0] as Id, nome: x[1] as string } : null)
+  const testo = (x: unknown) => (typeof x === 'string' ? x : '')
+  const valori = {
+    is_company: !!r.is_company,
+    comment: testoDaHtml(testo(r.comment)),
+    category_id: etichette.map((e) => ({ id: e.id, nome: e.name })),
+  } as Valori
+  for (const k of CAMPI_TESTO) valori[k] = testo(r[k]).trim()
+  for (const k of CAMPI_UNO) valori[k] = rel(r[k])
+  for (const k of CAMPI_SCELTA) valori[k] = testo(r[k])
+  const conta = (x: unknown) => (typeof x === 'number' ? x : null)
+  const valuta = rel(r.currency_id)?.nome || ''
+  return {
+    id,
+    foto: foto.has(id),
+    campi,
+    valori,
+    banche: banche.map((b) => [b.acc_number, b.bank_id ? b.bank_id[1] : ''].filter(Boolean).join(' · ')),
+    contatori: {
+      opportunita: conta(r.opportunity_count),
+      vendite: conta(r.sale_order_count),
+      appuntamenti: conta(r.meeting_count),
+      fatturato: fatturato === null ? null : { importo: fatturato, valuta },
+    },
+    figli: figli.map((f) => ({
+      ...daRiga(f as unknown as Riga, foto),
+      tipo: testo(f.type) || 'contact',
+      tipoNome: nomeScelta(campi.type, testo(f.type) || 'contact'),
+      indirizzo: indirizzoDi(f),
+    })),
+    segue: !!r.message_is_follower,
+  }
+}
+
+/** Le scelte per un campo: elenco di Odoo (lingua, tipo) o ricerca nel modello collegato. */
+export async function opzioniCampo(server: string, campo: string, testo: string, valori: Partial<Valori>): Promise<Opzione[]> {
+  const info = (await infoCampiPartner(server))[campo]
+  if (!info) {
+    return []
+  }
+  if (info.selection) {
+    const q = testo.trim().toLowerCase()
+    return info.selection.map(([v, n], i) => ({ id: i + 1, nome: n, valore: v })).filter((x) => !q || x.nome.toLowerCase().includes(q))
+  }
+  if (!info.relation) {
+    return []
+  }
+  const dominio: unknown[] =
+    campo === 'parent_id'
+      ? [['is_company', '=', true]]
+      : campo === 'state_id' && valori.country_id
+        ? [['country_id', '=', valori.country_id.id]]
+        : campo === 'user_id'
+          ? [['share', '=', false]]
+          : []
+  // Argomenti per posizione: il secondo si chiama «args» in Odoo 17 e «domain» dalla 18.
+  const r = await callKw<[Id, string][]>(server, info.relation, 'name_search', [testo, dominio, 'ilike', 80])
+  return r.map(([id, nome]) => ({ id, nome }))
+}
+
+/** Scrive solo i campi cambiati, nei formati di Odoo. */
+export async function salvaContatto(server: string, id: Id, cambi: Partial<Valori>): Promise<void> {
+  const campi = await infoCampiPartner(server)
+  const v: Record<string, unknown> = {}
+  for (const [k, x] of Object.entries(cambi)) {
+    if (!(k in campi) || k === 'is_company') continue
+    if (k === 'category_id') v[k] = [[6, 0, (x as Rel[]).map((e) => e.id)]]
+    else if (k === 'comment') v[k] = (x as string).trim() ? htmlDaTesto(x as string) : false
+    else if ((CAMPI_UNO as readonly string[]).includes(k)) v[k] = x ? (x as Rel).id : false
+    else v[k] = typeof x === 'string' ? x.trim() || false : x
+  }
+  if (Object.keys(v).length) {
+    await callKw(server, 'res.partner', 'write', [[id], v])
+  }
+  // Persona / azienda: come in creaContatto (Odoo 20 lo ricalcola, si conferma dopo).
+  if (cambi.is_company !== undefined) {
+    await callKw(server, 'res.partner', 'write', [[id], 'company_type' in campi ? { company_type: cambi.is_company ? 'company' : 'person' } : { is_company: cambi.is_company }])
+  }
+}
+
+/** Una voce nuova nel modello collegato (es. un'etichetta), come «Crea» nei campi di Odoo. */
+export async function creaVoce(server: string, campo: string, nome: string): Promise<Opzione> {
+  const info = (await infoCampiPartner(server))[campo]
+  if (!info?.relation) {
+    throw new Error(campo)
+  }
+  const id = await callKw<Id>(server, info.relation, 'create', [{ name: nome.trim() }])
+  return { id, nome: nome.trim() }
+}
+
+/** Contatto o indirizzo nuovo sotto un'azienda (scheda «Contatti e indirizzi»). */
+export async function creaFiglio(server: string, aziendaId: Id, tipo: string, nome: string): Promise<Id> {
+  const campi = await infoCampiPartner(server)
+  return callKw<Id>(server, 'res.partner', 'create', [{ parent_id: aziendaId, name: nome.trim() || false, ...('type' in campi ? { type: tipo } : {}) }])
 }
 
 /** Prima lettera per i gruppi della lista (A, B, ... e # per il resto). */

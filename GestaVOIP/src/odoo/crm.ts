@@ -177,6 +177,17 @@ export async function opportunita(server: string, uid: number, filtro: Filtro, t
   return righe.map(daRiga)
 }
 
+/** Le opportunita' in corso di un cliente (e dei suoi contatti), dalla sua scheda. */
+export async function opportunitaCliente(server: string, cliente: Id): Promise<Opportunita[]> {
+  const righe = await callKw<Riga[]>(server, 'crm.lead', 'search_read', [], {
+    domain: [['type', '=', 'opportunity'], ['partner_id', 'child_of', cliente]],
+    fields: CAMPI_ELENCO,
+    order: 'priority desc, id desc',
+    limit: 200,
+  })
+  return righe.map(daRiga)
+}
+
 /** Quante opportunita' per filtro (i numeri sulle schede in alto). */
 export async function conteggi(server: string, uid: number): Promise<Record<Filtro, number>> {
   const conta = (f: Filtro) =>

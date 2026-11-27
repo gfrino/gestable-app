@@ -532,7 +532,7 @@ export default function SchedaOpportunita() {
             <Registro server={server} modello={MODELLO} id={op.id} versione={versione} />
           </Sezione>
 
-          <Pulsante testo={t('crm.apriInOdoo')} variante="tenue" onPress={apriInOdoo} />
+          <Pulsante testo={t('crm.apriInOdoo')} variante="tenue" icona="arrow-forward-circle" onPress={apriInOdoo} />
         </ScrollView>
       </KeyboardAvoidingView>
 

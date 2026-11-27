@@ -505,7 +505,7 @@ export default function SchedaOrdine() {
             <Registro server={server} modello={MODELLO} id={op.id} versione={versione} />
           </Sezione>
 
-          <Pulsante testo={t('vendite.apriInOdoo')} variante="tenue" onPress={() => apriInOdooWeb(router, MODELLO, op.id)} />
+          <Pulsante testo={t('vendite.apriInOdoo')} variante="tenue" icona="arrow-forward-circle" onPress={() => apriInOdooWeb(router, MODELLO, op.id)} />
         </ScrollView>
       </KeyboardAvoidingView>
 

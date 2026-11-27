@@ -132,6 +132,17 @@ export async function ordini(server: string, uid: number, filtro: Filtro, testo 
   return righe.map(daRiga)
 }
 
+/** Tutti i preventivi e ordini di un cliente (e dei suoi contatti), dalla sua scheda. */
+export async function ordiniCliente(server: string, cliente: Id): Promise<Ordine[]> {
+  const righe = await callKw<Riga[]>(server, 'sale.order', 'search_read', [], {
+    domain: [['partner_id', 'child_of', cliente]],
+    fields: CAMPI_ELENCO,
+    order: 'date_order desc, id desc',
+    limit: 200,
+  })
+  return righe.map(daRiga)
+}
+
 /** Quanti documenti per filtro (i numeri sulle schede in alto). */
 export async function conteggi(server: string, uid: number): Promise<Record<Filtro, number>> {
   const conta = (f: Filtro) => callKw<number>(server, 'sale.order', 'search_count', [dominio(f, uid, '')]).catch(() => 0)

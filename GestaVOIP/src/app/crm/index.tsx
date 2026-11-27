@@ -1,17 +1,18 @@
 /**
  * CRM: le opportunità divise per fase, come le colonne della pipeline di
  * Odoo (con quante sono e quanto valgono), le schede Mie / Tutte / Perse con
- * il numero accanto, la ricerca e il + per una nuova.
+ * il numero accanto, la ricerca e il + per una nuova. Aperta dalla scheda di
+ * un contatto (parametro «cliente») mostra le opportunità di quel cliente.
  */
 
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { useFocusEffect, useRouter } from 'expo-router'
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Pressable, RefreshControl, ScrollView, SectionList, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { t, tn } from '../../i18n'
 import { leggi, scrivi } from '../../odoo/archivio'
-import { conteggi, fasi as caricaFasi, opportunita, type Fase, type Filtro, type Opportunita } from '../../odoo/crm'
+import { conteggi, fasi as caricaFasi, opportunita, opportunitaCliente, type Fase, type Filtro, type Opportunita } from '../../odoo/crm'
 import { urlAvatar } from '../../odoo/lavoro'
 import { Avatar } from '../../ui/Avatar'
 import { Caricamento } from '../../ui/Caricamento'
@@ -50,13 +51,15 @@ function perFase(lista: Opportunita[], fasi: Fase[], perse: boolean): Sezione[] 
 export default function SchermataCrm() {
   const c = useColori()
   const router = useRouter()
+  const param = useLocalSearchParams<{ cliente?: string; clienteNome?: string }>()
+  const cliente = param.cliente ? Number(param.cliente) : 0
   const { sessione } = useApp()
   const server = sessione?.server || ''
   const uid = sessione?.utente.uid || 0
   const [filtro, setFiltro] = useState<Filtro>('mie')
   const [testo, setTesto] = useState('')
   const [cercato, setCercato] = useState('')
-  const [lista, setLista] = useState<Opportunita[] | null>(() => leggi<Opportunita[]>(server, uid, 'crm-mie'))
+  const [lista, setLista] = useState<Opportunita[] | null>(() => (cliente ? null : leggi<Opportunita[]>(server, uid, 'crm-mie')))
   const [fasi, setFasi] = useState<Fase[]>(() => leggi<Fase[]>(server, uid, 'crm-fasi') || [])
   const [numeri, setNumeri] = useState<Partial<Record<Filtro, number>>>({})
   const [errore, setErrore] = useState('')
@@ -70,9 +73,9 @@ export default function SchermataCrm() {
     const n = ++richiesta.current
     try {
       const [r, f, conti] = await Promise.all([
-        opportunita(server, uid, filtro, testo),
+        cliente ? opportunitaCliente(server, cliente) : opportunita(server, uid, filtro, testo),
         caricaFasi(server).catch(() => null),
-        testo ? Promise.resolve(null) : conteggi(server, uid),
+        testo || cliente ? Promise.resolve(null) : conteggi(server, uid),
       ])
       if (n !== richiesta.current) {
         return
@@ -85,7 +88,7 @@ export default function SchermataCrm() {
       if (conti) {
         setNumeri(conti)
       }
-      if (!testo) {
+      if (!testo && !cliente) {
         scrivi(server, uid, `crm-${filtro}`, r)
       }
       setErrore('')
@@ -94,7 +97,7 @@ export default function SchermataCrm() {
         setErrore(e instanceof Error ? e.message : String(e))
       }
     }
-  }, [server, uid, filtro, testo])
+  }, [server, uid, filtro, testo, cliente])
 
   useFocusEffect(
     useCallback(() => {
@@ -131,7 +134,7 @@ export default function SchermataCrm() {
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
       <Testata
-        titolo={t('crm.titolo')}
+        titolo={cliente && param.clienteNome ? t('schede.perCliente', { nome: param.clienteNome }) : t('crm.titolo')}
         sottotitolo={lista ? [tn('crm.conta', lista.length), totale ? importo(totale, valuta) : ''].filter(Boolean).join(' · ') : undefined}
         destra={
           <Pressable
@@ -146,6 +149,8 @@ export default function SchermataCrm() {
         }
       />
 
+      {cliente ? null : (
+        <>
       <View style={[s.cerca, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
         <Ionicons name="search" size={18} color={c.testo3} />
         <TextInput
@@ -187,6 +192,8 @@ export default function SchermataCrm() {
         </ScrollView>
       </View>
 
+        </>
+      )}
       {errore && !lista ? (
         <Text style={[s.errore, { color: c.rosso }]}>{errore}</Text>
       ) : !lista ? (
@@ -203,7 +210,7 @@ export default function SchermataCrm() {
             testo ? (
               <StatoVuoto icona="search" titolo={t('crm.nessunRisultato')} />
             ) : (
-              <StatoVuoto icona="trending-up" titolo={t(`crm.vuoto.${filtro}`)} testo={filtro === 'perse' ? undefined : t('crm.vuotoTesto')}>
+              <StatoVuoto icona="trending-up" titolo={cliente ? t('crm.vuoto.tutte') : t(`crm.vuoto.${filtro}`)} testo={filtro === 'perse' ? undefined : t('crm.vuotoTesto')}>
                 {filtro === 'perse' ? null : <Pulsante testo={t('crm.nuova')} onPress={nuova} />}
               </StatoVuoto>
             )

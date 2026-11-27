@@ -15,6 +15,7 @@ export const it = {
   'vendite.vuoto.preventivi': 'Nessun preventivo',
   'vendite.vuoto.ordini': 'Nessun ordine',
   'vendite.vuoto.fatturare': 'Niente da fatturare',
+  'vendite.vuoto.cliente': 'Nessun preventivo o ordine',
   'vendite.vuotoTesto': 'Crea un preventivo: scegli il cliente e i prodotti, i prezzi li calcola Odoo.',
   'vendite.nessunRisultato': 'Nessun documento trovato',
 
@@ -59,7 +60,7 @@ export const it = {
   'vendite.noteEsempio': 'Condizioni, tempi di consegna…',
   'vendite.modifica': 'Modifica',
   'vendite.conversazione': 'Conversazione',
-  'vendite.apriInOdoo': 'Apri in Odoo',
+  'vendite.apriInOdoo': 'Odoo web view',
   'vendite.nonSalvato': 'Modifica non salvata',
 
   // Righe
@@ -129,6 +130,7 @@ export const en: Record<keyof typeof it, string> = {
   'vendite.vuoto.preventivi': 'No quotations',
   'vendite.vuoto.ordini': 'No orders',
   'vendite.vuoto.fatturare': 'Nothing to invoice',
+  'vendite.vuoto.cliente': 'No quotations or orders',
   'vendite.vuotoTesto': 'Create a quotation: choose the customer and the products, Odoo works out the prices.',
   'vendite.nessunRisultato': 'No documents found',
 
@@ -172,7 +174,7 @@ export const en: Record<keyof typeof it, string> = {
   'vendite.noteEsempio': 'Conditions, delivery times…',
   'vendite.modifica': 'Edit',
   'vendite.conversazione': 'Conversation',
-  'vendite.apriInOdoo': 'Open in Odoo',
+  'vendite.apriInOdoo': 'Odoo web view',
   'vendite.nonSalvato': 'Change not saved',
 
   'vendite.riga': 'Line',

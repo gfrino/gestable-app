@@ -1,17 +1,18 @@
 /**
  * Vendite: i preventivi e gli ordini, come le viste di Odoo (I miei
  * preventivi, Preventivi, Ordini, Da fatturare) con il numero accanto,
- * la ricerca e il + per un preventivo nuovo.
+ * la ricerca e il + per un preventivo nuovo. Aperta dalla scheda di un
+ * contatto (parametro «cliente») mostra tutti i documenti di quel cliente.
  */
 
 import Ionicons from '@expo/vector-icons/Ionicons'
-import { useFocusEffect, useRouter } from 'expo-router'
+import { useFocusEffect, useLocalSearchParams, useRouter } from 'expo-router'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { t, tn } from '../../i18n'
 import { leggi, scrivi } from '../../odoo/archivio'
-import { conteggi, ordini, type Filtro, type Ordine } from '../../odoo/vendite'
+import { conteggi, ordini, ordiniCliente, type Filtro, type Ordine } from '../../odoo/vendite'
 import { Caricamento } from '../../ui/Caricamento'
 import { data } from '../../ui/formatoCrm'
 import { coloreStato, importo, testoFatturazione, testoStato } from '../../ui/formatoVendite'
@@ -26,13 +27,15 @@ const FILTRI: Filtro[] = ['miei', 'preventivi', 'ordini', 'fatturare']
 export default function SchermataVendite() {
   const c = useColori()
   const router = useRouter()
+  const param = useLocalSearchParams<{ cliente?: string; clienteNome?: string }>()
+  const cliente = param.cliente ? Number(param.cliente) : 0
   const { sessione } = useApp()
   const server = sessione?.server || ''
   const uid = sessione?.utente.uid || 0
   const [filtro, setFiltro] = useState<Filtro>('miei')
   const [testo, setTesto] = useState('')
   const [cercato, setCercato] = useState('')
-  const [lista, setLista] = useState<Ordine[] | null>(() => leggi<Ordine[]>(server, uid, 'vendite-miei'))
+  const [lista, setLista] = useState<Ordine[] | null>(() => (cliente ? null : leggi<Ordine[]>(server, uid, 'vendite-miei')))
   const [numeri, setNumeri] = useState<Partial<Record<Filtro, number>>>({})
   const [errore, setErrore] = useState('')
   const [ricarica, setRicarica] = useState(false)
@@ -44,6 +47,14 @@ export default function SchermataVendite() {
     }
     const n = ++richiesta.current
     try {
+      if (cliente) {
+        const r = await ordiniCliente(server, cliente)
+        if (n === richiesta.current) {
+          setLista(r)
+          setErrore('')
+        }
+        return
+      }
       const [r, conti] = await Promise.all([ordini(server, uid, filtro, testo), testo ? Promise.resolve(null) : conteggi(server, uid)])
       if (n !== richiesta.current) {
         return
@@ -61,7 +72,7 @@ export default function SchermataVendite() {
         setErrore(e instanceof Error ? e.message : String(e))
       }
     }
-  }, [server, uid, filtro, testo])
+  }, [server, uid, filtro, testo, cliente])
 
   useFocusEffect(
     useCallback(() => {
@@ -89,7 +100,8 @@ export default function SchermataVendite() {
     setRicarica(false)
   }
 
-  const nuovo = () => router.push('/vendite/nuovo')
+  const nuovo = () =>
+    router.push(cliente ? { pathname: '/vendite/nuovo', params: { cliente: String(cliente), clienteNome: param.clienteNome || '' } } : '/vendite/nuovo')
   const valuta = lista?.find((o) => o.valuta)?.valuta || ''
   const unaValuta = !!lista && lista.every((o) => !o.valuta || o.valuta === valuta)
   const totale = (lista || []).reduce((x, o) => x + o.totale, 0)
@@ -97,7 +109,7 @@ export default function SchermataVendite() {
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
       <Testata
-        titolo={t('vendite.titolo')}
+        titolo={cliente && param.clienteNome ? t('schede.perCliente', { nome: param.clienteNome }) : t('vendite.titolo')}
         sottotitolo={lista ? [tn('vendite.conta', lista.length), totale && unaValuta ? importo(totale, valuta) : ''].filter(Boolean).join(' · ') : undefined}
         destra={
           <Pressable
@@ -112,6 +124,8 @@ export default function SchermataVendite() {
         }
       />
 
+      {cliente ? null : (
+        <>
       <View style={[s.cerca, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
         <Ionicons name="search" size={18} color={c.testo3} />
         <TextInput
@@ -153,6 +167,8 @@ export default function SchermataVendite() {
         </ScrollView>
       </View>
 
+        </>
+      )}
       {errore && !lista ? (
         <Text style={[s.errore, { color: c.rosso }]}>{errore}</Text>
       ) : !lista ? (
@@ -168,7 +184,7 @@ export default function SchermataVendite() {
             testo ? (
               <StatoVuoto icona="search" titolo={t('vendite.nessunRisultato')} />
             ) : (
-              <StatoVuoto icona="document-text-outline" titolo={t(`vendite.vuoto.${filtro}`)} testo={filtro === 'miei' || filtro === 'preventivi' ? t('vendite.vuotoTesto') : undefined}>
+              <StatoVuoto icona="document-text-outline" titolo={cliente ? t('vendite.vuoto.cliente') : t(`vendite.vuoto.${filtro}`)} testo={filtro === 'miei' || filtro === 'preventivi' ? t('vendite.vuotoTesto') : undefined}>
                 {filtro === 'miei' || filtro === 'preventivi' ? <Pulsante testo={t('vendite.nuovo')} onPress={nuovo} /> : null}
               </StatoVuoto>
             )
