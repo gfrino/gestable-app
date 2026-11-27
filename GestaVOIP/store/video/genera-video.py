@@ -11,7 +11,11 @@ non tagliate del demo). Si registrano con
 e a fine scena si salva clip/<nome>-fine.png (il registratore salva solo i
 fotogrammi che cambiano e perde l'ultimo dopo un'animazione).
 
-Uso: python3 store/video/genera-video.py   (scrive store/video/gestable-*.mp4)
+La musica è originale, sintetizzata da genera-musica.py (musica-gestable.m4a):
+se il file c'è, finisce nei video.
+
+Uso: python3 store/video/genera-musica.py && python3 store/video/genera-video.py
+     (scrive store/video/gestable-*.mp4)
 """
 
 import os
@@ -28,6 +32,7 @@ CLIP = os.path.join(QUI, 'clip')
 SF = '/System/Library/Fonts/SFNS.ttf'
 FPS = 30
 DISSOLVENZA = 0.45
+MUSICA = os.path.join(QUI, 'musica-gestable.m4a')
 
 FONDO_ALTO = (252, 247, 252)
 FONDO_BASSO = (238, 245, 252)
@@ -293,7 +298,12 @@ def video(nome, fmt):
             prima = out
             tempo = off + pezzi[k][1]
         uscita = os.path.join(QUI, f'gestable-{nome}-{fmt["L"]}x{fmt["A"]}.mp4')
-        esegui(['ffmpeg', '-y', '-v', 'error', *ingressi, '-filter_complex', ';'.join(filtro), '-map', '[v]',
+        # Musica (genera-musica.py), già in AAC alla durata del video.
+        audio = []
+        if os.path.exists(MUSICA):
+            audio = ['-map', f'{len(pezzi)}:a', '-c:a', 'copy', '-shortest']
+            ingressi += ['-i', MUSICA]
+        esegui(['ffmpeg', '-y', '-v', 'error', *ingressi, '-filter_complex', ';'.join(filtro), '-map', '[v]', *audio,
                 '-c:v', 'libx264', '-preset', 'slow', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', uscita])
         print(uscita, f'{tempo:.1f} s', os.path.getsize(uscita) // 1024, 'KB')
     finally:
