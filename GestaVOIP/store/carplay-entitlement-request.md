@@ -17,3 +17,8 @@ Calls already use CallKit, so incoming and outgoing calls appear on the CarPlay 
 1. Apple abilita l'entitlement `com.apple.developer.carplay-communication` per l'App ID.
 2. In `eas.json`, profilo `production`: `"env": { "CARPLAY_ENTITLED": "1" }`. Senza l'approvazione la firma della build fallirebbe, per questo l'entitlement e' disattivato di default (vedi `plugins/carplay-siri.js`).
 3. Nuova build per lo store.
+
+## Stato
+
+- 27.11.2026: Apple ha concesso l'entitlement (mail a dev@ticinoweb.net); l'utente ha attivato «CarPlay Communication App» sull'App ID.
+- 1.4.0 (13): prima build con `CARPLAY_ENTITLED=1` (eas.json, profilo production). Gli OTA per la 1.3.0 restano senza la variabile (runtime 58a8d55d).
