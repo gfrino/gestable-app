@@ -208,6 +208,7 @@ export default function SchedaContattoSchermata() {
             <Text style={[s.nome, { color: c.testo }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
               {v.name || nomeScelta(k.campi.type, v.type)}
             </Text>
+            <Collegamenti {...collegamenti} />
             {[v.title?.nome, funzione].filter(Boolean).length ? (
               <Text style={[s.funzione, { color: c.testo2 }]} numberOfLines={2}>
                 {[v.title?.nome, funzione].filter(Boolean).join(' · ')}
@@ -230,7 +231,6 @@ export default function SchedaContattoSchermata() {
             ) : null}
           </View>
         </View>
-        <Collegamenti {...collegamenti} />
 
         <View style={s.azioni}>
           {azioni.map((a) => (

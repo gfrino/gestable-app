@@ -1,5 +1,5 @@
 /**
- * Sito web e social di un contatto, sotto il nome: il sito come testo breve
+ * Sito web e social di un contatto, subito sotto il nome (a destra del logo): il sito come testo breve
  * (dominio) con il globo, i social come icone tonde con il loro colore.
  *
  * Odoo non ha campi social sul contatto: i link si cercano nel sito, nei campi
@@ -10,7 +10,7 @@
 
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { Linking, Pressable, StyleSheet, Text, View } from 'react-native'
-import { raggio, spazio, useColori } from '../tema'
+import { raggio, useColori } from '../tema'
 
 type Social = { chiave: string; icona: keyof typeof Ionicons.glyphMap; colore: string; nome: string; dominio: RegExp }
 
@@ -98,7 +98,7 @@ export function Collegamenti({ sito, social }: ReturnType<typeof trovaCollegamen
           accessibilityRole="link"
           accessibilityLabel={x.nome}
         >
-          <Ionicons name={x.icona} size={20} color={x.chiave === 'x' || x.chiave === 'tiktok' || x.chiave === 'github' ? c.testo : x.colore} />
+          <Ionicons name={x.icona} size={18} color={x.chiave === 'x' || x.chiave === 'tiktok' || x.chiave === 'github' ? c.testo : x.colore} />
         </Pressable>
       ))}
     </View>
@@ -106,8 +106,8 @@ export function Collegamenti({ sito, social }: ReturnType<typeof trovaCollegamen
 }
 
 const s = StyleSheet.create({
-  riga: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: spazio.s },
-  sito: { flexDirection: 'row', alignItems: 'center', gap: 6, height: 36, paddingHorizontal: 12, borderRadius: raggio.tondo, maxWidth: '100%', flexShrink: 1 },
-  sitoTesto: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
-  icona: { width: 36, height: 36, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
+  riga: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 },
+  sito: { flexDirection: 'row', alignItems: 'center', gap: 5, height: 32, paddingHorizontal: 10, borderRadius: raggio.tondo, maxWidth: '100%', flexShrink: 1 },
+  sitoTesto: { fontSize: 13, fontWeight: '700', flexShrink: 1 },
+  icona: { width: 32, height: 32, borderRadius: 16, borderWidth: StyleSheet.hairlineWidth, alignItems: 'center', justifyContent: 'center' },
 })
