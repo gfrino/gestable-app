@@ -36,7 +36,7 @@ export function Avatar({ url, nome, lato = 44, icona, logo }: Props) {
 
   if (url && rotta !== url && logo) {
     return (
-      <View style={[forma, s.logo, { padding: lato * 0.12 }]}>
+      <View style={[forma, s.logo, { padding: lato * 0.1, borderColor: c.bordo }]}>
         <Image
           source={{ uri: url }}
           style={s.logoImmagine}
@@ -70,6 +70,7 @@ export function Avatar({ url, nome, lato = 44, icona, logo }: Props) {
 
 const s = StyleSheet.create({
   vuoto: { alignItems: 'center', justifyContent: 'center' },
-  logo: { backgroundColor: '#FFFFFF', overflow: 'hidden' },
+  // Bianco anche nel tema scuro (i loghi sono fatti per il bianco), con un bordo per staccarsi dalle schede bianche.
+  logo: { backgroundColor: '#FFFFFF', overflow: 'hidden', borderWidth: StyleSheet.hairlineWidth },
   logoImmagine: { width: '100%', height: '100%' },
 })

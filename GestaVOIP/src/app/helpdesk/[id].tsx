@@ -404,7 +404,7 @@ export default function SchedaTicket() {
           {/* Cliente */}
           <Sezione titolo={t('helpdesk.cliente')}>
             <Pressable onPress={() => setFoglioPersone('cliente')} style={s.riga} accessibilityRole="button">
-              {tk.clienteId ? <Avatar nome={tk.cliente} lato={40} url={urlAvatar(server, 'res.partner', tk.clienteId)} /> : <Avatar nome="?" lato={40} icona="person-outline" />}
+              {tk.clienteId ? <Avatar nome={tk.cliente} lato={40} url={urlAvatar(server, 'res.partner', tk.clienteId)} logo={tk.clienteAzienda} /> : <Avatar nome="?" lato={40} icona="person-outline" />}
               <View style={{ flex: 1 }}>
                 <Text style={[s.valore, { color: tk.cliente ? c.testo : c.testo3 }]} numberOfLines={1}>
                   {tk.cliente || t('helpdesk.nessunCliente')}
@@ -710,7 +710,7 @@ export default function SchedaTicket() {
         chiudi={() => setFoglioPersone(null)}
         tocca={(p) => {
           if (foglioPersone === 'cliente') {
-            void cambia({ clienteId: p.id }, { clienteId: p.id, cliente: p.nome, email: p.email })
+            void cambia({ clienteId: p.id }, { clienteId: p.id, cliente: p.nome, email: p.email, clienteAzienda: !!p.eAzienda })
           } else {
             void cambia({ assegnato: p.id }, { assegnato: [p.id, p.nome] })
           }

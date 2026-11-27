@@ -134,7 +134,7 @@ export function CercaPersone({ aperto, server, tipo, scelti, chiudi, tocca, tito
                 accessibilityRole="button"
                 accessibilityState={{ selected: scelto }}
               >
-                <Avatar url={urlAvatar(server, tipo === 'invitati' ? 'res.partner' : 'res.users', p.id)} nome={p.nome} lato={38} />
+                <Avatar url={urlAvatar(server, tipo === 'invitati' ? 'res.partner' : 'res.users', p.id)} nome={p.nome} lato={38} logo={p.eAzienda} />
                 <View style={{ flex: 1 }}>
                   <Text style={[s.nome, { color: c.testo }]} numberOfLines={1}>
                     {p.nome}

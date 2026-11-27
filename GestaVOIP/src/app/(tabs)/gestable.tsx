@@ -1,5 +1,5 @@
 /**
- * Scheda GestABLE: le app di Odoo rifatte per il telefono (Helpdesk e Ferie;
+ * Scheda GestABLE: le app di Odoo rifatte per il telefono (Helpdesk, CRM e Ferie;
  * Spese, Messaggi e Attivita' stanno nel menu ☰). Compaiono solo quelle che
  * l'utente ha in Odoo; le stesse app spariscono dalla griglia di Odoo. Il menu ≡ in alto a destra e'
  * quello della scheda Odoo (voci dell'account) con in cima «Odoo Web».
@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { t } from '../../i18n'
 import { leggi } from '../../odoo/archivio'
 import { APP, conHelpdesk, menuOdoo, menuSalvato } from '../../odoo/capacita'
+import { iconaCrm } from '../../odoo/crm'
 import { iconaFerie } from '../../odoo/ferie'
 import { inviaOdoo, rottaOdoo } from '../../ui/comandiOdoo'
 import { MenuOdoo, type DatiPannello } from '../../ui/MenuOdoo'
@@ -69,6 +70,7 @@ export default function SchedaGestable() {
     ...(nativo && conHelpdesk(menu)
       ? [{ chiave: 'helpdesk', nome: t('helpdesk.app'), percorso: '/helpdesk' as Href, immagine: iconaHelpdesk(server, menu) }]
       : []),
+    ...(nativo && menu?.has(APP.crm) ? [{ chiave: 'crm', nome: t('crm.app'), percorso: '/crm' as Href, immagine: iconaCrm(server) }] : []),
     ...(nativo && menu?.has(APP.ferie) ? [{ chiave: 'ferie', nome: t('ferie.app'), percorso: '/ferie' as Href, immagine: iconaFerie(server) }] : []),
   ]
 

@@ -12,9 +12,8 @@
  */
 
 import { t } from '../i18n'
-import { File } from 'expo-file-system'
 import { callKw } from './client'
-import { mioPartner } from './lavoro'
+import * as registro from './registro'
 import { dataOdoo, htmlDaTesto, testoDaHtml } from './testo'
 
 type Id = number
@@ -206,6 +205,8 @@ export async function conteggi(server: string, uid: number): Promise<Record<Excl
 export type Scelta = { id: Id; nome: string }
 
 export type DettaglioTicket = Ticket & {
+  /** Il cliente e' un'azienda: si mostra il logo intero, non una foto tonda. */
+  clienteAzienda: boolean
   descrizione: string
   email: string
   telefono: string
@@ -252,7 +253,7 @@ export async function ticket(server: string, id: Id): Promise<DettaglioTicket | 
       ? callKw<{ id: Id; name: string }[]>(server, 'sale.order', 'read', [r.sale_order_ids, ['name']]).catch(() => [])
       : Promise.resolve([]),
     r.partner_id
-      ? callKw<{ phone: string | false; mobile?: string | false }[]>(server, 'res.partner', 'read', [[r.partner_id[0]], ['phone']]).catch(() => [])
+      ? callKw<{ phone: string | false; is_company: boolean }[]>(server, 'res.partner', 'read', [[r.partner_id[0]], ['phone', 'is_company']]).catch(() => [])
       : Promise.resolve([]),
     r.stage_id
       ? callKw<Record<string, unknown>[]>(server, s.fasi, 'read', [[r.stage_id[0]], [s.chiusa]]).catch(() => [])
@@ -260,6 +261,7 @@ export async function ticket(server: string, id: Id): Promise<DettaglioTicket | 
   ])
   return {
     ...daRiga(r),
+    clienteAzienda: !!partner[0]?.is_company,
     descrizione: testoDaHtml(r.description as string),
     email: (r.partner_email as string) || '',
     telefono: (partner[0]?.phone as string) || '',
@@ -355,129 +357,26 @@ export async function creaTicket(server: string, n: NuovoTicket): Promise<Id> {
 }
 
 /** Segue (o smette di seguire) il ticket: arrivano le notifiche dei messaggi nuovi. */
-export async function seguiTicket(server: string, uid: number, id: Id, segui: boolean): Promise<void> {
-  const io = await mioPartner(server, uid)
-  await callKw(server, 'helpdesk.ticket', segui ? 'message_subscribe' : 'message_unsubscribe', [[id]], { partner_ids: [io] })
+export function seguiTicket(server: string, uid: number, id: Id, segui: boolean): Promise<void> {
+  return registro.segui(server, uid, 'helpdesk.ticket', id, segui)
 }
 
 // ---------------------------------------------------------------------------
-// Conversazione
+// Conversazione (uguale per tutti i record: src/odoo/registro.ts)
 // ---------------------------------------------------------------------------
 
-export type Messaggio = {
-  id: Id
-  autore: string
-  autoreId: Id | null
-  data: Date | null
-  testo: string
-  nota: boolean
-  email: boolean
-  allegati: { id: Id; nome: string; tipo: string }[]
-  /** Cambio di fase, assegnazione... scritto da Odoo. */
-  tracciamento: string
-}
+export type Messaggio = registro.Messaggio
 
-type RigaMessaggio = {
-  id: Id
-  body: string
-  author_id: M2o
-  date: string
-  message_type: string
-  subtype_id: M2o
-  is_internal?: boolean
-  attachment_ids: Id[]
-  tracking_value_ids?: Id[]
-}
-
-export async function conversazione(server: string, id: Id): Promise<Messaggio[]> {
-  const righe = await callKw<RigaMessaggio[]>(server, 'mail.message', 'search_read', [], {
-    domain: [['model', '=', 'helpdesk.ticket'], ['res_id', '=', id], ['message_type', 'in', ['comment', 'email', 'notification']]],
-    fields: ['body', 'author_id', 'date', 'message_type', 'subtype_id', 'is_internal', 'attachment_ids', 'tracking_value_ids'],
-    order: 'id desc',
-    limit: 80,
-  })
-  const idAllegati = [...new Set(righe.flatMap((r) => r.attachment_ids || []))]
-  const idTracce = [...new Set(righe.flatMap((r) => r.tracking_value_ids || []))]
-  // Nota interna = sottotipo «internal» (mail.mt_note): `is_internal` del messaggio resta false sulle note.
-  const idSottotipi = [...new Set(righe.flatMap((r) => (r.subtype_id ? [r.subtype_id[0]] : [])))]
-  const [allegati, tracce, sottotipi] = await Promise.all([
-    idAllegati.length
-      ? callKw<{ id: Id; name: string; mimetype: string | false }[]>(server, 'ir.attachment', 'read', [idAllegati, ['name', 'mimetype']]).catch(() => [])
-      : Promise.resolve([]),
-    idTracce.length
-      ? callKw<{ id: Id; field_id?: M2o; field?: string; old_value_char?: string | false; new_value_char?: string | false; field_desc?: string }[]>(
-          server,
-          'mail.tracking.value',
-          'read',
-          [idTracce, ['field_id', 'old_value_char', 'new_value_char']],
-        ).catch(() => [])
-      : Promise.resolve([]),
-    idSottotipi.length
-      ? callKw<{ id: Id; internal: boolean }[]>(server, 'mail.message.subtype', 'read', [idSottotipi, ['internal']]).catch(() => [])
-      : Promise.resolve([]),
-  ])
-  const interni = new Set(sottotipi.filter((x) => x.internal).map((x) => x.id))
-  const allegato = new Map(allegati.map((a) => [a.id, { id: a.id, nome: a.name, tipo: a.mimetype || '' }]))
-  const traccia = new Map(tracce.map((x) => [x.id, x]))
-  return righe
-    .map((r) => {
-      const testo = testoDaHtml(r.body)
-      const cambi = (r.tracking_value_ids || [])
-        .map((tid) => traccia.get(tid))
-        .filter(Boolean)
-        .map((x) => `${x?.field_id ? x.field_id[1] : ''}: ${x?.old_value_char || '—'} → ${x?.new_value_char || '—'}`.replace(/^: /, ''))
-      const nota = !!r.is_internal || (!!r.subtype_id && interni.has(r.subtype_id[0]))
-      return {
-        id: r.id,
-        autore: r.author_id ? r.author_id[1] : '',
-        autoreId: r.author_id ? r.author_id[0] : null,
-        data: dataOdoo(r.date),
-        testo,
-        nota: r.message_type === 'comment' && nota,
-        email: r.message_type === 'email',
-        allegati: (r.attachment_ids || []).map((a) => allegato.get(a)).filter((a): a is NonNullable<typeof a> => !!a),
-        tracciamento: cambi.join('\n'),
-      }
-    })
-    .filter((m) => m.testo || m.allegati.length || m.tracciamento)
+export function conversazione(server: string, id: Id): Promise<Messaggio[]> {
+  return registro.conversazione(server, 'helpdesk.ticket', id)
 }
 
 /**
  * Scrive nel ticket: `nota` interna (solo colleghi) o risposta al cliente
  * (va per email ai follower, cliente compreso). Le foto (file://) diventano allegati.
  */
-export async function scrivi(server: string, id: Id, testo: string, nota: boolean, foto: string[] = []): Promise<void> {
-  const allegati: Id[] = []
-  if (foto.length) {
-    const campo = await campoDati(server)
-    for (const [i, uri] of foto.entries()) {
-      const f = new File(uri)
-      const dati = await f.base64()
-      allegati.push(
-        await callKw<Id>(server, 'ir.attachment', 'create', [
-          { name: `Foto ${i + 1}.jpg`, [campo]: dati, res_model: 'helpdesk.ticket', res_id: id },
-        ]),
-      )
-    }
-  }
-  await callKw(server, 'helpdesk.ticket', 'message_post', [[id]], {
-    body: htmlDaTesto(testo.trim()),
-    message_type: 'comment',
-    subtype_xmlid: nota ? 'mail.mt_note' : 'mail.mt_comment',
-    attachment_ids: allegati,
-  })
-}
-
-const campoDatiDi = new Map<string, Promise<'datas' | 'raw'>>()
-
-function campoDati(server: string): Promise<'datas' | 'raw'> {
-  let p = campoDatiDi.get(server)
-  if (!p) {
-    p = callKw<Record<string, unknown>>(server, 'ir.attachment', 'fields_get', [], { attributes: ['type'] }).then((f) => ('datas' in f ? 'datas' : 'raw'))
-    p.catch(() => campoDatiDi.delete(server))
-    campoDatiDi.set(server, p)
-  }
-  return p
+export function scrivi(server: string, id: Id, testo: string, nota: boolean, foto: string[] = []): Promise<void> {
+  return registro.scrivi(server, 'helpdesk.ticket', id, testo, nota, foto)
 }
 
 // ---------------------------------------------------------------------------

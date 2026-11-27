@@ -347,7 +347,7 @@ export async function opzioniEvento(server: string): Promise<Opzioni> {
   }
 }
 
-export type Persona = { id: Id; nome: string; email: string; azienda: string }
+export type Persona = { id: Id; nome: string; email: string; azienda: string; /** Contatto azienda: logo intero nell'elenco. */ eAzienda?: boolean }
 
 /** Contatti da invitare: nome, email o azienda. */
 export async function cercaInvitati(server: string, testo: string): Promise<Persona[]> {
@@ -358,14 +358,14 @@ export async function cercaInvitati(server: string, testo: string): Promise<Pers
   } else {
     dominio.push(['email', '!=', false])
   }
-  const r = await callKw<{ id: Id; name: string; email: string | false; parent_id: M2o }[]>(
+  const r = await callKw<{ id: Id; name: string; email: string | false; parent_id: M2o; is_company: boolean }[]>(
     server,
     'res.partner',
     'search_read',
     [],
-    { domain: dominio, fields: ['name', 'email', 'parent_id'], order: 'name asc', limit: 40 },
+    { domain: dominio, fields: ['name', 'email', 'parent_id', 'is_company'], order: 'name asc', limit: 40 },
   )
-  return r.map((p) => ({ id: p.id, nome: p.name, email: p.email || '', azienda: p.parent_id ? p.parent_id[1] : '' }))
+  return r.map((p) => ({ id: p.id, nome: p.name, email: p.email || '', azienda: p.parent_id ? p.parent_id[1] : '', eAzienda: !!p.is_company }))
 }
 
 /** Un invitato nuovo da un indirizzo email (come fa Odoo scrivendo l'email). */

@@ -7,6 +7,7 @@
 import * as accesso from './accesso'
 import * as calendario from './calendario'
 import * as comune from './comune'
+import * as crm from './crm'
 import * as ferie from './ferie'
 import * as helpdesk from './helpdesk'
 import * as lavoro from './lavoro'
@@ -17,7 +18,7 @@ import * as telefono from './telefono'
 
 type Dizionario = Record<string, string>
 
-const GRUPPI: { it: Dizionario; en: Dizionario }[] = [comune, accesso, schede, calendario, telefono, lavoro, spese, helpdesk, ferie, notifiche]
+const GRUPPI: { it: Dizionario; en: Dizionario }[] = [comune, accesso, schede, calendario, telefono, lavoro, spese, helpdesk, ferie, crm, notifiche]
 
 function unisci(lingua: 'it' | 'en'): Dizionario {
   return Object.assign({}, ...GRUPPI.map((g) => g[lingua]))
