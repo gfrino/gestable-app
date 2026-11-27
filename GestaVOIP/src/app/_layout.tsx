@@ -52,6 +52,8 @@ function Navigazione() {
           <Stack.Screen name="helpdesk/index" />
           <Stack.Screen name="helpdesk/[id]" />
           <Stack.Screen name="helpdesk/nuovo" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="ferie/index" />
+          <Stack.Screen name="ferie/nuova" options={{ presentation: 'modal' }} />
           <Stack.Screen name="calendario/[id]" />
           <Stack.Screen name="calendario/nuovo" options={{ presentation: 'modal' }} />
           <Stack.Screen name="calendario/modifica" options={{ presentation: 'modal' }} />

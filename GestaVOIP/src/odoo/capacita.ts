@@ -22,6 +22,8 @@ export const APP = {
   /** Helpdesk OCA (helpdesk_mgmt) e Helpdesk di Odoo Enterprise. */
   helpdesk: 'helpdesk_mgmt.helpdesk_ticket_main_menu',
   helpdeskEnterprise: 'helpdesk.menu_helpdesk_root',
+  /** Assenze (hr_holidays): la radice del menu, uguale dalla 17 alla 20. */
+  ferie: 'hr_holidays.menu_hr_holidays_root',
 } as const
 
 /** C'e' l'Helpdesk (uno dei due) tra le app di questo utente? */
@@ -39,6 +41,7 @@ export const APP_NATIVE: readonly string[] = [
   APP.messaggi,
   APP.helpdesk,
   APP.helpdeskEnterprise,
+  APP.ferie,
   // Le Spese sono native solo dove c'e' lo scanner (build 1.2+ su iPhone).
   ...(spesePossibili ? [APP.spese] : []),
 ]
