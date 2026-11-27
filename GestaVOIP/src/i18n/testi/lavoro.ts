@@ -9,6 +9,7 @@ export const it = {
   // Messaggi: chat e notifiche
   'lavoro.messaggi.titolo': 'Messaggi',
   'lavoro.messaggi.tutteLette': 'Tutte lette',
+  'lavoro.messaggi.segnaLetta': 'Letta',
   'lavoro.messaggi.chat': 'Chat',
   'lavoro.messaggi.notifiche': 'Notifiche',
   'lavoro.messaggi.nessunaChat': 'Nessuna chat.',
@@ -59,6 +60,7 @@ export const en: Record<keyof typeof it, string> = {
 
   'lavoro.messaggi.titolo': 'Messages',
   'lavoro.messaggi.tutteLette': 'Mark all read',
+  'lavoro.messaggi.segnaLetta': 'Read',
   'lavoro.messaggi.chat': 'Chats',
   'lavoro.messaggi.notifiche': 'Inbox',
   'lavoro.messaggi.nessunaChat': 'No chats.',

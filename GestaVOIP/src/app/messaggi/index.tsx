@@ -1,6 +1,7 @@
 /**
  * Messaggi: le chat e i canali di Discuss, e le notifiche (la posta in arrivo
- * di Odoo: menzioni e messaggi sui record che segui).
+ * di Odoo: menzioni e messaggi sui record che segui). Una notifica si apre
+ * toccandola o si segna come letta scorrendola a sinistra, senza aprirla.
  */
 
 import { useFocusEffect, useRouter } from 'expo-router'
@@ -21,6 +22,7 @@ import { quandoBreve, testoDaHtml } from '../../odoo/testo'
 import { Avatar } from '../../ui/Avatar'
 import { apriRecord } from '../../ui/apriRecord'
 import { useMenu } from '../../ui/MenuLaterale'
+import { RigaScorrevole } from '../../ui/RigaScorrevole'
 import { StatoVuoto } from '../../ui/StatoVuoto'
 import { Testata } from '../../ui/Testata'
 import { raggio, spazio, useColori } from '../../ui/tema'
@@ -44,6 +46,8 @@ export default function Messaggi() {
   const [totaleNotifiche, setTotaleNotifiche] = useState(copia?.totale || 0)
   const [errore, setErrore] = useState('')
   const [ricarica, setRicarica] = useState(false)
+  // Mentre si scorre una notifica a sinistra la lista non scorre in verticale.
+  const [scorrendo, setScorrendo] = useState(false)
   const server = sessione?.server || ''
   const uid = sessione?.utente.uid || 0
 
@@ -78,12 +82,16 @@ export default function Messaggi() {
     setRicarica(false)
   }
 
-  async function apriNotifica(n: Notifica) {
+  function letta(n: Notifica) {
     setNotifiche((l) => (l ? l.filter((x) => x.id !== n.id) : l))
     setTotaleNotifiche((x) => Math.max(0, x - 1))
     segnaNotificheLette(server, [n.id])
       .then(aggiorna)
       .catch(() => undefined)
+  }
+
+  async function apriNotifica(n: Notifica) {
+    letta(n)
     // La schermata nativa del documento se c'e', altrimenti Odoo Web.
     apriRecord(router, n.modello, n.recordId, { nome: n.titolo })
   }
@@ -195,29 +203,38 @@ export default function Messaggi() {
         <FlatList
           data={notifiche}
           keyExtractor={(x) => String(x.id)}
+          scrollEnabled={!scorrendo}
           refreshControl={<RefreshControl refreshing={ricarica} onRefresh={tiraGiu} tintColor={c.primario} />}
           ListEmptyComponent={
             <StatoVuoto icona="mail-open-outline" titolo={t('lavoro.messaggi.tuttoLetto')} testo={t('lavoro.messaggi.nessunaNotifica')} />
           }
           renderItem={({ item }) => (
-            <Pressable
-              onPress={() => apriNotifica(item)}
-              style={({ pressed }) => [s.riga, { backgroundColor: pressed ? c.superficie : 'transparent' }]}
+            <RigaScorrevole
+              testo={t('lavoro.messaggi.segnaLetta')}
+              icona="checkmark-done"
+              colore={c.verde}
+              scorri={() => letta(item)}
+              trascina={setScorrendo}
             >
-              <Avatar url={item.autoreId ? urlAvatar(server, 'res.partner', item.autoreId) : undefined} nome={item.autore} lato={44} />
-              <View style={s.rigaCorpo}>
-                <View style={s.rigaSopra}>
-                  <Text style={[s.rigaTitolo, { color: c.testo }]} numberOfLines={1}>
-                    {item.titolo || item.autore}
+              <Pressable
+                onPress={() => apriNotifica(item)}
+                style={({ pressed }) => [s.riga, { backgroundColor: pressed ? c.superficie : c.sfondo }]}
+              >
+                <Avatar url={item.autoreId ? urlAvatar(server, 'res.partner', item.autoreId) : undefined} nome={item.autore} lato={44} />
+                <View style={s.rigaCorpo}>
+                  <View style={s.rigaSopra}>
+                    <Text style={[s.rigaTitolo, { color: c.testo }]} numberOfLines={1}>
+                      {item.titolo || item.autore}
+                    </Text>
+                    <Text style={[s.ora, { color: c.testo3 }]}>{quandoBreve(item.data)}</Text>
+                  </View>
+                  <Text style={[s.anteprima, { color: c.testo2 }]} numberOfLines={3}>
+                    {item.autore ? `${item.autore}: ` : ''}
+                    {testoDaHtml(item.testo).replace(/\s+/g, ' ')}
                   </Text>
-                  <Text style={[s.ora, { color: c.testo3 }]}>{quandoBreve(item.data)}</Text>
                 </View>
-                <Text style={[s.anteprima, { color: c.testo2 }]} numberOfLines={3}>
-                  {item.autore ? `${item.autore}: ` : ''}
-                  {testoDaHtml(item.testo).replace(/\s+/g, ' ')}
-                </Text>
-              </View>
-            </Pressable>
+  </Pressable>
+            </RigaScorrevole>
           )}
         />
       )}
