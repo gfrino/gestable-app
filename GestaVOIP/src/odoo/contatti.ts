@@ -296,6 +296,8 @@ export type Completa = {
   contatori: { opportunita: number | null; vendite: number | null; appuntamenti: number | null; fatturato: { importo: number; valuta: string } | null }
   figli: Figlio[]
   segue: boolean
+  /** Testi di campi social aggiunti da moduli (facebook, instagram, social_*...). */
+  social: string[]
 }
 
 /** Il nome leggibile di un valore di un campo a scelta («invoice» → «Indirizzo di fatturazione»). */
@@ -320,6 +322,10 @@ export async function schedaCompleta(server: string, id: Id): Promise<Completa |
   if (!r) {
     return null
   }
+  const socialCampi = Object.keys(campi).filter((x) => campi[x].type === 'char' && /social|facebook|instagram|linkedin|twitter|youtube|tiktok/i.test(x))
+  const socialValori = socialCampi.length
+    ? await callKw<Record<string, unknown>[]>(server, 'res.partner', 'read', [[id], socialCampi]).then((x) => x[0] || {}).catch(() => ({}) as Record<string, unknown>)
+    : {}
   const ids = (x: unknown) => (Array.isArray(x) ? (x as Id[]) : [])
   const campiFiglio = ['name', 'parent_id', 'is_company', 'function', 'city', 'phone', 'mobile', 'email', 'type', 'street', 'street2', 'zip', 'state_id', 'country_id'].filter(ha)
   const [etichette, figli, banche, foto, fatturato] = await Promise.all([
@@ -367,6 +373,7 @@ export async function schedaCompleta(server: string, id: Id): Promise<Completa |
       indirizzo: indirizzoDi(f),
     })),
     segue: !!r.message_is_follower,
+    social: socialCampi.map((x) => socialValori[x]).filter((x): x is string => typeof x === 'string' && !!x.trim()),
   }
 }
 

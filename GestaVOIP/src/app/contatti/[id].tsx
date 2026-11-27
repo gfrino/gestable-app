@@ -23,6 +23,7 @@ import { Avatar } from '../../ui/Avatar'
 import { Caricamento } from '../../ui/Caricamento'
 import { chiamaNumero } from '../../ui/chiama'
 import { inviaOdoo, rottaOdoo } from '../../ui/comandiOdoo'
+import { Collegamenti, soloLink, trovaCollegamenti } from '../../ui/contatti/Collegamenti'
 import { ModuloContatto } from '../../ui/contatti/ModuloContatto'
 import { Foglio } from '../../ui/Foglio'
 import { importo } from '../../ui/formatoVendite'
@@ -133,6 +134,9 @@ export default function SchedaContattoSchermata() {
   const numero = v.mobile || v.phone
   const indirizzo = [v.street, v.street2, [v.zip, v.city].filter(Boolean).join(' '), v.state_id?.nome, v.country_id?.nome].filter(Boolean).join('\n')
   const indirizzoUnaRiga = indirizzo.replace(/\n/g, ', ')
+  // Sito e social sotto il nome; un link scritto in «posizione lavorativa» non si ripete come testo.
+  const collegamenti = trovaCollegamenti(v.website, [v.function, v.ref, v.comment, ...k.social])
+  const funzione = soloLink(v.function) ? '' : v.function
   const mappa = () => apri(`http://maps.apple.com/?q=${encodeURIComponent(indirizzoUnaRiga)}`)
 
   const azioni = [
@@ -199,27 +203,34 @@ export default function SchedaContattoSchermata() {
       />
       <ScrollView contentContainerStyle={s.contenuto} keyboardShouldPersistTaps="handled">
         <View style={s.eroe}>
-          <Avatar url={k.foto ? urlAvatar(server, MODELLO, k.id) : undefined} nome={v.name || '?'} icona={v.is_company ? 'business' : undefined} logo={azienda} lato={96} />
-          <Text style={[s.nome, { color: c.testo }]}>{v.name || nomeScelta(k.campi.type, v.type)}</Text>
-          {[v.title?.nome, v.function].filter(Boolean).length ? (
-            <Text style={[s.funzione, { color: c.testo2 }]}>{[v.title?.nome, v.function].filter(Boolean).join(' · ')}</Text>
-          ) : null}
-          {v.parent_id ? (
-            <Pressable
-              onPress={() => router.push({ pathname: '/contatti/[id]', params: { id: String(v.parent_id?.id) } })}
-              style={[s.azienda, { backgroundColor: c.primarioTenue }]}
-              accessibilityRole="link"
-            >
-              <Ionicons name="business" size={14} color={c.primario} />
-              <Text style={[s.aziendaTesto, { color: c.primario }]} numberOfLines={1}>
-                {v.parent_id.nome}
+          <Avatar url={k.foto ? urlAvatar(server, MODELLO, k.id) : undefined} nome={v.name || '?'} icona={v.is_company ? 'business' : undefined} logo={azienda} lato={72} />
+          <View style={s.eroeTesto}>
+            <Text style={[s.nome, { color: c.testo }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.5}>
+              {v.name || nomeScelta(k.campi.type, v.type)}
+            </Text>
+            {[v.title?.nome, funzione].filter(Boolean).length ? (
+              <Text style={[s.funzione, { color: c.testo2 }]} numberOfLines={2}>
+                {[v.title?.nome, funzione].filter(Boolean).join(' · ')}
               </Text>
-            </Pressable>
-          ) : null}
-          {v.parent_id && v.type && v.type !== 'contact' ? (
-            <Text style={[s.funzione, { color: c.testo3 }]}>{nomeScelta(k.campi.type, v.type)}</Text>
-          ) : null}
+            ) : null}
+            {v.parent_id ? (
+              <Pressable
+                onPress={() => router.push({ pathname: '/contatti/[id]', params: { id: String(v.parent_id?.id) } })}
+                style={[s.azienda, { backgroundColor: c.primarioTenue }]}
+                accessibilityRole="link"
+              >
+                <Ionicons name="business" size={14} color={c.primario} />
+                <Text style={[s.aziendaTesto, { color: c.primario }]} numberOfLines={1}>
+                  {v.parent_id.nome}
+                </Text>
+              </Pressable>
+            ) : null}
+            {v.parent_id && v.type && v.type !== 'contact' ? (
+              <Text style={[s.funzione, { color: c.testo3 }]}>{nomeScelta(k.campi.type, v.type)}</Text>
+            ) : null}
+          </View>
         </View>
+        <Collegamenti {...collegamenti} />
 
         <View style={s.azioni}>
           {azioni.map((a) => (
@@ -265,10 +276,9 @@ export default function SchedaContattoSchermata() {
           {voce('phone-portrait-outline', nome('mobile'), v.mobile, () => chiamaNumero(sessione, v.mobile, v.name))}
           {v.phone && v.phone.replace(/\D/g, '') !== v.mobile.replace(/\D/g, '') ? voce('call-outline', nome('phone'), v.phone, () => chiamaNumero(sessione, v.phone, v.name)) : null}
           {voce('mail-outline', nome('email'), v.email, () => apri(`mailto:${v.email}`))}
-          {voce('globe-outline', nome('website'), v.website, () => apri(/^https?:/i.test(v.website) ? v.website : `https://${v.website}`))}
           {voce('location-outline', t('schede.indirizzo'), indirizzo, mappa)}
           {voce('language-outline', nome('lang'), v.lang ? nomeScelta(k.campi.lang, v.lang) : '')}
-          {!numero && !v.email && !indirizzo && !v.website ? <Text style={[s.vuotoScheda, { color: c.testo3 }]}>{t('schede.nessunRecapito')}</Text> : null}
+          {!numero && !v.email && !indirizzo ? <Text style={[s.vuotoScheda, { color: c.testo3 }]}>{t('schede.nessunRecapito')}</Text> : null}
         </Scheda>
 
         {v.category_id.length ? (
@@ -426,10 +436,11 @@ const s = StyleSheet.create({
   tasto: { width: 40, height: 44, alignItems: 'center', justifyContent: 'center' },
   contenuto: { padding: spazio.l, gap: spazio.m, paddingBottom: spazio.xxl },
   vuoto: { fontSize: 15, textAlign: 'center', marginTop: spazio.xl, paddingHorizontal: spazio.xl },
-  eroe: { alignItems: 'center', gap: 6, paddingTop: spazio.s },
-  nome: { fontSize: 26, fontWeight: '800', textAlign: 'center', marginTop: spazio.s, letterSpacing: -0.3 },
-  funzione: { fontSize: 15, textAlign: 'center' },
-  azienda: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 12, paddingVertical: 6, borderRadius: 14, maxWidth: '90%' },
+  eroe: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, paddingTop: spazio.xs },
+  eroeTesto: { flex: 1, alignItems: 'flex-start', gap: 4 },
+  nome: { fontSize: 26, fontWeight: '800', letterSpacing: -0.3, alignSelf: 'stretch' },
+  funzione: { fontSize: 15 },
+  azienda: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, maxWidth: '100%' },
   aziendaTesto: { fontSize: 14, fontWeight: '700' },
   azioni: { flexDirection: 'row', gap: spazio.s },
   azione: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 12, borderRadius: raggio.l, borderWidth: 1 },
