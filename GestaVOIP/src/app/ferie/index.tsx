@@ -1,17 +1,21 @@
 /**
  * Ferie: in alto quanti giorni restano per ogni tipo con giorni assegnati,
- * sotto le mie richieste divise per stato (da approvare, approvate,
- * rifiutate, annullate) e il + per una richiesta nuova.
+ * poi (per chi approva) le richieste del team da approvare con Approva e
+ * Rifiuta, sotto le mie richieste divise per stato (da approvare, approvate,
+ * rifiutate, annullate) e il + per una richiesta nuova. Una notifica di
+ * richiesta ferie apre questa schermata: quelle da approvare sono in cima.
  */
 
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect, useRouter } from 'expo-router'
 import { useCallback, useState } from 'react'
-import { Pressable, RefreshControl, ScrollView, SectionList, StyleSheet, Text, View } from 'react-native'
+import { Alert, Pressable, RefreshControl, ScrollView, SectionList, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { t, tn } from '../../i18n'
 import { leggi, scrivi } from '../../odoo/archivio'
-import { mieRichieste, saldi as caricaSaldi, type Richiesta, type Saldo, type StatoFerie } from '../../odoo/ferie'
+import { approva, daApprovare, mieRichieste, rifiuta, saldi as caricaSaldi, type Richiesta, type Saldo, type StatoFerie } from '../../odoo/ferie'
+import { urlAvatar } from '../../odoo/lavoro'
+import { Avatar } from '../../ui/Avatar'
 import { Caricamento } from '../../ui/Caricamento'
 import { bollino, coloreStato, durata, numero, periodo } from '../../ui/formatoFerie'
 import { Pulsante } from '../../ui/Pulsante'
@@ -22,7 +26,9 @@ import { useApp } from '../../voip/Contesto'
 
 const ORDINE: StatoFerie[] = ['attesa', 'approvata', 'rifiutata', 'annullata']
 
-type Dati = { saldi: Saldo[]; richieste: Richiesta[] }
+type Dati = { saldi: Saldo[]; richieste: Richiesta[]; team?: Richiesta[] }
+
+type Sezione = { chiave: string; titolo: string; colore: string; data: Richiesta[] }
 
 export default function SchermataFerie() {
   const c = useColori()
@@ -40,8 +46,13 @@ export default function SchermataFerie() {
     }
     try {
       // I saldi non devono fermare l'elenco: senza giorni assegnati restano vuoti.
-      const [s, r] = await Promise.all([caricaSaldi(server, uid).catch(() => [] as Saldo[]), mieRichieste(server, uid)])
-      const nuovi = { saldi: s, richieste: r }
+      const [s, r, team] = await Promise.all([
+        caricaSaldi(server, uid).catch(() => [] as Saldo[]),
+        mieRichieste(server, uid),
+        // Chi non approva non ha nulla qui: un errore non deve fermare le sue ferie.
+        daApprovare(server, uid).catch(() => [] as Richiesta[]),
+      ])
+      const nuovi = { saldi: s, richieste: r, team }
       setDati(nuovi)
       scrivi(server, uid, 'ferie', nuovi)
       setErrore('')
@@ -56,6 +67,26 @@ export default function SchermataFerie() {
     }, [aggiorna]),
   )
 
+  const [occupato, setOccupato] = useState('')
+
+  async function agisci(r: Richiesta, cosa: 'approva' | 'rifiuta') {
+    setOccupato(`${cosa}-${r.id}`)
+    try {
+      await (cosa === 'approva' ? approva(server, uid, r) : rifiuta(server, uid, r))
+      await aggiorna()
+    } catch (e) {
+      Alert.alert(cosa === 'approva' ? t('ferie.nonApprovata') : t('ferie.nonRifiutata'), e instanceof Error ? e.message : String(e))
+    }
+    setOccupato('')
+  }
+
+  function chiediRifiuto(r: Richiesta) {
+    Alert.alert(t('ferie.rifiutaDomanda'), [r.dipendente, r.tipo, periodo(r.dal, r.al)].filter(Boolean).join(' · '), [
+      { text: t('ferie.indietro'), style: 'cancel' },
+      { text: t('ferie.rifiuta'), style: 'destructive', onPress: () => void agisci(r, 'rifiuta') },
+    ])
+  }
+
   async function tiraGiu() {
     setRicarica(true)
     await aggiorna()
@@ -64,13 +95,17 @@ export default function SchermataFerie() {
 
   const nuova = () => router.push('/ferie/nuova')
   const richieste = dati?.richieste || []
-  const sezioni = ORDINE.map((stato) => ({ stato, data: richieste.filter((x) => x.stato === stato) })).filter((x) => x.data.length)
+  const team = dati?.team || []
+  const sezioni: Sezione[] = [
+    ...(team.length ? [{ chiave: 'team', titolo: t('ferie.daApprovareTeam'), colore: c.ambra, data: team }] : []),
+    ...ORDINE.map((stato) => ({ chiave: stato, titolo: t(`ferie.stato.${stato}`), colore: coloreStato(stato, c), data: richieste.filter((x) => x.stato === stato) })),
+  ].filter((x) => x.data.length)
 
   return (
     <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
       <Testata
         titolo={t('ferie.titolo')}
-        sottotitolo={dati ? tn('ferie.conta', richieste.length) : undefined}
+        sottotitolo={dati ? [tn('ferie.conta', richieste.length), team.length ? tn('ferie.contaTeam', team.length) : ''].filter(Boolean).join(' · ') : undefined}
         destra={
           <Pressable
             onPress={nuova}
@@ -102,12 +137,21 @@ export default function SchermataFerie() {
           }
           renderSectionHeader={({ section }) => (
             <View style={s.sezione}>
-              <View style={[s.punto, { backgroundColor: coloreStato(section.stato, c) }]} />
-              <Text style={[s.sezioneTitolo, { color: c.testo }]}>{t(`ferie.stato.${section.stato}`)}</Text>
+              <View style={[s.punto, { backgroundColor: section.colore }]} />
+              <Text style={[s.sezioneTitolo, { color: c.testo }]}>{section.titolo}</Text>
               <Text style={[s.sezioneNumero, { color: c.testo3 }]}>{section.data.length}</Text>
             </View>
           )}
-          renderItem={({ item }) => <RigaRichiesta r={item} />}
+          renderItem={({ item, section }) => (
+            <RigaRichiesta
+              r={item}
+              server={server}
+              altri={section.chiave === 'team'}
+              occupato={occupato}
+              approva={() => void agisci(item, 'approva')}
+              rifiuta={() => chiediRifiuto(item)}
+            />
+          )}
         />
       )}
     </SafeAreaView>
@@ -144,7 +188,22 @@ function Saldi({ saldi }: { saldi: Saldo[] }) {
   )
 }
 
-function RigaRichiesta({ r }: { r: Richiesta }) {
+function RigaRichiesta({
+  r,
+  server,
+  altri,
+  occupato,
+  approva: suApprova,
+  rifiuta: suRifiuta,
+}: {
+  r: Richiesta
+  server: string
+  /** Richiesta di un collega: in testa chi la chiede, con la foto. */
+  altri: boolean
+  occupato: string
+  approva: () => void
+  rifiuta: () => void
+}) {
   const c = useColori()
   const b = bollino(r.dal)
   const quanto = r.mezza
@@ -152,25 +211,78 @@ function RigaRichiesta({ r }: { r: Richiesta }) {
     : r.inOre && r.ore
       ? durata(r.ore, true)
       : durata(r.giorni)
+  const azioni = r.puoApprovare || r.puoRifiutare
   return (
-    <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]} accessible accessibilityLabel={`${r.tipo}, ${periodo(r.dal, r.al)}, ${quanto}, ${t(`ferie.chip.${r.stato}`)}`}>
-      <View style={[s.bollino, { backgroundColor: c.primarioTenue }]}>
-        <Text style={[s.bollinoGiorno, { color: c.primario }]}>{b.giorno}</Text>
-        <Text style={[s.bollinoMese, { color: c.primario }]}>{b.mese}</Text>
-      </View>
-      <View style={{ flex: 1, gap: 2 }}>
-        <Text style={[s.titolo, { color: c.testo }]} numberOfLines={1}>
-          {r.tipo}
-        </Text>
-        <Text style={[s.dettaglio, { color: c.testo2 }]} numberOfLines={1}>
-          {periodo(r.dal, r.al)} · {quanto}
-        </Text>
-        {r.nota ? (
-          <Text style={[s.nota, { color: c.testo3 }]} numberOfLines={2}>
-            {r.nota}
+    <View style={[s.scheda, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
+      <View
+        style={s.schedaRiga}
+        accessible
+        accessibilityLabel={[altri ? r.dipendente : '', r.tipo, periodo(r.dal, r.al), quanto, t(`ferie.chip.${r.stato}`)].filter(Boolean).join(', ')}
+      >
+        {altri ? (
+          <Avatar nome={r.dipendente} lato={48} url={r.utenteId ? urlAvatar(server, 'res.users', r.utenteId) : undefined} />
+        ) : (
+          <View style={[s.bollino, { backgroundColor: c.primarioTenue }]}>
+            <Text style={[s.bollinoGiorno, { color: c.primario }]}>{b.giorno}</Text>
+            <Text style={[s.bollinoMese, { color: c.primario }]}>{b.mese}</Text>
+          </View>
+        )}
+        <View style={{ flex: 1, gap: 2 }}>
+          <Text style={[s.titolo, { color: c.testo }]} numberOfLines={1}>
+            {altri ? r.dipendente : r.tipo}
           </Text>
-        ) : null}
+          {altri ? (
+            <Text style={[s.dettaglio, { color: c.testo }]} numberOfLines={1}>
+              {r.tipo}
+            </Text>
+          ) : null}
+          <Text style={[s.dettaglio, { color: c.testo2 }]} numberOfLines={1}>
+            {periodo(r.dal, r.al)} · {quanto}
+          </Text>
+          {r.seconda ? (
+            <Text style={[s.dettaglio, { color: c.ambra, fontWeight: '600' }]} numberOfLines={1}>
+              {t('ferie.secondaApprovazione')}
+            </Text>
+          ) : null}
+          {r.nota ? (
+            <Text style={[s.nota, { color: c.testo3 }]} numberOfLines={2}>
+              {r.nota}
+            </Text>
+          ) : null}
+        </View>
       </View>
+      {azioni ? (
+        <View style={s.azioni}>
+          {r.puoRifiutare ? (
+            <Pressable
+              onPress={suRifiuta}
+              disabled={!!occupato}
+              style={({ pressed }) => [s.azione, { backgroundColor: c.rossoTenue, opacity: pressed || occupato === `rifiuta-${r.id}` ? 0.6 : 1 }]}
+              accessibilityRole="button"
+              accessibilityLabel={`${t('ferie.rifiuta')}: ${r.dipendente || r.tipo}`}
+            >
+              {occupato === `rifiuta-${r.id}` ? <Caricamento dimensione={18} /> : <Ionicons name="close" size={18} color={c.rosso} />}
+              <Text style={[s.azioneTesto, { color: c.rosso }]} numberOfLines={1}>
+                {t('ferie.rifiuta')}
+              </Text>
+            </Pressable>
+          ) : null}
+          {r.puoApprovare ? (
+            <Pressable
+              onPress={suApprova}
+              disabled={!!occupato}
+              style={({ pressed }) => [s.azione, { backgroundColor: c.verde, opacity: pressed || occupato === `approva-${r.id}` ? 0.7 : 1 }]}
+              accessibilityRole="button"
+              accessibilityLabel={`${t('ferie.approva')}: ${r.dipendente || r.tipo}`}
+            >
+              {occupato === `approva-${r.id}` ? <Caricamento dimensione={18} /> : <Ionicons name="checkmark" size={18} color="#FFFFFF" />}
+              <Text style={[s.azioneTesto, { color: '#FFFFFF' }]} numberOfLines={1}>
+                {t('ferie.approva')}
+              </Text>
+            </Pressable>
+          ) : null}
+        </View>
+      ) : null}
     </View>
   )
 }
@@ -192,8 +304,6 @@ const s = StyleSheet.create({
   sezioneTitolo: { fontSize: 15, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.5 },
   sezioneNumero: { fontSize: 14, fontWeight: '600' },
   scheda: {
-    flexDirection: 'row',
-    alignItems: 'center',
     gap: spazio.m,
     marginHorizontal: spazio.l,
     marginBottom: spazio.s,
@@ -201,6 +311,10 @@ const s = StyleSheet.create({
     borderRadius: raggio.l,
     borderWidth: StyleSheet.hairlineWidth,
   },
+  schedaRiga: { flexDirection: 'row', alignItems: 'center', gap: spazio.m },
+  azioni: { flexDirection: 'row', gap: spazio.s },
+  azione: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, minHeight: 44, borderRadius: raggio.m, paddingHorizontal: spazio.m },
+  azioneTesto: { fontSize: 16, fontWeight: '700' },
   bollino: { width: 48, height: 48, borderRadius: raggio.m, alignItems: 'center', justifyContent: 'center' },
   bollinoGiorno: { fontSize: 19, fontWeight: '800', lineHeight: 21 },
   bollinoMese: { fontSize: 11, fontWeight: '700', textTransform: 'uppercase' },

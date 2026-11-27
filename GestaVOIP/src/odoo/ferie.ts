@@ -10,6 +10,12 @@
  * questo l'app non calcola nulla da se': chiede a Odoo l'onchange del modulo,
  * come fa il browser, e riceve gli stessi giorni e gli stessi valori. Gli
  * errori (giorni non sufficienti, richiesta sovrapposta...) sono quelli di Odoo.
+ *
+ * Chi approva (responsabile delle assenze del dipendente, addetto o
+ * amministratore delle Assenze) vede anche le richieste del team da approvare.
+ * Chi puo' fare cosa lo dice Odoo (can_approve, can_validate, can_refuse); i
+ * pulsanti chiamano action_approve / action_validate / action_refuse come il
+ * browser, doppia approvazione compresa.
  */
 
 import { callKw } from './client'
@@ -48,6 +54,14 @@ export type Richiesta = {
   nota: string
   /** Mezza giornata: mattina o pomeriggio. */
   mezza: 'am' | 'pm' | null
+  dipendente: string
+  /** L'utente del dipendente (per la foto), se ne ha uno. */
+  utenteId: number | null
+  /** L'utente collegato puo' approvarla / rifiutarla (lo calcola Odoo). */
+  puoApprovare: boolean
+  puoRifiutare: boolean
+  /** Gia' approvata una volta, manca la seconda approvazione. */
+  seconda: boolean
 }
 
 /** Quello che sceglie il dipendente nella richiesta nuova. */
@@ -170,11 +184,30 @@ type Riga = {
 }
 
 /** Le mie richieste, le piu' recenti prima. */
-export async function mieRichieste(server: string, uid: number): Promise<Richiesta[]> {
+export function mieRichieste(server: string, uid: number): Promise<Richiesta[]> {
+  return leggiRichieste(server, uid, [['user_id', '=', uid]], 'request_date_from desc, id desc', 200)
+}
+
+/**
+ * Le richieste degli altri che l'utente puo' approvare, le prime che
+ * iniziano prima. Odoo da' a ognuno solo quelle che puo' leggere; tra quelle,
+ * restano quelle su cui Odoo dice che puo' agire.
+ */
+export async function daApprovare(server: string, uid: number): Promise<Richiesta[]> {
+  const r = await leggiRichieste(server, uid, [['state', 'in', ['confirm', 'validate1']], ['user_id', '!=', uid]], 'request_date_from asc, id asc', 100)
+  return r.filter((x) => x.puoApprovare || x.puoRifiutare)
+}
+
+async function leggiRichieste(server: string, uid: number, domain: unknown[], order: string, limit: number): Promise<Richiesta[]> {
   const st = await struttura(server, uid)
   const righe = await callKw<Riga[]>(server, 'hr.leave', 'search_read', [], {
-    domain: [['user_id', '=', uid]],
+    domain,
     fields: campiEsistenti(st, [
+      'employee_id',
+      'user_id',
+      'can_approve',
+      'can_validate',
+      'can_refuse',
       st.campoTipo,
       'name',
       'request_date_from',
@@ -186,8 +219,8 @@ export async function mieRichieste(server: string, uid: number): Promise<Richies
       'leave_type_request_unit',
       'work_entry_type_request_unit',
     ]),
-    order: 'request_date_from desc, id desc',
-    limit: 200,
+    order,
+    limit,
     ...contesto(st),
   })
   return righe.map((r) => {
@@ -195,6 +228,7 @@ export async function mieRichieste(server: string, uid: number): Promise<Richies
     const al = r.request_date_to || dal
     const giorni = r.number_of_days || 0
     const tipo = r[st.campoTipo] as M2o
+    const inAttesa = r.state === 'confirm' || r.state === 'validate1'
     return {
       id: r.id,
       tipo: tipo ? tipo[1] : '',
@@ -206,6 +240,13 @@ export async function mieRichieste(server: string, uid: number): Promise<Richies
       stato: STATI[r.state] || 'attesa',
       nota: r.name || '',
       mezza: dal === al && giorni > 0 && giorni < 1 ? r.request_date_from_period || 'am' : null,
+      dipendente: r.employee_id ? (r.employee_id as [number, string])[1] : '',
+      utenteId: r.user_id ? (r.user_id as [number, string])[0] : null,
+      // Solo le richieste in attesa: i pulsanti di Odoo valgono anche per altri passaggi.
+      puoApprovare: inAttesa && (!!r.can_approve || !!r.can_validate),
+      // Odoo 17 non ha can_refuse: chi puo' approvare puo' anche rifiutare.
+      puoRifiutare: inAttesa && ('can_refuse' in st.campi ? !!r.can_refuse : !!r.can_approve),
+      seconda: r.state === 'validate1',
     }
   })
 }
@@ -364,6 +405,19 @@ export async function inviaRichiesta(server: string, uid: number, s: Scelta): Pr
 }
 
 /** Icona dell'app Assenze di Odoo (uguale dalla 17 alla 20). */
+/** Approva come il pulsante di Odoo: prima o seconda approvazione secondo il tipo di assenza. */
+export async function approva(server: string, uid: number, r: Richiesta): Promise<void> {
+  const st = await struttura(server, uid)
+  // Odoo 17: la seconda approvazione e' action_validate; 19 e 20 la fanno con action_approve.
+  const metodo = r.seconda && !('can_validate' in st.campi) ? 'action_validate' : 'action_approve'
+  await callKw(server, 'hr.leave', metodo, [[r.id]], contesto(st))
+}
+
+export async function rifiuta(server: string, uid: number, r: Richiesta): Promise<void> {
+  const st = await struttura(server, uid)
+  await callKw(server, 'hr.leave', 'action_refuse', [[r.id]], contesto(st))
+}
+
 export function iconaFerie(server: string): string {
   return `${server}/hr_holidays/static/description/icon.png`
 }
