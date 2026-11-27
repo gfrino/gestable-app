@@ -3,7 +3,7 @@
 Immagini per App Store Connect → pagina prodotto:
 - «Intestazione» (header) 3840×1646, 21:9
 - «Risultati della ricerca» 3840×2560, 3:2
-PNG senza trasparenza, dagli screenshot in store/screenshots/raw e dal logo G.
+PNG senza trasparenza, dagli screenshot in store/screenshots/raw e dal logo G. Fondo chiaro; messaggio: tutta l'azienda in tasca, basato su Odoo ma ridisegnato.
 
 Uso: python3 store/genera-intestazione.py   (scrive in store/app-store/)
 """
@@ -16,13 +16,14 @@ RADICE = os.path.dirname(QUI)
 USCITA = os.path.join(QUI, 'app-store')
 SF = '/System/Library/Fonts/SFNS.ttf'
 
-FONDO_ALTO = (24, 14, 40)
-FONDO_BASSO = (12, 14, 22)
+FONDO_ALTO = (252, 247, 252)
+FONDO_BASSO = (238, 245, 252)
 MAGENTA = (179, 58, 126)
 BLU = (15, 122, 182)
 VIOLA = (131, 70, 194)
-TESTO = (255, 255, 255)
-TESTO2 = (214, 210, 230)
+TESTO = (27, 21, 48)
+TESTO2 = (88, 82, 110)
+PILLOLA = (247, 226, 239)
 
 
 def font(peso, dim):
@@ -44,8 +45,9 @@ def fondo(l, a):
     da.ellipse([int(l * 0.70) - r, int(a * 0.35) - r, int(l * 0.70) + r, int(a * 0.35) + r], fill=MAGENTA)
     r2 = int(a * 0.55)
     da.ellipse([int(l * 0.92) - r2, int(a * 0.95) - r2, int(l * 0.92) + r2, int(a * 0.95) + r2], fill=BLU)
-    alone = alone.filter(ImageFilter.GaussianBlur(a * 0.28))
-    return Image.blend(img, Image.composite(alone, img, Image.new('L', (l, a), 255)), 0.42)
+    alone = alone.filter(ImageFilter.GaussianBlur(a * 0.30))
+    maschera = alone.convert('L').point(lambda v: int(v * 0.22))
+    return Image.composite(alone, img, maschera)
 
 
 def telefono(nome, altezza):
@@ -70,7 +72,7 @@ def incolla_con_ombra(base, el, x, y, angolo=0):
     if angolo:
         el = el.rotate(angolo, resample=Image.BICUBIC, expand=True)
     ombra = Image.new('RGBA', base.size, (0, 0, 0, 0))
-    alfa = el.split()[3].point(lambda v: int(v * 0.55))
+    alfa = el.split()[3].point(lambda v: int(v * 0.30))
     nero = Image.new('RGBA', el.size, (0, 0, 0, 255))
     nero.putalpha(alfa)
     ombra.alpha_composite(nero, (x + int(el.width * 0.03), y + int(el.height * 0.04)))
@@ -88,30 +90,36 @@ def scrivi(d, xy, testo, f, colore):
     d.text(xy, testo, font=f, fill=colore)
 
 
+def pillola(img, d, x, y, testo, f):
+    w = d.textlength(testo, font=f)
+    alto = int(f.size * 1.75)
+    d.rounded_rectangle([x, y, x + w + f.size * 1.6, y + alto], alto // 2, fill=PILLOLA)
+    d.text((x + f.size * 0.8, y + alto / 2), testo, font=f, fill=MAGENTA, anchor='lm')
+    return alto
+
+
 def intestazione():
     L, A = 3840, 1646
     img = fondo(L, A).convert('RGBA')
     # Telefoni a destra (dentro l'80 % centrale, per i tagli dei vari schermi).
+    # Due telefoni a destra, lontani dal testo.
     h = int(A * 0.92)
-    t1 = telefono('1-tastierino.png', int(h * 0.88))
-    t2 = telefono('2-calendario.png', h)
-    t3 = telefono('4-scheda-contatto.png', int(h * 0.88))
-    cx = int(L * 0.66)
-    incolla_con_ombra(img, t1, cx - int(t2.width * 1.05), int(A * 0.14), angolo=6)
-    incolla_con_ombra(img, t3, cx + int(t2.width * 0.62), int(A * 0.14), angolo=-6)
-    incolla_con_ombra(img, t2, cx - t2.width // 2 + int(t2.width * 0.2), int(A * 0.06))
+    t2 = telefono('6-crm.png', h)
+    t3 = telefono('7-preventivo.png', int(h * 0.88))
+    x2 = int(L * 0.60)
+    incolla_con_ombra(img, t3, x2 + int(t2.width * 0.78), int(A * 0.13), angolo=-5)
+    incolla_con_ombra(img, t2, x2, int(A * 0.05))
     # Testo a sinistra.
     d = ImageDraw.Draw(img)
-    x = int(L * 0.115)
-    g = logo(230)
-    img.alpha_composite(g, (x, int(A * 0.20)))
-    scrivi(d, (x + 280, int(A * 0.20) + 18), 'GestABLE', font('Heavy', 190), TESTO)
-    titolo = font('Bold', 150)
-    scrivi(d, (x, int(A * 0.43)), 'Il telefono dell’ufficio', titolo, TESTO)
-    scrivi(d, (x, int(A * 0.43) + 180), 'e il tuo Odoo, in tasca', titolo, TESTO)
-    sotto = font('Medium', 84)
-    d.rounded_rectangle([x, int(A * 0.70), x + 170, int(A * 0.70) + 16], 8, fill=MAGENTA)
-    scrivi(d, (x, int(A * 0.74)), 'Chiamate, contatti, calendario, CRM e vendite', sotto, TESTO2)
+    x = int(L * 0.10)
+    g = logo(200)
+    img.alpha_composite(g, (x, int(A * 0.15)))
+    scrivi(d, (x + 245, int(A * 0.15) + 14), 'GestABLE', font('Heavy', 165), TESTO)
+    titolo = font('Heavy', 160)
+    scrivi(d, (x, int(A * 0.36)), 'Tutta la tua azienda,', titolo, TESTO)
+    scrivi(d, (x, int(A * 0.36) + 200), 'in tasca', titolo, MAGENTA)
+    scrivi(d, (x, int(A * 0.64)), 'Chiamate, CRM, vendite, calendario, ferie e chat', font('Medium', 74), TESTO2)
+    pillola(img, d, x, int(A * 0.75), 'Basato su Odoo · ridisegnato, moderno e flessibile', font('Semibold', 70))
     return img.convert('RGB')
 
 
@@ -119,20 +127,25 @@ def ricerca():
     L, A = 3840, 2560
     img = fondo(L, A).convert('RGBA')
     d = ImageDraw.Draw(img)
-    # Titolo in alto al centro.
-    titolo = font('Bold', 176)
-    riga = 'Il telefono dell’ufficio e il tuo Odoo, in tasca'
-    w = d.textlength(riga, font=titolo)
-    scrivi(d, ((L - w) / 2, int(A * 0.07)), riga, titolo, TESTO)
-    # Tre telefoni affiancati, dritti, leggibili anche in piccolo.
-    h = int(A * 0.74)
-    nomi = ['1-tastierino.png', '2-calendario.png', '4-scheda-contatto.png']
+    titolo = font('Heavy', 190)
+    a, b = 'Tutta la tua azienda, ', 'in tasca'
+    wa, wb = d.textlength(a, font=titolo), d.textlength(b, font=titolo)
+    x0 = (L - wa - wb) / 2
+    scrivi(d, (x0, int(A * 0.055)), a, titolo, TESTO)
+    scrivi(d, (x0 + wa, int(A * 0.055)), b, titolo, MAGENTA)
+    f = font('Semibold', 82)
+    testo = 'Basato su Odoo · ridisegnato, moderno e flessibile'
+    w = d.textlength(testo, font=f) + f.size * 1.6
+    pillola(img, d, int((L - w) / 2), int(A * 0.165), testo, f)
+    # Quattro telefoni affiancati, dritti, leggibili anche in piccolo.
+    h = int(A * 0.60)
+    nomi = ['1-tastierino.png', '6-crm.png', '7-preventivo.png', '8-scheda-azienda.png']
     tel = [telefono(n, h) for n in nomi]
-    spazio = int(L * 0.05)
-    tot = sum(t.width for t in tel) + spazio * 2
+    spazio = int(L * 0.028)
+    tot = sum(t.width for t in tel) + spazio * (len(tel) - 1)
     x = (L - tot) // 2
     for t in tel:
-        incolla_con_ombra(img, t, x, int(A * 0.22))
+        incolla_con_ombra(img, t, x, int(A * 0.29))
         x += t.width + spazio
     return img.convert('RGB')
 
