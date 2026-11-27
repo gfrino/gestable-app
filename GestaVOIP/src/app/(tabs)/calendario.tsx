@@ -84,6 +84,8 @@ function VistaCalendario() {
   // dimensione del testo scelta nelle impostazioni del telefono (con il testo
   // grande andava a capo).
   const larghezzaOre = Math.ceil((lingua() === 'it' ? 58 : 86) * Math.max(1, fontScale))
+  // Cerchio del numero del giorno con margine anche con il testo grande.
+  const cerchio = Math.max(38, Math.ceil(17 * Math.max(1, fontScale) * 2))
   const { sessione } = useApp()
   const server = sessione?.server || ''
   const uid = sessione?.utente.uid || 0
@@ -414,7 +416,7 @@ function VistaCalendario() {
                     return (
                       <Pressable key={chiave} onPress={() => setScelto(giorno)} style={s.giorno} accessibilityRole="button">
                         <Text style={[s.lettera, { color: g > 4 ? c.testo3 : c.testo2 }]}>{lettera}</Text>
-                        <View style={[s.numero, eScelto && { backgroundColor: c.primario }]}>
+                        <View style={[s.numero, { width: cerchio, height: cerchio, borderRadius: cerchio / 2 }, eScelto && { backgroundColor: c.primario }]}>
                           <Text
                             style={[
                               s.numeroTesto,
@@ -475,7 +477,7 @@ const s = StyleSheet.create({
   settimana: { flexDirection: 'row', paddingHorizontal: spazio.s, paddingBottom: spazio.s },
   giorno: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 4 },
   lettera: { fontSize: 12, fontWeight: '700' },
-  numero: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  numero: { alignItems: 'center', justifyContent: 'center' },
   numeroTesto: { fontSize: 17, fontWeight: '600' },
   punto: { width: 5, height: 5, borderRadius: 3 },
   linea: { height: StyleSheet.hairlineWidth },

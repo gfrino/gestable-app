@@ -3,15 +3,15 @@
  * appuntamento usata anche nella vista Giorno.
  *
  * Settimana: i sette giorni uno sotto l'altro, a sinistra la data (si tocca per
- * aprire quel giorno), a destra i suoi appuntamenti raccolti in un riquadro.
- * Mese: la griglia del mese a tessere; nelle celle strette (iPhone) fino a 10
+ * aprire quel giorno), a destra i suoi appuntamenti.
+ * Mese: la griglia del mese; nelle celle strette (iPhone) fino a 10
  * pallini in file da 5, in quelle larghe (iPhone Duo aperto) i titoli.
  * Toccare un giorno apre quel giorno.
  */
 
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useState, type ReactElement } from 'react'
-import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View, type RefreshControlProps } from 'react-native'
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, useWindowDimensions, View, type RefreshControlProps } from 'react-native'
 import { loc, t, tn } from '../../i18n'
 import { delGiorno, giornoChiave, giornoEsteso, lettereGiorni, oraBreve, type Evento } from '../../odoo/calendario'
 import { raggio, spazio, useColori } from '../tema'
@@ -37,6 +37,16 @@ export function settimaneDelMese(d: Date): Date[] {
     lista.push(s)
   }
   return lista
+}
+
+/**
+ * Il cerchio attorno al numero del giorno: largo quanto il numero piu' un
+ * margine, anche con il testo grande scelto nelle impostazioni del telefono
+ * (con un cerchio fisso «27» toccava il bordo).
+ */
+function useCerchio(dimensioneTesto: number): number {
+  const { fontScale } = useWindowDimensions()
+  return Math.ceil(dimensioneTesto * Math.max(1, fontScale) * 2)
 }
 
 type Carta = {
@@ -128,7 +138,7 @@ function RigaSettimana({ evento: e, adesso, larghezzaOre, primo, onPress }: { ev
   const passato = !e.tuttoIlGiorno && e.fine.getTime() < adesso
   return (
     <Pressable onPress={onPress} accessibilityRole="button" style={({ pressed }) => [s.riga7, pressed && { backgroundColor: c.superficie2 }]}>
-      {primo ? null : <View style={[s.divisore, { backgroundColor: c.bordo, left: spazio.m + larghezzaOre + spazio.m }]} />}
+      {primo ? null : <View style={[s.divisore, { backgroundColor: c.bordo, left: spazio.s + larghezzaOre + spazio.m }]} />}
       <View style={[s.ore7, { width: larghezzaOre, opacity: passato ? 0.5 : 1 }]}>
         {e.tuttoIlGiorno ? (
           <Text style={[s.tutto, { color: c.primario }]}>{t('calendario.tuttoIlGiorno')}</Text>
@@ -186,6 +196,7 @@ export function VistaSettimana({
   onEvento: (id: number) => void
 }) {
   const c = useColori()
+  const cerchio = useCerchio(18)
   // Le ore in questa vista hanno un carattere piu' piccolo: colonna piu' stretta.
   const ore = Math.round(larghezzaOre * 0.9)
   return (
@@ -196,7 +207,7 @@ export function VistaSettimana({
         const eOggi = giornoChiave(giorno) === giornoChiave(oggi)
         const lista = dati ? delGiorno(dati, giorno) : null
         return (
-          <View key={g} style={s.giornoSettimana}>
+          <View key={g} style={[s.giornoSettimana, g > 0 && { borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: c.bordo }]}>
             <Pressable
               onPress={() => onGiorno(giorno)}
               hitSlop={4}
@@ -207,23 +218,21 @@ export function VistaSettimana({
               <Text style={[s.dataGiorno, { color: eOggi ? c.primario : g > 4 ? c.testo3 : c.testo2 }]} numberOfLines={1}>
                 {giorno.toLocaleDateString(loc(), { weekday: 'short' }).replace('.', '')}
               </Text>
-              <View style={[s.dataNumero, eOggi && { backgroundColor: c.primario }]}>
+              <View style={[s.dataNumero, { width: cerchio, height: cerchio, borderRadius: cerchio / 2 }, eOggi && { backgroundColor: c.primario }]}>
                 <Text style={[s.dataNumeroTesto, { color: eOggi ? c.primarioTesto : g > 4 ? c.testo2 : c.testo }]}>{giorno.getDate()}</Text>
               </View>
             </Pressable>
             <View style={s.eventiGiorno}>
               {!lista ? (
-                <View style={[s.segnaposto, { backgroundColor: c.superficie }]} />
+                <View style={[s.segnaposto, { backgroundColor: c.superficie2 }]} />
               ) : !lista.length ? (
                 <Pressable onPress={() => onGiorno(giorno)} style={({ pressed }) => [s.libero, pressed && { opacity: 0.6 }]} accessibilityRole="button">
                   <Text style={[s.liberoTesto, { color: c.testo3 }]}>{t('calendario.libero')}</Text>
                 </Pressable>
               ) : (
-                <View style={[s.gruppo, { backgroundColor: c.superficie }]}>
-                  {lista.map((e, i) => (
-                    <RigaSettimana key={e.id} evento={e} adesso={adesso} larghezzaOre={ore} primo={i === 0} onPress={() => onEvento(e.id)} />
-                  ))}
-                </View>
+                lista.map((e, i) => (
+                  <RigaSettimana key={e.id} evento={e} adesso={adesso} larghezzaOre={ore} primo={i === 0} onPress={() => onEvento(e.id)} />
+                ))
               )}
             </View>
           </View>
@@ -251,10 +260,11 @@ export function VistaMese({
   errore: string
 }) {
   const c = useColori()
+  const cerchio = useCerchio(15)
   const [misura, setMisura] = useState({ w: 0, h: 0 })
   const settimane = settimaneDelMese(mese)
-  const larghezzaCella = (misura.w - 6 * GRIGLIA_SPAZIO) / 7
-  const altezzaCella = (misura.h - (settimane.length - 1) * GRIGLIA_SPAZIO) / settimane.length
+  const larghezzaCella = misura.w / 7
+  const altezzaCella = misura.h / settimane.length
   // Celle larghe: i titoli (quanti ne stanno); strette: i pallini.
   const conTitoli = larghezzaCella >= 72
   const titoliMax = Math.max(1, Math.floor((altezzaCella - 40) / 18))
@@ -282,7 +292,7 @@ export function VistaMese({
         {settimane.map((inizio) => {
           const dati = perSettimana[giornoChiave(inizio)]
           return (
-            <View key={giornoChiave(inizio)} style={s.rigaMese}>
+            <View key={giornoChiave(inizio)} style={[s.rigaMese, { borderTopColor: c.bordo }]}>
               {Array.from({ length: 7 }, (_, g) => {
                 const giorno = piuGiorni(inizio, g)
                 const chiave = giornoChiave(giorno)
@@ -290,16 +300,21 @@ export function VistaMese({
                 const eOggi = chiave === chiaveOggi
                 const eScelto = chiave === chiaveScelto && !eOggi
                 const lista = dati ? delGiorno(dati, giorno) : []
-                const sfondo = eScelto ? c.primarioTenue : fuori ? 'transparent' : c.superficie
                 return (
                   <Pressable
                     key={chiave}
                     onPress={() => onGiorno(giorno)}
-                    style={({ pressed }) => [s.cella, { backgroundColor: pressed ? c.superficie2 : sfondo }]}
+                    style={({ pressed }) => [s.cella, pressed && { backgroundColor: c.superficie2 }]}
                     accessibilityRole="button"
                     accessibilityLabel={etichettaGiorno(giorno, lista.length)}
                   >
-                    <View style={[s.numero, eOggi && { backgroundColor: c.primario }]}>
+                    <View
+                      style={[
+                        s.numero,
+                        { width: cerchio, height: cerchio, borderRadius: cerchio / 2 },
+                        eOggi ? { backgroundColor: c.primario } : eScelto && { backgroundColor: c.primarioTenue },
+                      ]}
+                    >
                       <Text
                         style={[
                           s.numeroTesto,
@@ -344,17 +359,8 @@ export function VistaMese({
   )
 }
 
-const GRIGLIA_SPAZIO = 4
 const PALLINO = 5
 const PALLINO_SPAZIO = 3
-
-const ombra = {
-  shadowColor: '#000',
-  shadowOpacity: 0.06,
-  shadowRadius: 10,
-  shadowOffset: { width: 0, height: 2 },
-  elevation: 1,
-} as const
 
 const s = StyleSheet.create({
   carta: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, padding: spazio.m, borderRadius: raggio.l, borderWidth: 1 },
@@ -370,33 +376,32 @@ const s = StyleSheet.create({
   dettaglioTesto: { flex: 1, fontSize: 13 },
   errore: { fontSize: 15, textAlign: 'center', marginVertical: spazio.s },
 
-  settimana: { paddingHorizontal: spazio.l, paddingTop: spazio.xs, paddingBottom: spazio.xxl, gap: spazio.m },
-  giornoSettimana: { flexDirection: 'row', gap: spazio.m },
-  data: { width: 40, alignItems: 'center', gap: 2, paddingTop: 2 },
+  settimana: { paddingHorizontal: spazio.l, paddingTop: spazio.xs, paddingBottom: spazio.xxl },
+  giornoSettimana: { flexDirection: 'row', gap: spazio.s, paddingVertical: spazio.s },
+  data: { minWidth: 44, alignItems: 'center', gap: 2, paddingTop: 6 },
   dataGiorno: { fontSize: 11, fontWeight: '600', letterSpacing: 0.6, textTransform: 'uppercase' },
-  dataNumero: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  dataNumeroTesto: { fontSize: 19, fontWeight: '600', fontVariant: ['tabular-nums'] },
+  dataNumero: { alignItems: 'center', justifyContent: 'center' },
+  dataNumeroTesto: { fontSize: 18, fontWeight: '600', fontVariant: ['tabular-nums'] },
   eventiGiorno: { flex: 1 },
-  gruppo: { borderRadius: raggio.l, overflow: 'hidden', ...ombra },
-  riga7: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, paddingVertical: 11, paddingHorizontal: spazio.m },
+  riga7: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, paddingVertical: 10, paddingHorizontal: spazio.s, borderRadius: raggio.m },
   divisore: { position: 'absolute', top: 0, right: 0, height: StyleSheet.hairlineWidth },
   ore7: { alignItems: 'flex-start' },
   ora7: { fontSize: 14, fontWeight: '600', fontVariant: ['tabular-nums'] },
   oraFine7: { fontSize: 12, fontVariant: ['tabular-nums'], marginTop: 1 },
   titolo7: { flex: 1, fontSize: 15, fontWeight: '600' },
   dettaglio7: { flex: 1, fontSize: 13 },
-  segnaposto: { height: 52, borderRadius: raggio.l, opacity: 0.7 },
-  libero: { minHeight: 50, justifyContent: 'center', paddingHorizontal: spazio.xs },
+  segnaposto: { height: 44, marginVertical: 6, borderRadius: raggio.m, opacity: 0.6 },
+  libero: { minHeight: 56, justifyContent: 'center', paddingHorizontal: spazio.s },
   liberoTesto: { fontSize: 14 },
 
   mese: { flexGrow: 1, paddingHorizontal: spazio.s, paddingBottom: spazio.m },
-  lettere: { flexDirection: 'row', paddingBottom: 6, gap: GRIGLIA_SPAZIO },
+  lettere: { flexDirection: 'row', paddingBottom: 6 },
   lettera: { flex: 1, textAlign: 'center', fontSize: 11, fontWeight: '600', letterSpacing: 0.4 },
   attesa: { position: 'absolute', top: 0, right: spazio.m },
-  griglia: { flex: 1, gap: GRIGLIA_SPAZIO },
-  rigaMese: { flex: 1, minHeight: 58, flexDirection: 'row', gap: GRIGLIA_SPAZIO },
-  cella: { flex: 1, alignItems: 'center', paddingTop: 5, gap: 5, borderRadius: raggio.m, overflow: 'hidden' },
-  numero: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  griglia: { flex: 1 },
+  rigaMese: { flex: 1, minHeight: 60, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth },
+  cella: { flex: 1, alignItems: 'center', paddingTop: 6, gap: 5, borderRadius: raggio.m, overflow: 'hidden' },
+  numero: { alignItems: 'center', justifyContent: 'center' },
   numeroTesto: { fontSize: 15, fontWeight: '500', fontVariant: ['tabular-nums'] },
   pallini: {
     width: PALLINO * 5 + PALLINO_SPAZIO * 4,
