@@ -224,6 +224,28 @@ export class Telefono {
   // ------------------------------------------------------------------
   // Registrazione e token
   // ------------------------------------------------------------------
+  /**
+   * Il nome sullo schermo di chiamata dell'iPhone (CallKit, anche a telefono
+   * bloccato). Di base iOS mostra il «from» di Twilio, che per le chiamate tra
+   * interni e' il codice tecnico «client:odoo_user_30__…». Con VOIP AI 2.38.1+
+   * ogni chiamata porta il parametro DisplayName e lo si mostra al suo posto.
+   * Con un server piu' vecchio il modello si toglie: iOS mostrerebbe
+   * «${DisplayName}» alla lettera. La scelta resta salvata nel telefono, cosi'
+   * vale anche per le chiamate che arrivano ad app chiusa.
+   */
+  private nomeImpostato: boolean | null = null
+  private async nomeSulloSchermo(conNome: boolean) {
+    if (Platform.OS !== 'ios' || this.nomeImpostato === conNome) {
+      return
+    }
+    try {
+      await this.voice.setIncomingCallContactHandleTemplate(conNome ? '${DisplayName}' : undefined)
+      this.nomeImpostato = conNome
+    } catch (e) {
+      segnalaErrore(e, 'nome chiamante')
+    }
+  }
+
   private async registra(motivo: string) {
     if (!this.sessione || this.stato.chiamata) {
       return
@@ -244,6 +266,7 @@ export class Telefono {
           return
         }
         if (token.push) {
+          await this.nomeSulloSchermo(!!token.display_name)
           await this.voice.register(token.token)
           if (this.stato.disponibile) {
             await api.disponibilita(this.sessione.server, this.dispositivo, true, etichetta())

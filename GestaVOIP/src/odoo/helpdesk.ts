@@ -105,7 +105,11 @@ export function dimenticaHelpdesk(): void {
 // Elenco
 // ---------------------------------------------------------------------------
 
-export type Filtro = 'miei' | 'team' | 'liberi' | 'aperti' | 'chiusi'
+/** `u12`: i ticket aperti assegnati al collega con quell'id utente. */
+export type Filtro = 'miei' | 'liberi' | 'aperti' | 'chiusi' | `u${number}`
+
+/** Un collega con almeno un ticket aperto assegnato (una pillola in alto). */
+export type Collega = { id: Id; nome: string; ticket: number }
 
 export type Ticket = {
   id: Id
@@ -165,8 +169,8 @@ function dominio(s: Struttura, filtro: Filtro, uid: number, testo: string): unkn
     d.push(['user_id', '=', uid])
   } else if (filtro === 'liberi') {
     d.push(['user_id', '=', false])
-  } else if (filtro === 'team' && s.membriTeam) {
-    d.push([`team_id.${s.membriTeam}`, 'in', [uid]])
+  } else if (filtro.startsWith('u')) {
+    d.push(['user_id', '=', Number(filtro.slice(1))])
   }
   const q = testo.trim()
   if (q) {
@@ -190,12 +194,37 @@ export async function tickets(server: string, uid: number, filtro: Filtro, testo
   return righe.map(daRiga)
 }
 
-/** Quanti ticket aperti per ogni filtro (i numeri sulle schede in alto). */
-export async function conteggi(server: string, uid: number): Promise<Record<Exclude<Filtro, 'chiusi'>, number>> {
+export type Conteggi = { miei: number; liberi: number; aperti: number; colleghi: Collega[] }
+
+/**
+ * Quanti ticket aperti per ogni filtro (i numeri sulle schede in alto) e i
+ * colleghi che ne hanno almeno uno assegnato, dal piu' carico. Si legge solo
+ * chi e' assegnato (un campo per ticket): vale da Odoo 17 a 20, senza read_group.
+ */
+export async function conteggi(server: string, uid: number): Promise<Conteggi> {
   const s = await struttura(server)
   const conta = (f: Filtro) => callKw<number>(server, 'helpdesk.ticket', 'search_count', [dominio(s, f, uid, '')]).catch(() => 0)
-  const [miei, team, liberi, aperti] = await Promise.all([conta('miei'), conta('team'), conta('liberi'), conta('aperti')])
-  return { miei, team, liberi, aperti }
+  const [miei, liberi, aperti, assegnati] = await Promise.all([
+    conta('miei'),
+    conta('liberi'),
+    conta('aperti'),
+    callKw<{ user_id: M2o }[]>(server, 'helpdesk.ticket', 'search_read', [], {
+      domain: [...dominio(s, 'aperti', uid, ''), ['user_id', '!=', false], ['user_id', '!=', uid]],
+      fields: ['user_id'],
+      limit: 5000,
+    }).catch(() => []),
+  ])
+  const per = new Map<Id, Collega>()
+  for (const r of assegnati) {
+    if (!r.user_id) {
+      continue
+    }
+    const c = per.get(r.user_id[0]) || { id: r.user_id[0], nome: r.user_id[1], ticket: 0 }
+    c.ticket += 1
+    per.set(c.id, c)
+  }
+  const colleghi = [...per.values()].sort((a, b) => b.ticket - a.ticket || a.nome.localeCompare(b.nome))
+  return { miei, liberi, aperti, colleghi }
 }
 
 // ---------------------------------------------------------------------------

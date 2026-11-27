@@ -1,7 +1,7 @@
 /**
- * Helpdesk: i ticket divisi in schede (Miei, Del team, Da assegnare, Aperti,
- * Chiusi) con il numero accanto, ricerca per titolo, cliente o numero, e il +
- * per aprirne uno nuovo.
+ * Helpdesk: i ticket divisi in schede (Miei, una per ogni collega che ha
+ * ticket aperti assegnati, Da assegnare, Aperti, Chiusi) con il numero
+ * accanto, ricerca per titolo, cliente o numero, e il + per aprirne uno nuovo.
  */
 
 import Ionicons from '@expo/vector-icons/Ionicons'
@@ -11,7 +11,7 @@ import { FlatList, Pressable, RefreshControl, ScrollView, StyleSheet, Text, Text
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { t, tn } from '../../i18n'
 import { leggi, scrivi } from '../../odoo/archivio'
-import { conteggi, tickets, type Filtro, type Ticket } from '../../odoo/helpdesk'
+import { conteggi, tickets, type Conteggi, type Filtro, type Ticket } from '../../odoo/helpdesk'
 import { urlAvatar } from '../../odoo/lavoro'
 import { Caricamento } from '../../ui/Caricamento'
 import { Avatar } from '../../ui/Avatar'
@@ -21,7 +21,15 @@ import { Testata } from '../../ui/Testata'
 import { raggio, spazio, useColori } from '../../ui/tema'
 import { useApp } from '../../voip/Contesto'
 
-const FILTRI: Filtro[] = ['miei', 'team', 'liberi', 'aperti', 'chiusi']
+type Scheda = { filtro: Filtro; nome: string; numero?: number; collega?: number }
+
+/** Il nome dei colleghi sulle pillole: il primo nome, intero solo se due si chiamano uguale. */
+function nomiBrevi(colleghi: Conteggi['colleghi']): Map<number, string> {
+  const primo = (n: string) => n.trim().split(/\s+/)[0] || n
+  const quanti = new Map<string, number>()
+  colleghi.forEach((c) => quanti.set(primo(c.nome), (quanti.get(primo(c.nome)) || 0) + 1))
+  return new Map(colleghi.map((c) => [c.id, (quanti.get(primo(c.nome)) || 0) > 1 ? c.nome : primo(c.nome)]))
+}
 
 /** Le date tornano stringhe dalla copia salvata sul telefono. */
 function rileggi(l: Ticket[] | null): Ticket[] | null {
@@ -39,7 +47,9 @@ export default function SchermataHelpdesk() {
   const [filtro, setFiltro] = useState<Filtro>('miei')
   const [testo, setTesto] = useState('')
   const [lista, setLista] = useState<Ticket[] | null>(() => rileggi(leggi<Ticket[]>(server, uid, 'helpdesk-miei')))
-  const [numeri, setNumeri] = useState<Partial<Record<Filtro, number>>>({})
+  const [numeri, setNumeri] = useState<Conteggi | null>(() => leggi<Conteggi>(server, uid, 'helpdesk-conteggi'))
+  // Il collega scelto resta tra le schede anche quando non ha piu' ticket aperti.
+  const [scelto, setScelto] = useState<{ id: number; nome: string } | null>(null)
   const [errore, setErrore] = useState('')
   const [ricarica, setRicarica] = useState(false)
   const richiesta = useRef(0)
@@ -57,6 +67,7 @@ export default function SchermataHelpdesk() {
       setLista(r)
       if (conti) {
         setNumeri(conti)
+        scrivi(server, uid, 'helpdesk-conteggi', conti)
       }
       if (!testo) {
         scrivi(server, uid, `helpdesk-${filtro}`, r)
@@ -76,13 +87,28 @@ export default function SchermataHelpdesk() {
   )
 
   // Cambiando scheda si mostra subito la copia salvata, poi quella di Odoo.
-  function cambia(f: Filtro) {
+  function cambia(f: Filtro, collega: { id: number; nome: string } | null) {
     if (f === filtro) {
       return
     }
     setFiltro(f)
+    setScelto(collega)
     setLista(rileggi(leggi<Ticket[]>(server, uid, `helpdesk-${f}`)))
   }
+
+  // Miei, un collega per pillola (dal piu' carico), Da assegnare, Aperti, Chiusi.
+  const colleghi = numeri?.colleghi || []
+  const brevi = nomiBrevi(colleghi)
+  const schede: Scheda[] = [
+    { filtro: 'miei', nome: t('helpdesk.filtro.miei'), numero: numeri?.miei },
+    ...colleghi.map((x) => ({ filtro: `u${x.id}` as Filtro, nome: brevi.get(x.id) || x.nome, numero: x.ticket, collega: x.id })),
+    ...(scelto && !colleghi.some((x) => x.id === scelto.id)
+      ? [{ filtro: `u${scelto.id}` as Filtro, nome: scelto.nome, numero: 0, collega: scelto.id }]
+      : []),
+    { filtro: 'liberi', nome: t('helpdesk.filtro.liberi'), numero: numeri?.liberi },
+    { filtro: 'aperti', nome: t('helpdesk.filtro.aperti'), numero: numeri?.aperti },
+    { filtro: 'chiusi', nome: t('helpdesk.filtro.chiusi') },
+  ]
 
   // La ricerca parte quando si smette di scrivere.
   const [cercato, setCercato] = useState('')
@@ -131,19 +157,20 @@ export default function SchermataHelpdesk() {
 
       <View>
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={s.schede}>
-          {FILTRI.map((f) => {
+          {schede.map(({ filtro: f, nome, numero: n, collega }) => {
             const attivo = f === filtro
-            const n = numeri[f]
             return (
               <Pressable
                 key={f}
-                onPress={() => cambia(f)}
-                style={[s.scheda, { backgroundColor: attivo ? c.primario : c.superficie, borderColor: attivo ? c.primario : c.bordo }]}
+                onPress={() => cambia(f, collega ? { id: collega, nome } : null)}
+                style={[s.scheda, collega ? s.schedaCollega : null, { backgroundColor: attivo ? c.primario : c.superficie, borderColor: attivo ? c.primario : c.bordo }]}
                 accessibilityRole="tab"
                 accessibilityState={{ selected: attivo }}
+                accessibilityLabel={n !== undefined ? `${nome}, ${n}` : nome}
               >
+                {collega ? <Avatar nome={nome} lato={24} url={urlAvatar(server, 'res.users', collega)} /> : null}
                 <Text style={[s.schedaTesto, { color: attivo ? '#FFFFFF' : c.testo }]} numberOfLines={1}>
-                  {t(`helpdesk.filtro.${f}`)}
+                  {nome}
                 </Text>
                 {n !== undefined ? (
                   <View style={[s.conta, { backgroundColor: attivo ? 'rgba(255,255,255,0.25)' : c.superficie2 }]}>
@@ -217,6 +244,7 @@ const s = StyleSheet.create({
   campo: { flex: 1, fontSize: 16, paddingVertical: 10 },
   schede: { gap: spazio.s, paddingHorizontal: spazio.l, paddingVertical: spazio.m },
   scheda: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, height: 36, borderRadius: 18, borderWidth: StyleSheet.hairlineWidth },
+  schedaCollega: { paddingLeft: 6 },
   schedaTesto: { fontSize: 15, fontWeight: '600' },
   conta: { minWidth: 22, height: 20, borderRadius: 10, paddingHorizontal: 6, alignItems: 'center', justifyContent: 'center' },
   contaTesto: { fontSize: 12, fontWeight: '700' },

@@ -22,7 +22,16 @@ function controlla<T extends Esito>(r: T): T {
   return r
 }
 
-export type Token = { token: string; identity: string; ttl: number; ring_timeout: number; push: boolean; mode: string }
+export type Token = {
+  token: string
+  identity: string
+  ttl: number
+  ring_timeout: number
+  push: boolean
+  mode: string
+  /** VOIP AI 2.38.1+: ogni chiamata porta il parametro DisplayName (nome di chi chiama). */
+  display_name?: boolean
+}
 
 export async function chiediToken(server: string, dispositivo: string): Promise<Token> {
   return controlla(
