@@ -79,7 +79,7 @@ export default function NuovoPreventivo() {
   const stima = righe.reduce((x, r) => x + r.prodotto.prezzo * r.quantita, 0)
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <Testata titolo={t('vendite.nuovo')} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={s.contenuto} keyboardShouldPersistTaps="handled" keyboardDismissMode="interactive">

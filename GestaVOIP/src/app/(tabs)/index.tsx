@@ -201,7 +201,7 @@ function Tastierino() {
 
   if (modo === 'nome') {
     return (
-      <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+      <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
         <View style={s.barraNome}>
           <View style={[s.campoNome, { backgroundColor: c.superficie, borderColor: c.bordo }]}>
             <Ionicons name="search" size={18} color={c.testo3} />
@@ -249,7 +249,7 @@ function Tastierino() {
   }
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <View style={s.alto}>
         <View style={s.altoLato}>
           <PulsanteMenu />

@@ -119,7 +119,7 @@ export default function SchedaGestable() {
   }
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: scuro ? '#232846' : '#EEF2F8' }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: scuro ? '#232846' : '#EEF2F8' }]} edges={['top', 'left', 'right']}>
       <View pointerEvents="none" style={[StyleSheet.absoluteFill, { experimental_backgroundImage: scuro ? AURORA : AURORA_CHIARA }]} />
       <View style={s.barra}>
         <PulsanteMenu />

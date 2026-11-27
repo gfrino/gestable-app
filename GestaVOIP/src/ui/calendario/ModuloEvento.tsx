@@ -246,7 +246,7 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
 
   if (!m || !opzioni) {
     return (
-      <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom']}>
+      <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom', 'left', 'right']}>
         <Testata titolo={titoloPagina} />
         {errore ? (
           <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>
@@ -337,7 +337,7 @@ export function ModuloEvento({ id, giorno }: { id: number | null; giorno?: strin
   const campo = [s.campo, { backgroundColor: c.sfondo, borderColor: c.bordo, color: c.testo }]
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom', 'left', 'right']}>
       <Testata titolo={titoloPagina} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={s.contenuto} keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag">

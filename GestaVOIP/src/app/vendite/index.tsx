@@ -107,7 +107,7 @@ export default function SchermataVendite() {
   const totale = (lista || []).reduce((x, o) => x + o.totale, 0)
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <Testata
         titolo={cliente && param.clienteNome ? t('schede.perCliente', { nome: param.clienteNome }) : t('vendite.titolo')}
         sottotitolo={lista ? [tn('vendite.conta', lista.length), totale && unaValuta ? importo(totale, valuta) : ''].filter(Boolean).join(' · ') : undefined}

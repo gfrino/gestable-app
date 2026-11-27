@@ -181,7 +181,7 @@ export function VistaOdoo({ server, titolo, chiama }: Props) {
   }
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: aurora ? (scuro ? '#232846' : '#EEF2F8') : c.superficie }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: aurora ? (scuro ? '#232846' : '#EEF2F8') : c.superficie }]} edges={['top', 'left', 'right']}>
       {aurora ? (
         <View pointerEvents="none" style={[StyleSheet.absoluteFill, { experimental_backgroundImage: scuro ? AURORA : AURORA_CHIARA }]} />
       ) : null}

@@ -253,7 +253,7 @@ export default function SchermataChiamata() {
           />
         ))
       )}
-      <View style={[s.contenuto, { paddingTop: margini.top, paddingBottom: margini.bottom }]}>
+      <View style={[s.contenuto, { paddingTop: margini.top, paddingBottom: margini.bottom, paddingLeft: margini.left, paddingRight: margini.right }]}>
       <View style={s.testa}>
         <View style={s.direzione}>
           <Ionicons

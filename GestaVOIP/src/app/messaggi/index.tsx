@@ -110,7 +110,7 @@ export default function Messaggi() {
   const nonLettiChat = (chat || []).filter((x) => x.nonLetti > 0 && x.conta !== false).length
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <Testata
         titolo={t('lavoro.messaggi.titolo')}
         destra={

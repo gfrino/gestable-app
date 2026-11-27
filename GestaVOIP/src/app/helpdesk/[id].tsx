@@ -312,7 +312,7 @@ export default function SchedaTicket() {
 
   if (!tk) {
     return (
-      <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+      <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
         <Testata titolo={t('helpdesk.ticket')} />
         {problema ? <Text style={[s.problema, { color: c.rosso }]}>{problema}</Text> : <Caricamento style={{ marginTop: spazio.xxl }} />}
       </SafeAreaView>
@@ -325,7 +325,7 @@ export default function SchedaTicket() {
   const minutiTimer = inCorso ? Math.max(0, Math.round((ora - inCorso.getTime()) / 60_000)) : 0
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <Testata
         titolo={tk.numero || t('helpdesk.ticket')}
         sottotitolo={tk.team || undefined}

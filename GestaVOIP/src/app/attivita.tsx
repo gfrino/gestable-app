@@ -124,7 +124,7 @@ export default function SchermataAttivita() {
   }).filter((s) => s.data.length)
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <Testata titolo={t('lavoro.attivita.titolo')} sottotitolo={lista ? tn('lavoro.attivita.daFare', lista.length) : undefined} />
       {errore && !lista ? (
         <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text>

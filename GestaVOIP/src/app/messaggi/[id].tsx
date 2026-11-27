@@ -190,7 +190,7 @@ export default function Conversazione() {
   const dati = messaggi ? [...messaggi].reverse() : []
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: scuro ? '#232846' : '#EEF2F8' }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: scuro ? '#232846' : '#EEF2F8' }]} edges={['top', 'bottom', 'left', 'right']}>
       {/* La stessa sfumatura «Aurora» della scheda Odoo e della scheda GestABLE. */}
       <View pointerEvents="none" style={[StyleSheet.absoluteFill, { experimental_backgroundImage: scuro ? AURORA : AURORA_CHIARA }]} />
       <Testata

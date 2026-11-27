@@ -5,11 +5,11 @@
 
 import Ionicons from '@expo/vector-icons/Ionicons'
 import { useFocusEffect, useRouter } from 'expo-router'
-import { useCallback, useRef, useState } from 'react'
-import { ActivityIndicator, FlatList, Pressable, RefreshControl, SectionList, StyleSheet, Text, TextInput, View } from 'react-native'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { ActivityIndicator, FlatList, Pressable, RefreshControl, ScrollView, SectionList, StyleSheet, Text, TextInput, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { t } from '../../i18n'
-import { cercaContatti, lettera, type Contatto, type Filtro } from '../../odoo/contatti'
+import { cercaContatti, haClientiFornitori, lettera, type Contatto, type Filtro } from '../../odoo/contatti'
 import { urlAvatar } from '../../odoo/lavoro'
 import { Avatar } from '../../ui/Avatar'
 import { chiamaNumero } from '../../ui/chiama'
@@ -25,8 +25,11 @@ import { colleghi, type Collega } from '../../voip/api'
 
 const PAGINA = 60
 // Chiavi dei testi: t() si chiama mostrando la lista (la lingua puo' cambiare).
-const FILTRI: { valore: Filtro; chiave: string }[] = [
+// Clienti e Fornitori solo dove Odoo li conta (haClientiFornitori).
+const FILTRI: { valore: Filtro; chiave: string; rank?: boolean }[] = [
   { valore: 'tutti', chiave: 'schede.filtroTutti' },
+  { valore: 'clienti', chiave: 'schede.filtroClienti', rank: true },
+  { valore: 'fornitori', chiave: 'schede.filtroFornitori', rank: true },
   { valore: 'aziende', chiave: 'schede.filtroAziende' },
   { valore: 'persone', chiave: 'schede.filtroPersone' },
 ]
@@ -47,6 +50,18 @@ function ElencoContatti() {
   const giro = useRef(0)
   // «Interni»: i colleghi con il loro interno, solo con il telefono (VOIP AI).
   const telefono = conTelefono(sessione)
+  const [conRank, setConRank] = useState(false)
+  useEffect(() => {
+    let vivo = true
+    if (server) {
+      haClientiFornitori(server)
+        .then((x) => vivo && setConRank(x))
+        .catch(() => undefined)
+    }
+    return () => {
+      vivo = false
+    }
+  }, [server])
   const [interni, setInterni] = useState(false)
   const [elencoInterni, setElencoInterni] = useState<Collega[] | null>(() => leggi<Collega[]>(server, uid, 'interni'))
 
@@ -144,7 +159,7 @@ function ElencoContatti() {
   }
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <View style={s.testa}>
         <PulsanteMenu />
         <Text style={[s.titolo, { color: c.testo }]}>{t('schede.contatti')}</Text>
@@ -174,8 +189,8 @@ function ElencoContatti() {
         />
       </View>
 
-      <View style={s.filtri}>
-        {FILTRI.map((f) => {
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={s.filtriRiga} contentContainerStyle={s.filtri}>
+        {FILTRI.filter((f) => !f.rank || conRank).map((f) => {
           const attivo = !interni && f.valore === filtro
           return (
             <Pressable
@@ -206,7 +221,7 @@ function ElencoContatti() {
             </Text>
           </Pressable>
         ) : null}
-      </View>
+      </ScrollView>
 
       {interni ? (
         <ElencoInterni lista={elencoInterni} testo={testo} />
@@ -349,6 +364,7 @@ const s = StyleSheet.create({
     borderWidth: 1,
   },
   campo: { flex: 1, fontSize: 16, paddingVertical: 11 },
+  filtriRiga: { flexGrow: 0, flexShrink: 0 },
   filtri: { flexDirection: 'row', gap: spazio.s, paddingHorizontal: spazio.l, paddingVertical: spazio.m },
   filtro: { paddingHorizontal: 14, height: 32, borderRadius: 16, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   filtroTesto: { fontSize: 14, fontWeight: '700' },

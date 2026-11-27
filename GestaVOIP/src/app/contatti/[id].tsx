@@ -120,7 +120,7 @@ export default function SchedaContattoSchermata() {
 
   if (!k) {
     return (
-      <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom']}>
+      <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom', 'left', 'right']}>
         <Testata titolo={t('schede.contatto')} />
         {errore ? <Text style={[s.vuoto, { color: c.rosso }]}>{errore}</Text> : <Caricamento style={{ marginTop: spazio.xxl }} />}
       </SafeAreaView>
@@ -187,7 +187,7 @@ export default function SchedaContattoSchermata() {
     .map((x) => voce(x === 'user_id' ? 'person-outline' : x === 'team_id' ? 'people-outline' : x === 'industry_id' ? 'construct-outline' : x === 'property_product_pricelist' ? 'list-outline' : 'time-outline', nome(x), v[x]?.nome || ''))
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom', 'left', 'right']}>
       <Testata
         titolo={azienda ? t('schede.azienda') : t('schede.contatto')}
         destra={

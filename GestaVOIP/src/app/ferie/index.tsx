@@ -102,7 +102,7 @@ export default function SchermataFerie() {
   ].filter((x) => x.data.length)
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <Testata
         titolo={t('ferie.titolo')}
         sottotitolo={dati ? [tn('ferie.conta', richieste.length), team.length ? tn('ferie.contaTeam', team.length) : ''].filter(Boolean).join(' · ') : undefined}

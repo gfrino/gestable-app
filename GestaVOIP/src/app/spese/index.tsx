@@ -136,7 +136,7 @@ export default function SchermataSpese() {
   const sezioni = ORDINE.map((stato) => ({ stato, data: (lista || []).filter((x) => x.stato === stato) })).filter((x) => x.data.length)
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <Testata
         titolo={t('spese.titolo')}
         sottotitolo={lista ? tn('spese.conta', lista.length) : undefined}

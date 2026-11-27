@@ -157,7 +157,7 @@ export default function SchedaSpesa() {
 
   if (!spesa) {
     return (
-      <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+      <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
         <Testata titolo={titolo} />
         {errore ? <Text style={[s.errore, { color: c.rosso }]}>{errore}</Text> : <Caricamento style={{ marginTop: spazio.xxl }} />}
       </SafeAreaView>
@@ -169,7 +169,7 @@ export default function SchedaSpesa() {
   const colore = coloreStato(spesa.stato, c)
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom', 'left', 'right']}>
       <Testata titolo={titolo} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={s.contenuto} keyboardShouldPersistTaps="handled">

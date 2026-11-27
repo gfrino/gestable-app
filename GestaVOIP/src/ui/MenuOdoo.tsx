@@ -123,12 +123,12 @@ export function MenuOdoo({ dati, azienda, chiudi, scegliMenu, scegliUtente, prim
       <Animated.View
         style={[
           s.pannello,
-          { width: larghezza, backgroundColor: c.sfondo, paddingTop: margini.top + spazio.m, transform: [{ translateX: x }] },
+          { width: larghezza, backgroundColor: c.sfondo, paddingTop: margini.top + spazio.m, paddingRight: margini.right, transform: [{ translateX: x }] },
         ]}
       >
         {/* Il logo GestABLE, piccolo, su un alone del colore del tema: resta in basso mentre le voci scorrono. */}
         <View pointerEvents="none" style={[s.alone, { experimental_backgroundImage: `radial-gradient(circle at 75% 75%, ${c.primarioTenue} 0%, transparent 70%)` }]} />
-        <Image source={LOGO} style={[s.logo, { bottom: margini.bottom + spazio.l }]} accessibilityLabel="GestABLE" />
+        <Image source={LOGO} style={[s.logo, { bottom: margini.bottom + spazio.l, right: margini.right + spazio.l }]} accessibilityLabel="GestABLE" />
 
         <View style={s.testa}>
           <View style={{ flex: 1 }}>

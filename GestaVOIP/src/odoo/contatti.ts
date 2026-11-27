@@ -86,7 +86,17 @@ async function conFoto(server: string, ids: Id[]): Promise<Set<Id>> {
   return new Set(r)
 }
 
-export type Filtro = 'tutti' | 'aziende' | 'persone'
+export type Filtro = 'tutti' | 'aziende' | 'persone' | 'clienti' | 'fornitori'
+
+/**
+ * Clienti e fornitori come li conta Odoo (customer_rank / supplier_rank sale a
+ * ogni vendita o acquisto). I campi ci sono solo con la Contabilita'/Fatturazione:
+ * senza, i due filtri non si mostrano.
+ */
+export async function haClientiFornitori(server: string): Promise<boolean> {
+  const campi = await campiPartner(server)
+  return campi.has('customer_rank') && campi.has('supplier_rank')
+}
 
 export async function cercaContatti(
   server: string,
@@ -101,6 +111,10 @@ export async function cercaContatti(
     dominio.push(['is_company', '=', true])
   } else if (filtro === 'persone') {
     dominio.push(['is_company', '=', false])
+  } else if (filtro === 'clienti' && campi.has('customer_rank')) {
+    dominio.push(['customer_rank', '>', 0])
+  } else if (filtro === 'fornitori' && campi.has('supplier_rank')) {
+    dominio.push(['supplier_rank', '>', 0])
   }
   const t = testo.trim()
   if (!t) {

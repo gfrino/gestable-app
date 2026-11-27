@@ -275,7 +275,7 @@ export default function SchedaOrdine() {
 
   if (!op) {
     return (
-      <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+      <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
         <Testata titolo={t('vendite.documento')} />
         {problema ? <Text style={[s.problema, { color: c.rosso }]}>{problema}</Text> : <Caricamento style={{ marginTop: spazio.xxl }} />}
       </SafeAreaView>
@@ -289,7 +289,7 @@ export default function SchedaOrdine() {
   const righeProdotto = op.righe.filter((r) => r.tipo === 'prodotto')
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <Testata
         titolo={op.nome}
         sottotitolo={preventivo ? t('vendite.preventivo') : t('vendite.ordine')}

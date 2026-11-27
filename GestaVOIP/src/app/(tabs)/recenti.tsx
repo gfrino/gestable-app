@@ -97,7 +97,7 @@ export default function Recenti() {
   }
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <View style={s.testa}>
         <PulsanteMenu />
         <Text style={[s.titolo, { color: c.testo }]}>{t('schede.recenti')}</Text>

@@ -58,7 +58,7 @@ export default function NuovoContatto() {
   const etichetta = (testo: string) => <Text style={[s.etichetta, { color: c.testo2 }]}>{testo}</Text>
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom', 'left', 'right']}>
       <Testata titolo={t('schede.nuovoContatto')} />
       <KeyboardAvoidingView style={{ flex: 1 }} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
         <ScrollView contentContainerStyle={s.contenuto} keyboardShouldPersistTaps="handled">

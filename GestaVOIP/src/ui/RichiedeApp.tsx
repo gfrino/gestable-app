@@ -113,7 +113,7 @@ function Avviso({
   const router = useRouter()
   const indirizzo = server.replace(/^https?:\/\//, '')
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <View style={s.testa}>
         <PulsanteMenu />
         <Text style={[s.titolo, { color: c.testo }]} numberOfLines={1}>

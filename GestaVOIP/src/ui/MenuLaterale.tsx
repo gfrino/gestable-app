@@ -266,7 +266,7 @@ function Cassetto({ scorre, chiudi, contatori: n }: { scorre: Animated.Value; ch
       <Animated.View
         style={[
           s.pannello,
-          { backgroundColor: c.sfondo, paddingTop: margini.top + spazio.l, paddingBottom: margini.bottom + spazio.l },
+          { backgroundColor: c.sfondo, paddingTop: margini.top + spazio.l, paddingBottom: margini.bottom + spazio.l, paddingLeft: margini.left },
           { transform: [{ translateX: x }] },
         ]}
       >

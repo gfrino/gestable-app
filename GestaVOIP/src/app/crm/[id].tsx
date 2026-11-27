@@ -242,7 +242,7 @@ export default function SchedaOpportunita() {
 
   if (!op) {
     return (
-      <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+      <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
         <Testata titolo={t('crm.opportunita')} />
         {problema ? <Text style={[s.problema, { color: c.rosso }]}>{problema}</Text> : <Caricamento style={{ marginTop: spazio.xxl }} />}
       </SafeAreaView>
@@ -255,7 +255,7 @@ export default function SchedaOpportunita() {
   const ePersa = !op.attiva
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <Testata
         titolo={t('crm.opportunita')}
         destra={

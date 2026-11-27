@@ -124,7 +124,7 @@ export default function SchermataHelpdesk() {
   }
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <Testata
         titolo={t('helpdesk.titolo')}
         sottotitolo={lista ? tn('helpdesk.conta', lista.length) : undefined}

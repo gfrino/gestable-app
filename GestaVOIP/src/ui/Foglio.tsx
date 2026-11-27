@@ -24,7 +24,7 @@ export function Foglio({ aperto, titolo, chiudi, children, fatto = t('comune.fin
   return (
     <Modal visible={aperto} animationType="slide" presentationStyle="pageSheet" onRequestClose={chiudi}>
       <SafeAreaProvider>
-        <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom']}>
+        <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom', 'left', 'right']}>
           <View style={[s.barra, { borderBottomColor: c.bordo }]}>
             <Text style={[s.titolo, { color: c.testo }]} numberOfLines={1}>
               {titolo}

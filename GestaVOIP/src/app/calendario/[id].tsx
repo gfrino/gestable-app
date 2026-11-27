@@ -160,7 +160,7 @@ export default function Appuntamento() {
   const mostraCome = e && opzioni ? nomeScelta(opzioni.mostraCome, e.mostraCome) : ''
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'bottom', 'left', 'right']}>
       <Testata
         titolo={t('calendario.appuntamento')}
         destra={

@@ -344,7 +344,7 @@ function VistaCalendario() {
   }
 
   return (
-    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top']}>
+    <SafeAreaView style={[s.pagina, { backgroundColor: c.sfondo }]} edges={['top', 'left', 'right']}>
       <View style={s.testa}>
         <PulsanteMenu />
         <Text style={[s.mese, { color: c.testo }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.6}>
