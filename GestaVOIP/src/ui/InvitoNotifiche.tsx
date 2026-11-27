@@ -13,6 +13,7 @@ import { Modal, StyleSheet, Text, View } from 'react-native'
 import { t } from '../i18n'
 import { chiediPermesso, giaChiesto, permesso, segnaChiesto, pushDisponibile, registraTelefono, serverConNotifiche, suTocco } from '../notifiche/push'
 import { useApp } from '../voip/Contesto'
+import { apriRecord } from './apriRecord'
 import { segnalaErrore } from './crash'
 import { Pulsante } from './Pulsante'
 import { raggio, spazio, useColori } from './tema'
@@ -52,7 +53,8 @@ export function InvitoNotifiche() {
     }
   }, [server, uid])
 
-  // Tocco su una notifica (anche quella che ha aperto l'app): la chat giusta.
+  // Tocco su una notifica (anche quella che ha aperto l'app): la chat giusta,
+  // o il documento (schermata nativa se c'e', altrimenti Odoo Web).
   useEffect(() => {
     if (!uid) {
       return
@@ -60,6 +62,8 @@ export function InvitoNotifiche() {
     return suTocco((d) => {
       if (d.model === 'discuss.channel' && d.res_id) {
         router.push({ pathname: '/messaggi/[id]', params: { id: String(d.res_id), tipo: d.channel_type || 'chat', nome: d.name || '' } })
+      } else if (d.model && d.res_id) {
+        apriRecord(router, d.model, d.res_id, { nome: d.name })
       }
     })
   }, [uid, router])

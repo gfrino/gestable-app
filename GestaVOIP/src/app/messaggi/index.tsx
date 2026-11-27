@@ -10,7 +10,6 @@ import { SafeAreaView } from 'react-native-safe-area-context'
 import { t } from '../../i18n'
 import {
   conversazioni,
-  percorsoRecord,
   postaInArrivo,
   quanteNotifiche,
   segnaNotificheLette,
@@ -20,7 +19,7 @@ import {
 } from '../../odoo/lavoro'
 import { quandoBreve, testoDaHtml } from '../../odoo/testo'
 import { Avatar } from '../../ui/Avatar'
-import { inviaOdoo, rottaOdoo } from '../../ui/comandiOdoo'
+import { apriRecord } from '../../ui/apriRecord'
 import { useMenu } from '../../ui/MenuLaterale'
 import { StatoVuoto } from '../../ui/StatoVuoto'
 import { Testata } from '../../ui/Testata'
@@ -85,12 +84,8 @@ export default function Messaggi() {
     segnaNotificheLette(server, [n.id])
       .then(aggiorna)
       .catch(() => undefined)
-    if (n.modello && n.recordId) {
-      inviaOdoo({ tipo: 'apri', percorso: percorsoRecord(n.modello, n.recordId) })
-      // dismissTo torna alla vista di Odoo che c'e' gia' (navigate ne aprirebbe
-    // una seconda copia sopra, che riparte dalla home).
-    router.dismissTo(rottaOdoo())
-    }
+    // La schermata nativa del documento se c'e', altrimenti Odoo Web.
+    apriRecord(router, n.modello, n.recordId, { nome: n.titolo })
   }
 
   async function tutteLette() {

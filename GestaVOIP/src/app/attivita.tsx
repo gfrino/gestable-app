@@ -9,9 +9,9 @@ import { useCallback, useState } from 'react'
 import { Alert, Pressable, RefreshControl, SectionList, StyleSheet, Text, View } from 'react-native'
 import { SafeAreaView } from 'react-native-safe-area-context'
 import { loc, t, tn } from '../i18n'
-import { attivita as caricaAttivita, completaAttivita, percorsoRecord, type Attivita } from '../odoo/lavoro'
+import { attivita as caricaAttivita, completaAttivita, type Attivita } from '../odoo/lavoro'
 import { testoDaHtml } from '../odoo/testo'
-import { inviaOdoo, rottaOdoo } from '../ui/comandiOdoo'
+import { apriRecord } from '../ui/apriRecord'
 import { useMenu } from '../ui/MenuLaterale'
 import { StatoVuoto } from '../ui/StatoVuoto'
 import { Testata } from '../ui/Testata'
@@ -112,10 +112,8 @@ export default function SchermataAttivita() {
   }
 
   function apri(a: Attivita) {
-    inviaOdoo({ tipo: 'apri', percorso: percorsoRecord(a.modello, a.recordId) })
-    // dismissTo torna alla vista di Odoo che c'e' gia' (navigate ne aprirebbe
-    // una seconda copia sopra, che riparte dalla home).
-    router.dismissTo(rottaOdoo())
+    // La schermata nativa del documento se c'e', altrimenti Odoo Web.
+    apriRecord(router, a.modello, a.recordId, { nome: a.recordNome })
   }
 
   // In ritardo: prima le piu' recenti (quelle vecchie di mesi servono meno);
