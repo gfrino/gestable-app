@@ -40,14 +40,56 @@ export function settimaneDelMese(d: Date): Date[] {
 }
 
 /**
- * Il cerchio attorno al numero del giorno: largo quanto il numero piu' un
- * margine, anche con il testo grande scelto nelle impostazioni del telefono
- * (con un cerchio fisso «27» toccava il bordo).
+ * Il numero del giorno nel suo cerchio (oggi, giorno scelto), centrato
+ * davvero: il cerchio cresce con il testo grande scelto nelle impostazioni del
+ * telefono e lascia margine attorno al numero; il testo occupa tutta la
+ * larghezza del cerchio con il centro del testo (le cifre «tabulari» lo
+ * spostavano a sinistra) e scende di quel poco che le cifre, senza parti sotto
+ * la riga, lasciano vuoto in alto.
  */
-function useCerchio(dimensioneTesto: number): number {
+export function NumeroGiorno({
+  numero,
+  dimensione,
+  minimo = 0,
+  sfondo,
+  colore,
+  grassetto,
+}: {
+  numero: number
+  /** Dimensione del testo prima dell'ingrandimento del telefono. */
+  dimensione: number
+  /** Diametro minimo del cerchio. */
+  minimo?: number
+  sfondo?: string
+  colore: string
+  grassetto?: boolean
+}) {
   const { fontScale } = useWindowDimensions()
-  return Math.ceil(dimensioneTesto * Math.max(1, fontScale) * 2)
+  const testo = dimensione * Math.max(1, fontScale)
+  const d = Math.max(minimo, Math.ceil(testo * 2))
+  return (
+    <View style={[s.cerchio, { width: d, height: d, borderRadius: d / 2, backgroundColor: sfondo }]}>
+      <Text
+        style={[
+          s.cerchioTesto,
+          {
+            width: d,
+            fontSize: dimensione,
+            lineHeight: Math.round(dimensione * 1.2),
+            color: colore,
+            fontWeight: grassetto ? '700' : '500',
+            transform: [{ translateY: testo * SPOSTA_CIFRE }],
+          },
+        ]}
+      >
+        {numero}
+      </Text>
+    </View>
+  )
 }
+
+/** Quanto scendono le cifre (in em) per stare al centro del cerchio. */
+const SPOSTA_CIFRE = 0
 
 type Carta = {
   evento: Evento
@@ -196,7 +238,6 @@ export function VistaSettimana({
   onEvento: (id: number) => void
 }) {
   const c = useColori()
-  const cerchio = useCerchio(18)
   // Le ore in questa vista hanno un carattere piu' piccolo: colonna piu' stretta.
   const ore = Math.round(larghezzaOre * 0.9)
   return (
@@ -218,9 +259,13 @@ export function VistaSettimana({
               <Text style={[s.dataGiorno, { color: eOggi ? c.primario : g > 4 ? c.testo3 : c.testo2 }]} numberOfLines={1}>
                 {giorno.toLocaleDateString(loc(), { weekday: 'short' }).replace('.', '')}
               </Text>
-              <View style={[s.dataNumero, { width: cerchio, height: cerchio, borderRadius: cerchio / 2 }, eOggi && { backgroundColor: c.primario }]}>
-                <Text style={[s.dataNumeroTesto, { color: eOggi ? c.primarioTesto : g > 4 ? c.testo2 : c.testo }]}>{giorno.getDate()}</Text>
-              </View>
+              <NumeroGiorno
+                numero={giorno.getDate()}
+                dimensione={18}
+                sfondo={eOggi ? c.primario : undefined}
+                colore={eOggi ? c.primarioTesto : g > 4 ? c.testo2 : c.testo}
+                grassetto={eOggi}
+              />
             </Pressable>
             <View style={s.eventiGiorno}>
               {!lista ? (
@@ -260,7 +305,6 @@ export function VistaMese({
   errore: string
 }) {
   const c = useColori()
-  const cerchio = useCerchio(15)
   const [misura, setMisura] = useState({ w: 0, h: 0 })
   const settimane = settimaneDelMese(mese)
   const larghezzaCella = misura.w / 7
@@ -308,23 +352,13 @@ export function VistaMese({
                     accessibilityRole="button"
                     accessibilityLabel={etichettaGiorno(giorno, lista.length)}
                   >
-                    <View
-                      style={[
-                        s.numero,
-                        { width: cerchio, height: cerchio, borderRadius: cerchio / 2 },
-                        eOggi ? { backgroundColor: c.primario } : eScelto && { backgroundColor: c.primarioTenue },
-                      ]}
-                    >
-                      <Text
-                        style={[
-                          s.numeroTesto,
-                          { color: eOggi ? c.primarioTesto : eScelto ? c.primario : fuori ? c.testo3 : g > 4 ? c.testo2 : c.testo },
-                          (eOggi || eScelto) && { fontWeight: '700' },
-                        ]}
-                      >
-                        {giorno.getDate()}
-                      </Text>
-                    </View>
+                    <NumeroGiorno
+                      numero={giorno.getDate()}
+                      dimensione={15}
+                      sfondo={eOggi ? c.primario : eScelto ? c.primarioTenue : undefined}
+                      colore={eOggi ? c.primarioTesto : eScelto ? c.primario : fuori ? c.testo3 : g > 4 ? c.testo2 : c.testo}
+                      grassetto={eOggi || eScelto}
+                    />
                     {!lista.length ? null : conTitoli ? (
                       <View style={[s.titoli, fuori && { opacity: 0.5 }]}>
                         {lista.slice(0, lista.length > titoliMax ? titoliMax - 1 : titoliMax).map((e) => (
@@ -380,8 +414,6 @@ const s = StyleSheet.create({
   giornoSettimana: { flexDirection: 'row', gap: spazio.s, paddingVertical: spazio.s },
   data: { minWidth: 44, alignItems: 'center', gap: 2, paddingTop: 6 },
   dataGiorno: { fontSize: 11, fontWeight: '600', letterSpacing: 0.6, textTransform: 'uppercase' },
-  dataNumero: { alignItems: 'center', justifyContent: 'center' },
-  dataNumeroTesto: { fontSize: 18, fontWeight: '600', fontVariant: ['tabular-nums'] },
   eventiGiorno: { flex: 1 },
   riga7: { flexDirection: 'row', alignItems: 'center', gap: spazio.m, paddingVertical: 10, paddingHorizontal: spazio.s, borderRadius: raggio.m },
   divisore: { position: 'absolute', top: 0, right: 0, height: StyleSheet.hairlineWidth },
@@ -401,8 +433,8 @@ const s = StyleSheet.create({
   griglia: { flex: 1 },
   rigaMese: { flex: 1, minHeight: 60, flexDirection: 'row', borderTopWidth: StyleSheet.hairlineWidth },
   cella: { flex: 1, alignItems: 'center', paddingTop: 6, gap: 5, borderRadius: raggio.m, overflow: 'hidden' },
-  numero: { alignItems: 'center', justifyContent: 'center' },
-  numeroTesto: { fontSize: 15, fontWeight: '500', fontVariant: ['tabular-nums'] },
+  cerchio: { alignItems: 'center', justifyContent: 'center' },
+  cerchioTesto: { textAlign: 'center', includeFontPadding: false },
   pallini: {
     width: PALLINO * 5 + PALLINO_SPAZIO * 4,
     flexDirection: 'row',

@@ -35,7 +35,7 @@ import { APP } from '../../odoo/capacita'
 import { RichiedeApp } from '../../ui/RichiedeApp'
 import { leggi, scrivi } from '../../odoo/archivio'
 import { Caricamento } from '../../ui/Caricamento'
-import { CartaEvento, lunedi, piuGiorni, settimaneDelMese, VistaMese, VistaSettimana } from '../../ui/calendario/Viste'
+import { CartaEvento, lunedi, NumeroGiorno, piuGiorni, settimaneDelMese, VistaMese, VistaSettimana } from '../../ui/calendario/Viste'
 
 const SETTIMANE = 52 // avanti e indietro da oggi
 const SETTIMANA_MS = 7 * 86_400_000
@@ -84,8 +84,6 @@ function VistaCalendario() {
   // dimensione del testo scelta nelle impostazioni del telefono (con il testo
   // grande andava a capo).
   const larghezzaOre = Math.ceil((lingua() === 'it' ? 58 : 86) * Math.max(1, fontScale))
-  // Cerchio del numero del giorno con margine anche con il testo grande.
-  const cerchio = Math.max(38, Math.ceil(17 * Math.max(1, fontScale) * 2))
   const { sessione } = useApp()
   const server = sessione?.server || ''
   const uid = sessione?.utente.uid || 0
@@ -416,17 +414,14 @@ function VistaCalendario() {
                     return (
                       <Pressable key={chiave} onPress={() => setScelto(giorno)} style={s.giorno} accessibilityRole="button">
                         <Text style={[s.lettera, { color: g > 4 ? c.testo3 : c.testo2 }]}>{lettera}</Text>
-                        <View style={[s.numero, { width: cerchio, height: cerchio, borderRadius: cerchio / 2 }, eScelto && { backgroundColor: c.primario }]}>
-                          <Text
-                            style={[
-                              s.numeroTesto,
-                              { color: eScelto ? c.primarioTesto : eOggi ? c.primario : c.testo },
-                              (eScelto || eOggi) && { fontWeight: '800' },
-                            ]}
-                          >
-                            {giorno.getDate()}
-                          </Text>
-                        </View>
+                        <NumeroGiorno
+                          numero={giorno.getDate()}
+                          dimensione={17}
+                          minimo={38}
+                          sfondo={eScelto ? c.primario : undefined}
+                          colore={eScelto ? c.primarioTesto : eOggi ? c.primario : c.testo}
+                          grassetto={eScelto || eOggi}
+                        />
                         <View style={[s.punto, { backgroundColor: pieno ? (eScelto ? c.primario : c.testo3) : 'transparent' }]} />
                       </Pressable>
                     )
@@ -465,9 +460,10 @@ const s = StyleSheet.create({
   pagina: { flex: 1 },
   testa: { flexDirection: 'row', alignItems: 'center', gap: spazio.s, paddingHorizontal: spazio.m, paddingVertical: spazio.s },
   mese: { flex: 1, fontSize: 26, fontWeight: '800', letterSpacing: -0.3 },
-  oggi: { minHeight: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  // Il tasto non si stringe mai (con il testo grande diventava «O…»): si rimpicciolisce il titolo.
+  oggi: { flexShrink: 0, minHeight: 36, paddingHorizontal: 14, borderRadius: 18, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   oggiTesto: { fontSize: 15, fontWeight: '700' },
-  piu: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  piu: { flexShrink: 0, width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   comandi: { flexDirection: 'row', alignItems: 'center', gap: spazio.s, paddingHorizontal: spazio.m, paddingBottom: spazio.s },
   freccia: { width: 40, height: 40, borderRadius: 20, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
   segmenti: { flex: 1, flexDirection: 'row', padding: 4, borderRadius: raggio.m },
@@ -477,8 +473,6 @@ const s = StyleSheet.create({
   settimana: { flexDirection: 'row', paddingHorizontal: spazio.s, paddingBottom: spazio.s },
   giorno: { flex: 1, alignItems: 'center', gap: 4, paddingVertical: 4 },
   lettera: { fontSize: 12, fontWeight: '700' },
-  numero: { alignItems: 'center', justifyContent: 'center' },
-  numeroTesto: { fontSize: 17, fontWeight: '600' },
   punto: { width: 5, height: 5, borderRadius: 3 },
   linea: { height: StyleSheet.hairlineWidth },
   agenda: { padding: spazio.l, paddingBottom: spazio.xxl, gap: spazio.s },
