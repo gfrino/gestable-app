@@ -68,6 +68,37 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
 }
 `
 
+/**
+ * Frasi d'esempio di Siri (AppIntentVocabulary.plist per lingua): senza quella
+ * inglese App Store Connect segnala ITMS-90626 a ogni caricamento.
+ */
+const FRASI_SIRI = {
+  en: ['Call Mario Rossi with GestABLE', 'Call the office with GestABLE'],
+  it: ['Chiama Mario Rossi con GestABLE', "Chiama l'ufficio con GestABLE"],
+}
+
+function vocabolario(frasi) {
+  const esempi = frasi.map((f) => `        <string>${f.replace(/&/g, '&amp;').replace(/</g, '&lt;')}</string>`).join('\n')
+  return `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>IntentPhrases</key>
+  <array>
+    <dict>
+      <key>IntentName</key>
+      <string>INStartCallIntent</string>
+      <key>IntentExamples</key>
+      <array>
+${esempi}
+      </array>
+    </dict>
+  </array>
+</dict>
+</plist>
+`
+}
+
 const GESTORE_SIRI = `
   // Siri: «Chiama ... con GestABLE» (plugins/carplay-siri.js).
   @objc func application(_ application: UIApplication, handlerFor intent: INIntent) -> Any? {
@@ -134,6 +165,11 @@ function conFile(config) {
     async (cfg) => {
       const nome = IOSConfig.XcodeUtils.getProjectName(cfg.modRequest.projectRoot)
       await fs.promises.writeFile(path.join(cfg.modRequest.platformProjectRoot, nome, 'CarPlaySceneDelegate.swift'), DELEGATO_AUTO)
+      for (const [lingua, frasi] of Object.entries(FRASI_SIRI)) {
+        const cartella = path.join(cfg.modRequest.platformProjectRoot, nome, 'Supporting', `${lingua}.lproj`)
+        await fs.promises.mkdir(cartella, { recursive: true })
+        await fs.promises.writeFile(path.join(cartella, 'AppIntentVocabulary.plist'), vocabolario(frasi))
+      }
       return cfg
     },
   ])
@@ -146,6 +182,20 @@ function conProgetto(config) {
     const percorso = `${nome}/CarPlaySceneDelegate.swift`
     if (!progetto.hasFile(percorso)) {
       IOSConfig.XcodeUtils.addBuildSourceFileToGroup({ filepath: percorso, groupName: nome, project: progetto })
+    }
+    // Come fa Expo per le traduzioni di Info.plist (Locales.js): gruppo «<lingua>.lproj»,
+    // percorso relativo a Supporting.
+    for (const lingua of Object.keys(FRASI_SIRI)) {
+      const gruppo = `${nome}/Supporting/${lingua}.lproj`
+      const nodo = IOSConfig.XcodeUtils.ensureGroupRecursively(progetto, gruppo)
+      if (!nodo?.children.some(({ comment }) => comment === 'AppIntentVocabulary.plist')) {
+        IOSConfig.XcodeUtils.addResourceFileToGroup({
+          filepath: `${lingua}.lproj/AppIntentVocabulary.plist`,
+          groupName: gruppo,
+          project: progetto,
+          isBuildFile: true,
+        })
+      }
     }
     return cfg
   })
