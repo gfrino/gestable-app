@@ -45,7 +45,7 @@ class CarPlaySceneDelegate: UIResponder, CPTemplateApplicationSceneDelegate {
     _ templateApplicationScene: CPTemplateApplicationScene,
     didConnect interfaceController: CPInterfaceController
   ) {
-    CarPlayPonte.shared.collega(interfaceController)
+    CarPlayPonte.shared.collega(interfaceController, scena: templateApplicationScene)
     Self.avviaJavaScript()
   }
 

@@ -44,7 +44,7 @@ module.exports = {
     slug: 'gestavoip',
     owner: 'ticinoweb',
     scheme: 'gestavoip',
-    version: '1.4.0',
+    version: '1.4.1',
     orientation: 'portrait',
 
     // Aggiornamenti OTA (EAS Update): il JavaScript nuovo arriva senza una
@@ -64,7 +64,7 @@ module.exports = {
 
     ios: {
       bundleIdentifier: IDENTIFICATIVO,
-      buildNumber: '13',
+      buildNumber: '14',
       // La «G» di GestABLE: chiara, scura (sfondo del sistema) e tinta.
       icon: {
         light: './assets/icona-gestable.png',

@@ -13,6 +13,47 @@ import type { Utente } from './client'
 
 const CHIAVE = 'gestavoip.sessione'
 const CHIAVE_DISPOSITIVO = 'gestavoip.dispositivo'
+const CHIAVE_VERSIONE = 'gestavoip.portachiavi'
+
+/**
+ * Leggibili anche a telefono bloccato (dopo il primo sblocco dall'accensione):
+ * CarPlay e le chiamate in arrivo partono con l'iPhone in tasca. Restano solo
+ * su questo telefono e fuori dai backup leggibili, come prima.
+ */
+const OPZIONI: SecureStore.SecureStoreOptions = { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK_THIS_DEVICE_ONLY }
+
+/** Scrive da capo: aggiornare una voce esistente non ne cambia l'accessibilita'. */
+async function salva(chiave: string, valore: string): Promise<void> {
+  await SecureStore.deleteItemAsync(chiave).catch(() => undefined)
+  await SecureStore.setItemAsync(chiave, valore, OPZIONI)
+}
+
+let migrata = false
+
+/**
+ * Fino alla 1.4.0 le voci erano leggibili solo a telefono sbloccato: in auto,
+ * con l'iPhone bloccato, CarPlay chiedeva l'accesso. Alla prima lettura con il
+ * telefono sbloccato si riscrivono con la nuova accessibilita'.
+ */
+async function migra(grezza: string): Promise<void> {
+  if (migrata) {
+    return
+  }
+  migrata = true
+  try {
+    if ((await SecureStore.getItemAsync(CHIAVE_VERSIONE)) === '2') {
+      return
+    }
+    const dispositivo = await SecureStore.getItemAsync(CHIAVE_DISPOSITIVO)
+    await salva(CHIAVE, grezza)
+    if (dispositivo) {
+      await salva(CHIAVE_DISPOSITIVO, dispositivo)
+    }
+    await salva(CHIAVE_VERSIONE, '2')
+  } catch {
+    migrata = false
+  }
+}
 
 export type Sessione = {
   server: string
@@ -40,7 +81,9 @@ export async function leggiSessione(): Promise<Sessione | null> {
     return null
   }
   try {
-    return JSON.parse(grezza) as Sessione
+    const sessione = JSON.parse(grezza) as Sessione
+    void migra(grezza)
+    return sessione
   } catch {
     await SecureStore.deleteItemAsync(CHIAVE)
     return null
@@ -48,7 +91,7 @@ export async function leggiSessione(): Promise<Sessione | null> {
 }
 
 export async function salvaSessione(sessione: Sessione): Promise<void> {
-  await SecureStore.setItemAsync(CHIAVE, JSON.stringify(sessione))
+  await salva(CHIAVE, JSON.stringify(sessione))
 }
 
 export async function dimenticaSessione(): Promise<void> {
@@ -69,6 +112,6 @@ export async function idDispositivo(): Promise<string> {
     return esistente
   }
   const nuovo = `m${Crypto.randomUUID().replace(/[^a-f0-9]/g, '').slice(0, 20)}`
-  await SecureStore.setItemAsync(CHIAVE_DISPOSITIVO, nuovo)
+  await salva(CHIAVE_DISPOSITIVO, nuovo)
   return nuovo
 }

@@ -8,13 +8,52 @@ import { requireOptionalNativeModule, type EventSubscription } from 'expo-module
 
 export type DatiScontrinoAI = { negozio: string; descrizione: string; totale: number; data: string; valuta: string; categoria: string }
 
-export type VoceAuto = { titolo: string; sottotitolo: string; numero: string; entrata: boolean }
-export type DatiAuto = { accesso: boolean; recenti: VoceAuto[]; frequenti: VoceAuto[]; testi: Record<string, string> }
+/** CarPlay: le foto sono base64 (PNG/JPEG/WebP), '' = iniziali. */
+export type ChiamataAuto = { titolo: string; sottotitolo: string; numero: string; tipo: 'entrata' | 'uscita' | 'persa'; foto: string }
+export type PersonaAuto = {
+  id: number
+  nome: string
+  sottotitolo: string
+  dettaglio: string
+  numero: string
+  indirizzo: string
+  foto: string
+  /** Solo i colleghi: pallino verde (libero) o grigio. */
+  disponibile?: boolean
+}
+export type AppuntamentoAuto = {
+  id: number
+  titolo: string
+  /** «10:00», o un testo per tutto il giorno. */
+  ora: string
+  quando: string
+  luogo: string
+  persone: string
+  numero: string
+  chiamaNome: string
+  /** «#B33A7E». */
+  colore: string
+  inCorso: boolean
+}
+export type GiornoAuto = { titolo: string; sottotitolo: string; voci: AppuntamentoAuto[] }
+export type ChatAuto = { id: number; nome: string; nonLetti: number; dettaglio: string; gruppo: boolean; numero: string; foto: string }
+export type StatoAuto = 'pronto' | 'accesso' | 'bloccato' | 'senzaTelefono'
+export type DatiAuto = {
+  stato: StatoAuto
+  recenti: ChiamataAuto[]
+  preferiti: PersonaAuto[]
+  agenda: GiornoAuto[]
+  chat: ChatAuto[]
+  colleghi: PersonaAuto[]
+  contatti: PersonaAuto[]
+  testi: Record<string, string>
+}
 
 type Eventi = {
   onChiama: (e: { numero: string }) => void
   onSceltaAuto: (e: { numero: string }) => void
   onConnessioneAuto: (e: { collegata: boolean }) => void
+  onLettaAuto: (e: { id: number }) => void
 }
 
 type Modulo = {
