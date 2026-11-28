@@ -60,6 +60,8 @@ function Navigazione() {
           <Stack.Screen name="vendite/index" />
           <Stack.Screen name="vendite/[id]" />
           <Stack.Screen name="vendite/nuovo" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="fatturazione/index" />
+          <Stack.Screen name="fatturazione/[id]" />
           <Stack.Screen name="calendario/[id]" />
           <Stack.Screen name="calendario/nuovo" options={{ presentation: 'modal' }} />
           <Stack.Screen name="calendario/modifica" options={{ presentation: 'modal' }} />

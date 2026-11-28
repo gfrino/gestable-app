@@ -1,6 +1,6 @@
 /**
  * Apre un documento di Odoo da una notifica o da un'attivita': la schermata
- * nativa dell'app se c'e' (CRM, Vendite, Helpdesk, Ferie, Spese, Contatti, Calendario,
+ * nativa dell'app se c'e' (CRM, Vendite, Fatturazione, Helpdesk, Ferie, Spese, Contatti, Calendario,
  * chat), altrimenti il documento nella vista di Odoo Web.
  *
  * La vista di Odoo e' una scheda (nascosta): da una schermata aperta sopra le
@@ -27,6 +27,9 @@ function nativa(router: Router, modello: string, id: number, extra: Extra): bool
       return true
     case 'sale.order':
       router.push({ pathname: '/vendite/[id]', params })
+      return true
+    case 'account.move':
+      router.push({ pathname: '/fatturazione/[id]', params })
       return true
     case 'helpdesk.ticket':
       router.push({ pathname: '/helpdesk/[id]', params })
